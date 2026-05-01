@@ -32,7 +32,7 @@ const historyGroups = [
       { status: "queued", title: "Studio product teaser" },
       { status: "rendering", title: "Golden-hour lake pan" },
     ],
-    label: "STORIES",
+    label: "VIDEOS",
   },
 ] as const
 

@@ -74,7 +74,8 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
         <div className="group relative size-36 overflow-hidden rounded-md border">
           <Image
             alt="Uploaded image"
-            className="size-full object-cover transition-[filter] group-hover:brightness-50"
+            className="object-cover transition-[filter] group-hover:brightness-50"
+            fill
             src={value}
           />
           <button
