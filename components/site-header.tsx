@@ -2,8 +2,13 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
 const navigationLinks = [
-  { href: "#generator", label: "Generator" },
-  { href: "#preview", label: "Preview" },
+  { href: "#explore", label: "Explore" },
+  { href: "#videos", label: "Videos" },
+] as const
+
+const accountLinks = [
+  { href: "/settings", label: "Settings", variant: "ghost" },
+  { href: "/logout", label: "Logout", variant: "destructive" },
 ] as const
 
 export function SiteHeader() {
@@ -22,6 +27,11 @@ export function SiteHeader() {
         <nav aria-label="Primary" className="flex items-center gap-2">
           {navigationLinks.map((link) => (
             <Button asChild key={link.href} size="sm" variant="ghost">
+              <Link href={link.href}>{link.label}</Link>
+            </Button>
+          ))}
+          {accountLinks.map((link) => (
+            <Button asChild key={link.href} size="sm" variant={link.variant}>
               <Link href={link.href}>{link.label}</Link>
             </Button>
           ))}
