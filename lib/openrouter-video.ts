@@ -1,69 +1,17 @@
-export type VideoJobStatus =
-  | "pending"
-  | "in_progress"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "expired"
+import { OpenRouter } from "@openrouter/sdk"
+import type {
+  AspectRatio,
+  Resolution,
+  VideoGenerationResponseStatus,
+} from "@openrouter/sdk/models"
 
-export type VideoAspectRatio =
-  | "16:9"
-  | "9:16"
-  | "1:1"
-  | "4:3"
-  | "3:4"
-  | "21:9"
-  | "9:21"
+export type { VideoGenerationRequest } from "@openrouter/sdk/models"
 
-export type VideoResolution = "480p" | "720p" | "1080p" | "1K" | "2K" | "4K"
+export type VideoAspectRatio = AspectRatio
+export type VideoJobStatus = VideoGenerationResponseStatus
+export type VideoResolution = Resolution
 
-interface FrameImage {
-  frame_type: "first_frame" | "last_frame"
-  image_url: { url: string }
-  type: "image_url"
-}
-
-interface InputReference {
-  image_url: { url: string }
-  type: "image_url"
-}
-
-export interface SubmitJobOptions {
-  aspect_ratio?: VideoAspectRatio
-  callback_url?: string
-  duration?: number
-  frame_images?: FrameImage[]
-  generate_audio?: boolean
-  input_references?: InputReference[]
-  model?: string
-  prompt: string
-  provider?: { options: Record<string, unknown> }
-  resolution?: VideoResolution
-  seed?: number
-  size?: string
-}
-
-interface VideoGenerationUsage {
-  cost: number | null
-  is_byok: boolean
-}
-
-interface VideoJobResponse {
-  id: string
-  polling_url: string
-}
-
-interface VideoStatusResponse {
-  error?: string
-  generation_id?: string
-  id: string
-  polling_url: string
-  status: VideoJobStatus
-  unsigned_urls?: string[]
-  usage?: VideoGenerationUsage
-}
-
-export interface GenerateVideoOptions extends SubmitJobOptions {
+export interface GenerateVideoOptions extends VideoGenerationRequest {
   onStatus?: (status: VideoJobStatus) => void
   pollIntervalMs?: number
 }
@@ -76,106 +24,51 @@ export interface GenerateVideoResult {
   urls: string[]
 }
 
-export class OpenRouterVideoClient {
-  private readonly apiKey: string
-  private readonly baseUrl = "https://openrouter.ai/api/v1"
+export const openrouterClient = new OpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
+})
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey
-  }
+export async function pollJobUntilDone(
+  jobId: string,
+  intervalMs = 5000,
+  onStatus?: (status: VideoJobStatus) => void
+): Promise<GenerateVideoResult> {
+  while (true) {
+    const data = await openrouterClient.videoGeneration.getGeneration({ jobId })
+    onStatus?.(data.status)
 
-  private authHeaders(): HeadersInit {
-    return { Authorization: `Bearer ${this.apiKey}` }
-  }
+    if (data.status === "completed") {
+      return {
+        jobId: data.id,
+        generationId: data.generationId,
+        urls: data.unsignedUrls ?? [],
+        cost: data.usage?.cost ?? null,
+        isByok: data.usage?.isByok ?? false,
+      }
+    }
 
-  async submitJob(options: SubmitJobOptions): Promise<VideoJobResponse> {
-    const { model = "bytedance/seedance-2.0", ...rest } = options
-    const response = await fetch(`${this.baseUrl}/videos`, {
-      method: "POST",
-      headers: {
-        ...this.authHeaders(),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model, ...rest }),
-    })
-
-    if (!response.ok) {
+    if (
+      data.status === "failed" ||
+      data.status === "cancelled" ||
+      data.status === "expired"
+    ) {
       throw new Error(
-        `Failed to submit video job: ${response.status} ${response.statusText}`
+        data.error ?? `Video job ended with status: ${data.status}`
       )
     }
 
-    return response.json() as Promise<VideoJobResponse>
-  }
-
-  async pollJob(
-    pollingUrl: string,
-    intervalMs = 5000,
-    onStatus?: (status: VideoJobStatus) => void
-  ): Promise<VideoStatusResponse> {
-    while (true) {
-      const response = await fetch(pollingUrl, { headers: this.authHeaders() })
-
-      if (!response.ok) {
-        throw new Error(
-          `Polling failed: ${response.status} ${response.statusText}`
-        )
-      }
-
-      const data = (await response.json()) as VideoStatusResponse
-      onStatus?.(data.status)
-
-      if (data.status === "completed") {
-        return data
-      }
-
-      if (
-        data.status === "failed" ||
-        data.status === "cancelled" ||
-        data.status === "expired"
-      ) {
-        throw new Error(
-          data.error ?? `Video job ended with status: ${data.status}`
-        )
-      }
-
-      await new Promise<void>((resolve) => setTimeout(resolve, intervalMs))
-    }
-  }
-
-  async downloadContent(jobId: string, index = 0): Promise<Response> {
-    const url = new URL(`${this.baseUrl}/videos/${jobId}/content`)
-    url.searchParams.set("index", String(index))
-
-    const response = await fetch(url.toString(), {
-      headers: this.authHeaders(),
-    })
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to download video: ${response.status} ${response.statusText}`
-      )
-    }
-
-    return response
-  }
-
-  async generate(options: GenerateVideoOptions): Promise<GenerateVideoResult> {
-    const { onStatus, pollIntervalMs = 5000, ...submitOptions } = options
-
-    const job = await this.submitJob(submitOptions)
-    const result = await this.pollJob(job.polling_url, pollIntervalMs, onStatus)
-
-    return {
-      jobId: job.id,
-      generationId: result.generation_id,
-      urls: result.unsigned_urls ?? [],
-      cost: result.usage?.cost ?? null,
-      isByok: result.usage?.is_byok ?? false,
-    }
+    await new Promise<void>((resolve) => setTimeout(resolve, intervalMs))
   }
 }
 
-export const openrouterClient = new OpenRouterVideoClient(
-  process.env.OPENROUTER_API_KEY
-)
+export async function generateVideo({
+  onStatus,
+  pollIntervalMs = 5000,
+  ...videoGenerationRequest
+}: GenerateVideoOptions): Promise<GenerateVideoResult> {
+  const job = await openrouterClient.videoGeneration.generate({
+    videoGenerationRequest,
+  })
+
+  return pollJobUntilDone(job.id, pollIntervalMs, onStatus)
+}

@@ -8,12 +8,14 @@ export async function GET(
   const { jobId } = await params
   const index = Number(request.nextUrl.searchParams.get("index") ?? "0")
 
-  const upstream = await openrouterClient.downloadContent(jobId, index)
+  const stream = await openrouterClient.videoGeneration.getVideoContent({
+    jobId,
+    index,
+  })
 
-  return new Response(upstream.body, {
+  return new Response(stream, {
     headers: {
-      "Content-Type":
-        upstream.headers.get("Content-Type") ?? "application/octet-stream",
+      "Content-Type": "application/octet-stream",
       "Content-Disposition": `attachment; filename="video-${jobId}.mp4"`,
     },
   })
