@@ -13,7 +13,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -22,7 +21,6 @@ import {
 
 const mainNavigation = [
   { href: "/", icon: AiVideoIcon, label: "Videos" },
-  { href: "/settings", icon: Settings01Icon, label: "Settings" },
 ] as const
 
 const historyGroups = [
@@ -50,19 +48,6 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="New video" variant="outline">
-              <Link href="/">
-                <HugeiconsIcon icon={AiVideoIcon} strokeWidth={2} />
-                <span>New video</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-
       <SidebarContent className="gap-2">
         <SidebarGroup>
           <SidebarGroupContent>
@@ -84,8 +69,6 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* <SidebarSeparator /> */}
 
         {historyGroups.map((group) => (
           <SidebarGroup key={group.label}>
@@ -131,6 +114,18 @@ export function AppSidebar() {
               <IconMoon className="dark:hidden" size={18} />
               <span className="hidden dark:inline">Light mode</span>
               <span className="dark:hidden">Dark mode</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === "/settings"}
+              tooltip="Settings"
+            >
+              <Link href="/settings">
+                <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
+                <span>Settings</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
