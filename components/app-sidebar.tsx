@@ -2,11 +2,14 @@
 
 import { AiVideoIcon, Settings01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { IconMoon, IconSun } from "@tabler/icons-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTheme } from "next-themes"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,7 +18,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
 } from "@/components/ui/sidebar"
 
 const mainNavigation = [
@@ -30,22 +32,7 @@ const historyGroups = [
       { status: "queued", title: "Studio product teaser" },
       { status: "rendering", title: "Golden-hour lake pan" },
     ],
-    label: "Today",
-  },
-  {
-    items: [
-      { status: "draft", title: "Fantasy castle reveal" },
-      { status: "failed", title: "City fly-through" },
-      { status: "completed", title: "Quiet portrait close-up" },
-    ],
-    label: "Yesterday",
-  },
-  {
-    items: [
-      { status: "completed", title: "Night market opener" },
-      { status: "draft", title: "Slow-motion dance cut" },
-    ],
-    label: "Previous 7 days",
+    label: "STORIES",
   },
 ] as const
 
@@ -59,6 +46,7 @@ const historyStatusDotClassName = {
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { setTheme } = useTheme()
 
   return (
     <Sidebar collapsible="icon">
@@ -97,7 +85,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        {/* <SidebarSeparator /> */}
 
         {historyGroups.map((group) => (
           <SidebarGroup key={group.label}>
@@ -124,6 +112,29 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() =>
+                setTheme(
+                  document.documentElement.classList.contains("dark")
+                    ? "light"
+                    : "dark"
+                )
+              }
+              tooltip="Toggle theme"
+              type="button"
+            >
+              <IconSun className="hidden dark:block" size={18} />
+              <IconMoon className="dark:hidden" size={18} />
+              <span className="hidden dark:inline">Light mode</span>
+              <span className="dark:hidden">Dark mode</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono, Inter } from "next/font/google"
 import { AppSidebar } from "@/components/app-sidebar"
+import { ThemeProvider } from "@/components/theme-provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import "./globals.css"
@@ -39,16 +40,26 @@ export default function RootLayout({
         inter.variable
       )}
       lang="en"
+      suppressHydrationWarning
     >
-      <body className="h-full bg-background">
-        <TooltipProvider>
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
-            </SidebarInset>
-          </SidebarProvider>
-        </TooltipProvider>
+      <body className="h-full bg-background" suppressHydrationWarning>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          scriptProps={{ type: "application/json" }}
+        >
+          <TooltipProvider>
+            <SidebarProvider>
+              <AppSidebar />
+              <SidebarInset>
+                <main className="min-h-0 flex-1 overflow-hidden">
+                  {children}
+                </main>
+              </SidebarInset>
+            </SidebarProvider>
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
