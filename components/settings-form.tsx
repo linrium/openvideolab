@@ -9,7 +9,6 @@ import {
 } from "@/components/api-key-guide-card"
 import { Button } from "@/components/ui/button"
 import {
-  Card,
   CardContent,
   CardDescription,
   CardFooter,
@@ -155,8 +154,8 @@ export function SettingsForm() {
 
   return (
     <div className="grid w-full max-w-7xl gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)] lg:items-start">
-      <Card className="w-full">
-        <CardHeader>
+      <div className="flex min-h-0 flex-col rounded-lg border border-border/70 bg-background">
+        <CardHeader className="border-border/70 border-b px-4 py-4 sm:px-5">
           <CardTitle>API Credentials</CardTitle>
           <CardDescription>
             Save provider keys for this browser session. Keys are stored locally
@@ -165,12 +164,13 @@ export function SettingsForm() {
         </CardHeader>
 
         <form
+          className="flex min-h-0 flex-1 flex-col"
           onSubmit={(event) => {
             event.preventDefault()
             form.handleSubmit()
           }}
         >
-          <CardContent>
+          <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
             <FieldGroup>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
@@ -471,7 +471,7 @@ export function SettingsForm() {
             </FieldGroup>
           </CardContent>
 
-          <CardFooter className="flex items-center justify-between gap-3 pt-6">
+          <CardFooter className="sticky bottom-0 mt-0 flex items-center justify-between gap-3 border-border/70 border-t bg-background px-4 pt-4 pb-4 sm:px-5">
             <p className="text-muted-foreground text-xs">
               {statusMessage ??
                 "Leave a field blank if you do not want to store a key."}
@@ -495,7 +495,7 @@ export function SettingsForm() {
             </div>
           </CardFooter>
         </form>
-      </Card>
+      </div>
 
       {activeGuideSection ? (
         <ApiKeyGuideCard section={activeGuideSection} />
