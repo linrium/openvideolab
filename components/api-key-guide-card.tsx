@@ -67,7 +67,7 @@ export function ApiKeyGuideCard({ section }: { section: ApiKeyGuideSection }) {
   const guide = guideBySection[section]
 
   return (
-    <Card className="w-full lg:sticky lg:top-20">
+    <Card className="w-full lg:sticky">
       <CardHeader>
         <CardTitle>How To Get API Keys</CardTitle>
         <CardDescription>
