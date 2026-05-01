@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html
       className={cn(
-        "h-full",
+        "h-screen",
         "antialiased",
         geistSans.variable,
         geistMono.variable,
@@ -40,14 +40,12 @@ export default function RootLayout({
       )}
       lang="en"
     >
-      <body className="min-h-screen bg-background">
+      <body className="h-full bg-background">
         <TooltipProvider>
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-              <main className="h-[100vh] min-h-0 flex-1 overflow-hidden">
-                {children}
-              </main>
+              <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
             </SidebarInset>
           </SidebarProvider>
         </TooltipProvider>

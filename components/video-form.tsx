@@ -111,7 +111,7 @@ export function VideoForm() {
   })
 
   return (
-    <div className="flex h-[100svh] min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <CardHeader className="border-border/70 border-b px-4 py-4 sm:px-5">
         <CardTitle>Generate Video</CardTitle>
         <CardDescription>
