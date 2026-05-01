@@ -1,7 +1,15 @@
 "use client"
 
 import type { VideoGenerationResponse } from "@openrouter/sdk/models"
-import { IconDownload } from "@tabler/icons-react"
+import {
+  IconCheck,
+  IconCloudUpload,
+  IconDownload,
+  IconLoader2,
+  IconX,
+} from "@tabler/icons-react"
+import { useState, useTransition } from "react"
+import { syncVideoToR2 } from "@/app/actions/sync-video"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -55,6 +63,63 @@ interface VideoPreviewProps {
   url: string
 }
 
+type SyncState = "idle" | "syncing" | "synced" | "error"
+
+const SYNC_ICON: Record<SyncState, React.ReactNode> = {
+  idle: <IconCloudUpload size={16} />,
+  syncing: <IconLoader2 className="animate-spin" size={16} />,
+  synced: <IconCheck size={16} />,
+  error: <IconX size={16} />,
+}
+
+const SYNC_LABEL: Record<SyncState, string> = {
+  idle: "Sync to R2",
+  syncing: "Syncing…",
+  synced: "Synced",
+  error: "Retry sync",
+}
+
+interface SyncButtonProps {
+  jobId: string
+}
+
+function SyncButton({ jobId }: SyncButtonProps) {
+  const [syncState, setSyncState] = useState<SyncState>("idle")
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const handleSync = () => {
+    setSyncState("syncing")
+    setSyncError(null)
+    startTransition(async () => {
+      const result = await syncVideoToR2(jobId)
+      if (result.ok) {
+        setSyncState("synced")
+      } else {
+        setSyncState("error")
+        setSyncError(result.message)
+      }
+    })
+  }
+
+  return (
+    <div className="contents">
+      <Button
+        disabled={isPending || syncState === "synced"}
+        onClick={handleSync}
+        size="sm"
+        variant="outline"
+      >
+        {SYNC_ICON[syncState]}
+        {SYNC_LABEL[syncState]}
+      </Button>
+      {syncState === "error" && syncError && (
+        <p className="w-full px-4 text-rose-500 text-xs">{syncError}</p>
+      )}
+    </div>
+  )
+}
+
 export function VideoPreview({ generation, url }: VideoPreviewProps) {
   const downloadHref = generation ? `/api/videos/${generation.id}/content` : url
 
@@ -66,21 +131,24 @@ export function VideoPreview({ generation, url }: VideoPreviewProps) {
     <div className="w-full max-w-4xl space-y-3">
       <div className="flex items-center justify-center px-4 pt-4">
         {/* biome-ignore lint/a11y/useMediaCaption: no captions available for generated video */}
-        <video className="rounded-md" controls src={url} />
+        <video className="max-h-[40vh] w-full rounded-md" controls src={url} />
       </div>
 
-      <div className="flex items-center justify-between gap-2 px-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4">
         {statusConfig && (
           <Badge className={statusConfig.className} variant="outline">
             {statusConfig.label}
           </Badge>
         )}
-        <Button asChild className="ml-auto" size="sm" variant="outline">
-          <a download href={downloadHref} rel="noopener">
-            <IconDownload size={16} />
-            Download
-          </a>
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          {generation && <SyncButton jobId={generation.id} />}
+          <Button asChild size="sm" variant="outline">
+            <a download href={downloadHref} rel="noopener">
+              <IconDownload size={16} />
+              Download
+            </a>
+          </Button>
+        </div>
       </div>
 
       {generation && (

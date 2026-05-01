@@ -61,6 +61,34 @@ export async function pollJobUntilDone(
   }
 }
 
+const BASE_URL = "https://openrouter.ai/api/v1"
+
+// The SDK's stream matcher only accepts application/octet-stream, but
+// OpenRouter returns video/mp4 for this endpoint, causing a content-type
+// mismatch error. We fetch directly with the Bearer token instead.
+export async function fetchVideoContent(
+  jobId: string,
+  index = 0
+): Promise<Response> {
+  const url = new URL(`${BASE_URL}/videos/${jobId}/content`)
+  url.searchParams.set("index", String(index))
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    },
+  })
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    const message =
+      (body?.error?.message as string | undefined) ?? response.statusText
+    throw new Error(`OpenRouter video content fetch failed: ${message}`)
+  }
+
+  return response
+}
+
 export async function generateVideo({
   onStatus,
   pollIntervalMs = 5000,

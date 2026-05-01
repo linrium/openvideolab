@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { openrouterClient } from "@/lib/openrouter-video"
+import { fetchVideoContent } from "@/lib/openrouter-video"
 
 export async function GET(
   request: NextRequest,
@@ -8,14 +8,12 @@ export async function GET(
   const { jobId } = await params
   const index = Number(request.nextUrl.searchParams.get("index") ?? "0")
 
-  const stream = await openrouterClient.videoGeneration.getVideoContent({
-    jobId,
-    index,
-  })
+  const upstream = await fetchVideoContent(jobId, index)
 
-  return new Response(stream, {
+  return new Response(upstream.body, {
     headers: {
-      "Content-Type": "application/octet-stream",
+      "Content-Type":
+        upstream.headers.get("Content-Type") ?? "application/octet-stream",
       "Content-Disposition": `attachment; filename="video-${jobId}.mp4"`,
     },
   })

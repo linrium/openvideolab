@@ -84,39 +84,3 @@ export async function streamUrlToR2(
     resolvedContentType
   )
 }
-
-interface StreamVideoToR2Options {
-  apiKey: string
-  index?: number
-  jobId: string
-  key: string
-}
-
-// Streams a generated video from OpenRouter directly into R2 by job ID and optional content index.
-export async function streamOpenRouterVideoToR2(
-  options: StreamVideoToR2Options
-): Promise<void> {
-  const { apiKey, jobId, index = 0, key } = options
-  const url = new URL(`https://openrouter.ai/api/v1/videos/${jobId}/content`)
-  url.searchParams.set("index", String(index))
-
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  })
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => null)
-    const message = body?.error?.message ?? response.statusText
-    throw new Error(`OpenRouter video content fetch failed: ${message}`)
-  }
-
-  if (!response.body) {
-    throw new Error("Response body is null")
-  }
-
-  await uploadToR2(
-    key,
-    response.body as unknown as PutObjectCommandInput["Body"],
-    "video/mp4"
-  )
-}
