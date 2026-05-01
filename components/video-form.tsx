@@ -64,7 +64,7 @@ export function VideoForm() {
       aspect_ratio: "16:9" as VideoAspectRatio | undefined,
       resolution: "720p" as VideoResolution | undefined,
       duration: 10 as 5 | 10 | 15,
-      generate_audio: false,
+      generate_audio: true,
       input_references: [] as string[],
       first_frame: undefined as string | undefined,
       last_frame: undefined as string | undefined,
