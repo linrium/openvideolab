@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function SettingsPage() {
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <div className="flex w-full flex-col gap-6 px-4 py-4 sm:px-6 sm:py-6">
       <div className="flex max-w-3xl flex-col gap-2">
         <h1 className="font-heading font-medium text-2xl tracking-tight">
           Settings

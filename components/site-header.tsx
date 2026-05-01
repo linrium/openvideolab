@@ -1,10 +1,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-const navigationLinks = [
-  { href: "/videos", label: "Videos" },
-  { href: "/history", label: "History" },
-] as const
+const navigationLinks = [{ href: "/", label: "Videos" }] as const
 
 const accountLinks = [
   { href: "/settings", label: "Settings", variant: "ghost" },
