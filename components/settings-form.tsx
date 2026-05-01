@@ -3,7 +3,10 @@
 import { useForm } from "@tanstack/react-form"
 import { useEffect, useState } from "react"
 import z from "zod/v4"
-import { ApiKeyGuideCard } from "@/components/api-key-guide-card"
+import {
+  ApiKeyGuideCard,
+  type ApiKeyGuideSection,
+} from "@/components/api-key-guide-card"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -104,8 +107,15 @@ export function SettingsForm() {
   const [isOpenAiVisible, setIsOpenAiVisible] = useState(false)
   const [isR2AccessKeyVisible, setIsR2AccessKeyVisible] = useState(false)
   const [isR2SecretVisible, setIsR2SecretVisible] = useState(false)
-  const [isGuideVisible, setIsGuideVisible] = useState(false)
+  const [activeGuideSection, setActiveGuideSection] =
+    useState<ApiKeyGuideSection | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+
+  const toggleGuideSection = (section: ApiKeyGuideSection) => {
+    setActiveGuideSection((currentValue) =>
+      currentValue === section ? null : section
+    )
+  }
 
   const form = useForm({
     defaultValues: {
@@ -148,25 +158,9 @@ export function SettingsForm() {
       <Card className="w-full">
         <CardHeader>
           <CardTitle>API Credentials</CardTitle>
-          <CardDescription className="flex flex-col gap-3">
-            <span>
-              Save provider keys for this browser session. Keys are stored
-              locally on this device until you clear them.
-            </span>
-            <div>
-              <Button
-                onClick={() => {
-                  setIsGuideVisible((currentValue) => !currentValue)
-                }}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {isGuideVisible
-                  ? "Hide key instructions"
-                  : "How to get API keys"}
-              </Button>
-            </div>
+          <CardDescription>
+            Save provider keys for this browser session. Keys are stored locally
+            on this device until you clear them.
           </CardDescription>
         </CardHeader>
 
@@ -178,6 +172,28 @@ export function SettingsForm() {
         >
           <CardContent>
             <FieldGroup>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <h2 className="font-medium text-sm">Cloudflare R2</h2>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    Configure the R2 credentials used for S3-compatible storage
+                    access.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    toggleGuideSection("cloudflare-r2")
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {activeGuideSection === "cloudflare-r2"
+                    ? "Hide instructions"
+                    : "Show instructions"}
+                </Button>
+              </div>
+
               <form.Field
                 name="cloudflareR2AccessKeyId"
                 validators={{
@@ -295,6 +311,28 @@ export function SettingsForm() {
 
               <FieldSeparator />
 
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <h2 className="font-medium text-sm">OpenRouter</h2>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    Configure the API key used for OpenRouter generation
+                    requests.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    toggleGuideSection("openrouter")
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {activeGuideSection === "openrouter"
+                    ? "Hide instructions"
+                    : "Show instructions"}
+                </Button>
+              </div>
+
               <form.Field
                 name="openRouterApiKey"
                 validators={{
@@ -354,6 +392,27 @@ export function SettingsForm() {
               </form.Field>
 
               <FieldSeparator />
+
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <h2 className="font-medium text-sm">OpenAI</h2>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    Configure the API key used for OpenAI-powered features.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    toggleGuideSection("openai")
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {activeGuideSection === "openai"
+                    ? "Hide instructions"
+                    : "Show instructions"}
+                </Button>
+              </div>
 
               <form.Field
                 name="openAiApiKey"
@@ -438,7 +497,9 @@ export function SettingsForm() {
         </form>
       </Card>
 
-      {isGuideVisible ? <ApiKeyGuideCard /> : null}
+      {activeGuideSection ? (
+        <ApiKeyGuideCard section={activeGuideSection} />
+      ) : null}
     </div>
   )
 }

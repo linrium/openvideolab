@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 
 const providerGuides = [
   {
@@ -53,50 +52,58 @@ const providerGuides = [
   },
 ] as const
 
-export function ApiKeyGuideCard() {
+export type ApiKeyGuideSection = "cloudflare-r2" | "openai" | "openrouter"
+
+const guideBySection: Record<
+  ApiKeyGuideSection,
+  (typeof providerGuides)[number]
+> = {
+  "cloudflare-r2": providerGuides[0],
+  openai: providerGuides[2],
+  openrouter: providerGuides[1],
+}
+
+export function ApiKeyGuideCard({ section }: { section: ApiKeyGuideSection }) {
+  const guide = guideBySection[section]
+
   return (
     <Card className="w-full lg:sticky lg:top-20">
       <CardHeader>
         <CardTitle>How To Get API Keys</CardTitle>
         <CardDescription>
-          Follow the provider steps, then paste the keys into the settings form.
+          Follow the provider steps, then paste the keys into the matching form
+          fields.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-5">
-        {providerGuides.map((guide, index) => (
-          <section className="flex flex-col gap-3" key={guide.title}>
-            <div className="flex flex-col gap-1">
-              <h2 className="font-medium text-sm">{guide.title}</h2>
-              <p className="text-muted-foreground text-xs/relaxed">
-                {guide.description}
-              </p>
-            </div>
+      <CardContent className="flex flex-col gap-4">
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="font-medium text-sm">{guide.title}</h2>
+            <p className="text-muted-foreground text-xs/relaxed">
+              {guide.description}
+            </p>
+          </div>
 
-            <ol className="ml-4 flex list-decimal flex-col gap-2 text-xs/relaxed">
-              {guide.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
+          <ol className="ml-4 flex list-decimal flex-col gap-2 text-xs/relaxed">
+            {guide.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
 
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="outline">
-                <a href={guide.docsHref} rel="noopener" target="_blank">
-                  {guide.name} docs
-                </a>
-              </Button>
-              {"keyPageHref" in guide ? (
-                <Button asChild size="sm" variant="ghost">
-                  <a href={guide.keyPageHref} rel="noopener" target="_blank">
-                    Open key page
-                  </a>
-                </Button>
-              ) : null}
-            </div>
-
-            {index < providerGuides.length - 1 ? <Separator /> : null}
-          </section>
-        ))}
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline">
+              <a href={guide.docsHref} rel="noopener" target="_blank">
+                {guide.name} docs
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="ghost">
+              <a href={guide.keyPageHref} rel="noopener" target="_blank">
+                Open key page
+              </a>
+            </Button>
+          </div>
+        </section>
       </CardContent>
 
       <CardFooter className="border-t pt-3">

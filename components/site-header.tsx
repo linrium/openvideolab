@@ -5,7 +5,6 @@ const navigationLinks = [{ href: "/history", label: "History" }] as const
 
 const accountLinks = [
   { href: "/settings", label: "Settings", variant: "ghost" },
-  { href: "/logout", label: "Logout", variant: "destructive" },
 ] as const
 
 export function SiteHeader() {
