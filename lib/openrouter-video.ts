@@ -143,6 +143,23 @@ export class OpenRouterVideoClient {
     }
   }
 
+  async downloadContent(jobId: string, index = 0): Promise<Response> {
+    const url = new URL(`${this.baseUrl}/videos/${jobId}/content`)
+    url.searchParams.set("index", String(index))
+
+    const response = await fetch(url.toString(), {
+      headers: this.authHeaders(),
+    })
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download video: ${response.status} ${response.statusText}`
+      )
+    }
+
+    return response
+  }
+
   async generate(options: GenerateVideoOptions): Promise<GenerateVideoResult> {
     const { onStatus, pollIntervalMs = 5000, ...submitOptions } = options
 
@@ -158,3 +175,7 @@ export class OpenRouterVideoClient {
     }
   }
 }
+
+export const openrouterClient = new OpenRouterVideoClient(
+  process.env.OPENROUTER_API_KEY
+)

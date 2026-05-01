@@ -191,7 +191,7 @@ export function VideoForm() {
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="e.g. A serene mountain lake at golden hour, slow cinematic pan from left to right, soft warm light reflecting on calm water…"
-                    rows={4}
+                    rows={10}
                     spellCheck={false}
                     value={field.state.value}
                   />
