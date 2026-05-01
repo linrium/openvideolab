@@ -2,16 +2,14 @@ import { OpenRouter } from "@openrouter/sdk"
 import type {
   AspectRatio,
   Resolution,
+  VideoGenerationRequest,
   VideoGenerationResponseStatus,
 } from "@openrouter/sdk/models"
-
-export type { VideoGenerationRequest } from "@openrouter/sdk/models"
 
 export type VideoAspectRatio = AspectRatio
 export type VideoJobStatus = VideoGenerationResponseStatus
 export type VideoResolution = Resolution
-
-export interface GenerateVideoOptions extends VideoGenerationRequest {
+export type GenerateVideoOptions = VideoGenerationRequest & {
   onStatus?: (status: VideoJobStatus) => void
   pollIntervalMs?: number
 }

@@ -5,6 +5,7 @@
     "@base-ui/react": "^1.4.1",
     "@hugeicons/core-free-icons": "^4.1.1",
     "@hugeicons/react": "^1.1.6",
+    "@opennextjs/cloudflare": "^1.19.5",
     "@openrouter/sdk": "^0.12.24",
     "@tabler/icons-react": "^3.41.1",
     "@tanstack/react-form": "^1.29.1",
@@ -40,12 +41,13 @@
     "lint-staged": "^16.4.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "ultracite": "^7.6.2"
+    "ultracite": "^7.6.2",
+    "wrangler": "^4.87.0"
   },
-  "name": "shortdrama",
+  "name": "openvideolab",
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
+    "dev": "next dev",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
@@ -54,7 +56,11 @@
     "prepare": "lefthook install",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "version": "0.1.0",
   "private": true,

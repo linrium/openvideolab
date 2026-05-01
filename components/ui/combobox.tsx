@@ -272,7 +272,6 @@ function ComboboxChip({
         <ComboboxPrimitive.ChipRemove
           data-slot="combobox-chip-remove"
           render={<Button size="icon-xs" variant="ghost" />}
-          render={<Button size="icon-xs" variant="ghost" />}
         >
           <HugeiconsIcon
             className="pointer-events-none"
