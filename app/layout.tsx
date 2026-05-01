@@ -45,7 +45,9 @@ export default function RootLayout({
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-              <main className="min-h-svh flex-1">{children}</main>
+              <main className="h-[100vh] min-h-0 flex-1 overflow-hidden">
+                {children}
+              </main>
             </SidebarInset>
           </SidebarProvider>
         </TooltipProvider>

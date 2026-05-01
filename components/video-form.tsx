@@ -5,7 +5,6 @@ import z from "zod/v4"
 import { ImageUpload, MultiImageUpload } from "@/components/image-upload"
 import { Button } from "@/components/ui/button"
 import {
-  Card,
   CardContent,
   CardDescription,
   CardFooter,
@@ -112,8 +111,8 @@ export function VideoForm() {
   })
 
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
+    <div className="flex h-[100svh] min-h-0 flex-col">
+      <CardHeader className="border-border/70 border-b px-4 py-4 sm:px-5">
         <CardTitle>Generate Video</CardTitle>
         <CardDescription>
           Powered by Bytedance Seedance 2.0 via OpenRouter. Describe your scene,
@@ -165,12 +164,13 @@ export function VideoForm() {
       </CardHeader>
 
       <form
+        className="flex min-h-0 flex-1 flex-col"
         onSubmit={(e) => {
           e.preventDefault()
           form.handleSubmit()
         }}
       >
-        <CardContent>
+        <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
           <FieldGroup>
             <form.Field name="prompt">
               {(field) => (
@@ -375,7 +375,7 @@ export function VideoForm() {
           </FieldGroup>
         </CardContent>
 
-        <CardFooter className="mt-4 flex flex-col gap-3">
+        <CardFooter className="sticky bottom-0 mt-0 flex flex-col gap-3 border-border/70 border-t bg-background px-4 pt-4 pb-4 sm:px-5">
           <form.Subscribe
             selector={(s) => ({
               resolution: s.values.resolution,
@@ -438,6 +438,6 @@ export function VideoForm() {
           </form.Subscribe>
         </CardFooter>
       </form>
-    </Card>
+    </div>
   )
 }

@@ -6,13 +6,13 @@ export default async function Home() {
   const videoUrl = await getPresignedUrl({ key: "test-video.mp4" })
 
   return (
-    <div className="flex w-full flex-col gap-6 px-4 py-4 sm:px-6 sm:py-6 lg:flex-row lg:items-start lg:justify-start">
-      <section className="w-full max-w-2xl">
-        <VideoForm />
-      </section>
-      <section className="w-full max-w-2xl">
+    <div className="grid h-full min-h-0 w-full overflow-hidden lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <section className="h-full min-h-0 overflow-hidden p-4 sm:p-6">
         <VideoPreview url={videoUrl} />
       </section>
+      <aside className="h-full min-h-0 border-border/80 border-t bg-background lg:border-t-0 lg:border-l">
+        <VideoForm />
+      </aside>
     </div>
   )
 }
