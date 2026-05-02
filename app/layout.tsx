@@ -1,8 +1,6 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono, Inter } from "next/font/google"
-import { AppSidebar } from "@/components/app-sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import "./globals.css"
 import { cn } from "@/lib/utils"
@@ -49,16 +47,7 @@ export default function RootLayout({
           enableSystem
           scriptProps={{ type: "application/json" }}
         >
-          <TooltipProvider>
-            <SidebarProvider>
-              <AppSidebar />
-              <SidebarInset>
-                <main className="min-h-0 flex-1 overflow-hidden">
-                  {children}
-                </main>
-              </SidebarInset>
-            </SidebarProvider>
-          </TooltipProvider>
+          <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

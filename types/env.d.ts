@@ -6,7 +6,11 @@ declare namespace NodeJS {
 
     AWS_REGION: string
     AWS_SECRET_ACCESS_KEY: string
+    BETTER_AUTH_URL: string
     DATABASE_URL: string
+
+    GOOGLE_CLIENT_ID: string
+    GOOGLE_CLIENT_SECRET: string
 
     OPENROUTER_API_KEY: string
   }

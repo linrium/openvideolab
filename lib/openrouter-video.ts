@@ -22,8 +22,11 @@ export interface GenerateVideoResult {
   urls: string[]
 }
 
+const BASE_URL = "https://openrouter.ai/api/v1"
+
 export const openrouterClient = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
+  serverURL: BASE_URL,
 })
 
 export async function pollJobUntilDone(
@@ -58,8 +61,6 @@ export async function pollJobUntilDone(
     await new Promise<void>((resolve) => setTimeout(resolve, intervalMs))
   }
 }
-
-const BASE_URL = "https://openrouter.ai/api/v1"
 
 // The SDK's stream matcher only accepts application/octet-stream, but
 // OpenRouter returns video/mp4 for this endpoint, causing a content-type

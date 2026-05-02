@@ -2,9 +2,9 @@
 
 import { AiVideoIcon, Settings01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { IconMoon, IconSun } from "@tabler/icons-react"
+import { IconLogout, IconMoon, IconSun } from "@tabler/icons-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import {
   Sidebar,
@@ -18,6 +18,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { authClient } from "@/lib/auth-client"
 
 const mainNavigation = [
   { href: "/", icon: AiVideoIcon, label: "Videos" },
@@ -44,7 +45,13 @@ const historyStatusDotClassName = {
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { setTheme } = useTheme()
+
+  const handleLogout = async () => {
+    await authClient.signOut()
+    router.push("/sign-in")
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -126,6 +133,16 @@ export function AppSidebar() {
                 <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
                 <span>Settings</span>
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              tooltip="Log out"
+              type="button"
+            >
+              <IconLogout size={18} />
+              <span>Log out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

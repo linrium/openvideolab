@@ -8,7 +8,7 @@ const TEST_JOB_ID = "eGpsWAuifV13q7WlnWCT"
 
 export default async function Home() {
   const [videoUrl, generation] = await Promise.all([
-    getPresignedUrl({ key: "videos/eGpsWAuifV13q7WlnWCT.mp4" }),
+    getPresignedUrl({ key: "test-video.mp4" }),
     openrouterClient.videoGeneration
       .getGeneration({ jobId: TEST_JOB_ID })
       .catch((): VideoGenerationResponse | null => null),
