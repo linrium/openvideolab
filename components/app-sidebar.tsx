@@ -37,6 +37,7 @@ interface VideoItem {
   jobId: string
   prompt: string
   status: string
+  title: string
 }
 
 interface AppSidebarProps {
@@ -89,16 +90,16 @@ export function AppSidebar({ videos }: AppSidebarProps) {
                       className="h-auto py-2 text-sidebar-foreground/85"
                       isActive={pathname === `/videos/${video.jobId}`}
                       size="sm"
-                      tooltip={video.prompt}
+                      tooltip={video.title || video.prompt}
                     >
                       <Link href={`/videos/${video.jobId}`}>
                         <span
                           className={`size-2 shrink-0 rounded-full ${STATUS_DOT[video.status] ?? "bg-zinc-400"}`}
                         />
                         <span className="truncate">
-                          {video.prompt.length > 40
-                            ? `${video.prompt.slice(0, 40)}…`
-                            : video.prompt}
+                          {(video.title || video.prompt).length > 40
+                            ? `${(video.title || video.prompt).slice(0, 40)}…`
+                            : video.title || video.prompt}
                         </span>
                       </Link>
                     </SidebarMenuButton>

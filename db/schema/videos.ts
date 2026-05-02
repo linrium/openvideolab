@@ -25,6 +25,7 @@ export const videos = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("pending"),
+    title: text("title").notNull().default(""),
     prompt: text("prompt").notNull(),
     model: text("model").notNull(),
     aspectRatio: text("aspect_ratio"),

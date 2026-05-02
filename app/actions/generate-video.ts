@@ -24,8 +24,13 @@ interface ImageKeys {
   inputReferenceKeys?: string[]
 }
 
+interface VideoMetadata {
+  title: string
+}
+
 export async function submitVideoAction(
   request: VideoGenerationRequest,
+  metadata: VideoMetadata,
   imageKeys: ImageKeys = {}
 ): Promise<SubmitVideoResult | SubmitVideoError> {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -46,6 +51,7 @@ export async function submitVideoAction(
     await db.insert(videos).values({
       jobId: job.id,
       userId: session.user.id,
+      title: metadata.title,
       prompt: request.prompt,
       model: request.model,
       aspectRatio: request.aspectRatio ?? null,

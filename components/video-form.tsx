@@ -46,6 +46,7 @@ const PRICING = {
 } as const
 
 const schema = z.object({
+  title: z.string().trim().min(1, "Title is required"),
   prompt: z.string().min(1, "Prompt is required"),
   aspectRatio: z
     .enum(["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"])
@@ -65,6 +66,7 @@ type VideoFormAspectRatio = NonNullable<VideoFormValues["aspectRatio"]>
 type VideoFormResolution = NonNullable<VideoFormValues["resolution"]>
 
 const DEFAULT_VALUES: VideoFormValues = {
+  title: "",
   prompt: "",
   aspectRatio: "16:9",
   resolution: "720p",
@@ -96,7 +98,7 @@ export function VideoForm({
       },
     },
     onSubmit: async ({ value }) => {
-      const { inputReferences, firstFrame, lastFrame, ...rest } = value
+      const { title, inputReferences, firstFrame, lastFrame, ...rest } = value
       const result = await submitVideoAction(
         {
           model: "bytedance/seedance-2.0",
@@ -126,6 +128,7 @@ export function VideoForm({
               : []),
           ],
         },
+        { title },
         {
           inputReferenceKeys: inputReferences?.map(({ key }) => key),
           frameFirstKey: firstFrame?.key,
@@ -200,6 +203,41 @@ export function VideoForm({
       >
         <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
           <FieldGroup>
+            <form.Field name="title">
+              {(field) => (
+                <Field
+                  data-invalid={field.state.meta.errors.length > 0 || undefined}
+                >
+                  <FieldLabel htmlFor={field.name}>Title</FieldLabel>
+                  <FieldDescription>
+                    Give this video a short title for your sidebar and detail
+                    views.
+                  </FieldDescription>
+                  <input
+                    aria-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                    className="flex h-8 w-full rounded-md border border-input bg-input/20 px-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 md:text-xs/relaxed dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
+                    disabled={readOnly}
+                    id={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="e.g. Golden Hour Lake"
+                    spellCheck={false}
+                    type="text"
+                    value={field.state.value}
+                  />
+                  <FieldError
+                    errors={field.state.meta.errors.map((e) => ({
+                      message: String(e),
+                    }))}
+                  />
+                </Field>
+              )}
+            </form.Field>
+
+            <FieldSeparator />
+
             <form.Field name="prompt">
               {(field) => (
                 <Field

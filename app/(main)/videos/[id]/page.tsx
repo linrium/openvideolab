@@ -82,6 +82,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       <aside className="h-svh min-h-0 overflow-y-auto border-border/80 border-t bg-background lg:border-t-0 lg:border-l">
         <VideoForm
           initialValues={{
+            title: video.title,
             prompt: video.prompt,
             aspectRatio: normalizeAspectRatio(video.aspectRatio),
             resolution: normalizeResolution(video.resolution),
