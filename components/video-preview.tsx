@@ -64,7 +64,22 @@ function MetaRow({ label, value }: MetaRowProps) {
   )
 }
 
-function VideoPlaceholder({ status }: { status: string | undefined }) {
+function VideoPlaceholder({
+  hasJob,
+  status,
+}: {
+  hasJob: boolean
+  status: string | undefined
+}) {
+  if (!hasJob) {
+    return (
+      <>
+        <IconRefresh className="text-muted-foreground" size={24} />
+        <span>Create a video to see its preview here</span>
+      </>
+    )
+  }
+
   if (status === "failed") {
     return (
       <>
@@ -148,13 +163,21 @@ export interface VideoData {
 }
 
 interface VideoPreviewProps {
+  initialStatus?: string
   jobId?: string
   url: string
   video?: VideoData
 }
 
-export function VideoPreview({ jobId, url, video }: VideoPreviewProps) {
-  const [currentStatus, setCurrentStatus] = useState(video?.status)
+export function VideoPreview({
+  jobId,
+  url,
+  video,
+  initialStatus,
+}: VideoPreviewProps) {
+  const [currentStatus, setCurrentStatus] = useState(
+    video?.status ?? initialStatus
+  )
   const [currentUrl, setCurrentUrl] = useState(url)
 
   const statusConfig = currentStatus
@@ -173,7 +196,7 @@ export function VideoPreview({ jobId, url, video }: VideoPreviewProps) {
           />
         ) : (
           <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-muted-foreground text-sm">
-            <VideoPlaceholder status={currentStatus} />
+            <VideoPlaceholder hasJob={Boolean(jobId)} status={currentStatus} />
           </div>
         )}
       </div>
