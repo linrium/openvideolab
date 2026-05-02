@@ -1,4 +1,30 @@
+import { eq } from "drizzle-orm"
 import { type NextRequest, NextResponse } from "next/server"
+import z from "zod/v4"
+import { pollJobStatusAction } from "@/app/actions/poll-job-status"
+import { db } from "@/db"
+import { videos } from "@/db/schema/videos"
+
+const webhookBodySchema = z.object({
+  data: z.object({
+    generation_id: z.string(),
+    id: z.string(),
+    model: z.string(),
+    status: z.enum([
+      "pending",
+      "in_progress",
+      "completed",
+      "failed",
+      "cancelled",
+      "expired",
+    ]),
+    unsigned_urls: z.array(z.string()),
+    usage: z.object({
+      cost: z.number(),
+      is_byok: z.boolean(),
+    }),
+  }),
+})
 
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") ?? ""
@@ -6,7 +32,35 @@ export async function POST(request: NextRequest) {
   try {
     if (contentType.includes("application/json")) {
       const body = await request.json()
-      console.log("[webhook:video-created] body:", body)
+      const result = webhookBodySchema.safeParse(body)
+      if (!result.success) {
+        console.error(
+          "[webhook:video-created] invalid body:",
+          result.error.flatten()
+        )
+
+        return NextResponse.json(
+          { error: "Invalid webhook body", ok: false },
+          { status: 400 }
+        )
+      }
+
+      console.log("[webhook:video-created] body:", result.data)
+
+      const jobId = result.data.data.id
+      const [video] = await db
+        .select({ userId: videos.userId })
+        .from(videos)
+        .where(eq(videos.jobId, jobId))
+        .limit(1)
+
+      if (video) {
+        const syncResult = await pollJobStatusAction(jobId, {
+          refreshClient: false,
+          userId: video.userId,
+        })
+        console.log("[webhook:video-created] sync result:", syncResult)
+      }
     } else {
       const body = await request.text()
       console.log("[webhook:video-created] body:", body)

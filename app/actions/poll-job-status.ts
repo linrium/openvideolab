@@ -25,28 +25,88 @@ export interface PollJobStatusError {
   ok: false
 }
 
-export async function pollJobStatusAction(
-  jobId: string
-): Promise<PollJobStatusResult | PollJobStatusError> {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) {
+interface PollJobStatusOptions {
+  refreshClient?: boolean
+  userId?: string
+}
+
+async function resolvePollJobContext(
+  jobId: string,
+  options: PollJobStatusOptions
+): Promise<
+  | {
+      current: { path: string | null; status: string; userId: string }
+      userId: string
+    }
+  | PollJobStatusError
+> {
+  const session = options.userId
+    ? null
+    : await auth.api.getSession({ headers: await headers() })
+
+  if (!(session || options.userId)) {
     return { ok: false, message: "Unauthorized" }
   }
 
-  try {
-    const openrouterClient = await getOpenrouterClientByUserId(session.user.id)
-    const openrouterApiKey = await getOpenRouterApiKeyByUserId(session.user.id)
-    const data = await openrouterClient.videoGeneration.getGeneration({ jobId })
+  const [current] = await db
+    .select({
+      path: videos.path,
+      status: videos.status,
+      userId: videos.userId,
+    })
+    .from(videos)
+    .where(eq(videos.jobId, jobId))
+    .limit(1)
 
-    const [current] = await db
-      .select({ path: videos.path, status: videos.status })
-      .from(videos)
-      .where(eq(videos.jobId, jobId))
-      .limit(1)
+  if (!current) {
+    return { ok: false, message: "Video not found" }
+  }
+
+  const userId = options.userId ?? session?.user.id
+  if (!userId || current.userId !== userId) {
+    return { ok: false, message: "Unauthorized" }
+  }
+
+  return { current, userId }
+}
+
+async function syncCompletedVideo(
+  jobId: string,
+  openrouterApiKey: string,
+  userId: string
+): Promise<string> {
+  const response = await fetchVideoContent(openrouterApiKey, jobId)
+  const contentType = response.headers.get("Content-Type") ?? "video/mp4"
+  const ext = contentType.split("/").pop()?.toLowerCase() ?? "mp4"
+  const key = `${userId}/videos/${jobId}.${ext}`
+  const buffer = Buffer.from(await response.arrayBuffer())
+
+  await uploadToR2(key, buffer, contentType)
+  await db
+    .update(videos)
+    .set({ error: null, path: key, updatedAt: new Date() })
+    .where(eq(videos.jobId, jobId))
+
+  return key
+}
+
+export async function pollJobStatusAction(
+  jobId: string,
+  options: PollJobStatusOptions = {}
+): Promise<PollJobStatusResult | PollJobStatusError> {
+  try {
+    const context = await resolvePollJobContext(jobId, options)
+    if (!("userId" in context)) {
+      return context
+    }
+
+    const { current, userId } = context
+    const openrouterClient = await getOpenrouterClientByUserId(userId)
+    const openrouterApiKey = await getOpenRouterApiKeyByUserId(userId)
+    const data = await openrouterClient.videoGeneration.getGeneration({ jobId })
     const statusChanged = Boolean(current && current.status !== data.status)
 
     if (statusChanged) {
-      console.log("Status changed:", data)
       await db
         .update(videos)
         .set({
@@ -58,21 +118,14 @@ export async function pollJobStatusAction(
         })
         .where(eq(videos.jobId, jobId))
 
-      revalidatePath("/videos")
-      refresh()
+      if (options.refreshClient !== false) {
+        revalidatePath("/videos")
+        refresh()
+      }
     }
 
     if (data.status === "completed" && current && !current.path) {
-      const response = await fetchVideoContent(openrouterApiKey, jobId)
-      const contentType = response.headers.get("Content-Type") ?? "video/mp4"
-      const ext = contentType.split("/").pop()?.toLowerCase() ?? "mp4"
-      const key = `${session.user.id}/videos/${jobId}.${ext}`
-      const buffer = Buffer.from(await response.arrayBuffer())
-      await uploadToR2(key, buffer, contentType)
-      await db
-        .update(videos)
-        .set({ error: null, path: key, updatedAt: new Date() })
-        .where(eq(videos.jobId, jobId))
+      const key = await syncCompletedVideo(jobId, openrouterApiKey, userId)
       const url = await getPresignedUrl({ key })
       return { ok: true, status: data.status as VideoJobStatus, url }
     }
