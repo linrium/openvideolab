@@ -1,5 +1,7 @@
+import { headers } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 import { v7 as uuidv7 } from "uuid"
+import { auth } from "@/lib/auth"
 import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
 
 const MAX_SIZE = 10 * 1024 * 1024
@@ -11,6 +13,11 @@ const ALLOWED_TYPES = new Set([
 ])
 
 export async function POST(request: NextRequest) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const formData = await request.formData()
   const file = formData.get("file")
 
@@ -33,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg"
-  const key = `uploads/${uuidv7()}.${ext}`
+  const key = `${session.user.id}/images/${uuidv7()}.${ext}`
 
   const buffer = await file.arrayBuffer()
   await uploadToR2(key, Buffer.from(buffer), file.type)
