@@ -39,8 +39,17 @@ const apiKeySchema = z
     "API keys must be at least 20 characters or left blank."
   )
 
+const optionalUrlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => value.length === 0 || z.url().safeParse(value).success,
+    "Enter a valid URL or leave the field blank."
+  )
+
 const settingsSchema = z.object({
   cloudflareR2AccessKeyId: apiKeySchema,
+  cloudflareR2EndpointUrl: optionalUrlSchema,
   cloudflareR2SecretAccessKey: apiKeySchema,
   openRouterApiKey: apiKeySchema,
   openAiApiKey: apiKeySchema,
@@ -51,6 +60,7 @@ type KeyFieldName = keyof SettingsValues
 
 const EMPTY_SETTINGS_VALUES: SettingsValues = {
   cloudflareR2AccessKeyId: "",
+  cloudflareR2EndpointUrl: "",
   cloudflareR2SecretAccessKey: "",
   openAiApiKey: "",
   openRouterApiKey: "",
@@ -58,6 +68,7 @@ const EMPTY_SETTINGS_VALUES: SettingsValues = {
 
 const fieldLabels: Record<KeyFieldName, string> = {
   cloudflareR2AccessKeyId: "Cloudflare R2 Access Key ID",
+  cloudflareR2EndpointUrl: "Cloudflare R2 Endpoint URL",
   cloudflareR2SecretAccessKey: "Cloudflare R2 Secret Access Key",
   openAiApiKey: "OpenAI API Key",
   openRouterApiKey: "OpenRouter API Key",
@@ -149,6 +160,53 @@ export function SettingsForm({
                     : "Show instructions"}
                 </Button>
               </div>
+
+              <form.Field
+                name="cloudflareR2EndpointUrl"
+                validators={{
+                  onBlur: ({ value }) =>
+                    getFieldError("cloudflareR2EndpointUrl", value),
+                }}
+              >
+                {(field) => (
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>
+                      {fieldLabels.cloudflareR2EndpointUrl}
+                    </FieldLabel>
+                    <FieldDescription>
+                      Use your S3-compatible R2 endpoint, for example
+                      `https://&lt;accountid&gt;.r2.cloudflarestorage.com`.
+                    </FieldDescription>
+                    <InputGroup>
+                      <InputGroupInput
+                        aria-invalid={
+                          field.state.meta.errors.length > 0 || undefined
+                        }
+                        autoComplete="off"
+                        id={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value)
+                          setStatusMessage(null)
+                        }}
+                        placeholder="https://<accountid>.r2.cloudflarestorage.com"
+                        spellCheck={false}
+                        type="url"
+                        value={field.state.value}
+                      />
+                    </InputGroup>
+                    <FieldError
+                      errors={field.state.meta.errors.map((error) => ({
+                        message: String(error),
+                      }))}
+                    />
+                  </Field>
+                )}
+              </form.Field>
 
               <form.Field
                 name="cloudflareR2AccessKeyId"
@@ -436,6 +494,7 @@ export function SettingsForm({
               <Button
                 onClick={() => {
                   form.setFieldValue("cloudflareR2AccessKeyId", "")
+                  form.setFieldValue("cloudflareR2EndpointUrl", "")
                   form.setFieldValue("cloudflareR2SecretAccessKey", "")
                   form.setFieldValue("openRouterApiKey", "")
                   form.setFieldValue("openAiApiKey", "")

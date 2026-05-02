@@ -7,6 +7,7 @@ export const userSettings = pgTable("user_settings", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   cloudflareAccessKeyId: text("cloudflare_access_key_id"),
+  cloudflareR2EndpointUrl: text("cloudflare_r2_endpoint_url"),
   cloudflareSecretAccessKey: text("cloudflare_secret_access_key"),
   openrouterApiKey: text("openrouter_api_key"),
   openaiApiKey: text("openai_api_key"),

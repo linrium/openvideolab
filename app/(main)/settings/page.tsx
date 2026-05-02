@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 
 const EMPTY_SETTINGS_VALUES: SettingsValues = {
   cloudflareR2AccessKeyId: "",
+  cloudflareR2EndpointUrl: "",
   cloudflareR2SecretAccessKey: "",
   openAiApiKey: "",
   openRouterApiKey: "",
@@ -38,6 +39,7 @@ export default async function SettingsPage() {
           settings
             ? {
                 cloudflareR2AccessKeyId: settings.cloudflareAccessKeyId ?? "",
+                cloudflareR2EndpointUrl: settings.cloudflareR2EndpointUrl ?? "",
                 cloudflareR2SecretAccessKey:
                   settings.cloudflareSecretAccessKey ?? "",
                 openAiApiKey: settings.openaiApiKey ?? "",

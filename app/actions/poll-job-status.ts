@@ -8,7 +8,8 @@ import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 import {
   fetchVideoContent,
-  openrouterClient,
+  getOpenRouterApiKeyByUserId,
+  getOpenrouterClientByUserId,
   type VideoJobStatus,
 } from "@/lib/openrouter-client"
 import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
@@ -33,6 +34,8 @@ export async function pollJobStatusAction(
   }
 
   try {
+    const openrouterClient = await getOpenrouterClientByUserId(session.user.id)
+    const openrouterApiKey = await getOpenRouterApiKeyByUserId(session.user.id)
     const data = await openrouterClient.videoGeneration.getGeneration({ jobId })
 
     const [current] = await db
@@ -58,7 +61,7 @@ export async function pollJobStatusAction(
     }
 
     if (data.status === "completed" && current && !current.path) {
-      const response = await fetchVideoContent(jobId)
+      const response = await fetchVideoContent(openrouterApiKey, jobId)
       const contentType = response.headers.get("Content-Type") ?? "video/mp4"
       const ext = contentType.split("/").pop()?.toLowerCase() ?? "mp4"
       const key = `${session.user.id}/videos/${jobId}.${ext}`

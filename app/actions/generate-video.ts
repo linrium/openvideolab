@@ -6,7 +6,7 @@ import { headers } from "next/headers"
 import { db } from "@/db"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
-import { openrouterClient } from "@/lib/openrouter-client"
+import { getOpenrouterClientByUserId } from "@/lib/openrouter-client"
 
 export interface SubmitVideoResult {
   jobId: string
@@ -34,6 +34,7 @@ export async function submitVideoAction(
   }
 
   try {
+    const openrouterClient = await getOpenrouterClientByUserId(session.user.id)
     const job = await openrouterClient.videoGeneration.generate({
       videoGenerationRequest: {
         ...request,

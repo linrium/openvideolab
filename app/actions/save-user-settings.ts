@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth"
 
 export interface SaveUserSettingsInput {
   cloudflareR2AccessKeyId: string
+  cloudflareR2EndpointUrl: string
   cloudflareR2SecretAccessKey: string
   openAiApiKey: string
   openRouterApiKey: string
@@ -40,6 +41,7 @@ export async function saveUserSettingsAction(
       .values({
         userId: session.user.id,
         cloudflareAccessKeyId: normalizeValue(input.cloudflareR2AccessKeyId),
+        cloudflareR2EndpointUrl: normalizeValue(input.cloudflareR2EndpointUrl),
         cloudflareSecretAccessKey: normalizeValue(
           input.cloudflareR2SecretAccessKey
         ),
@@ -50,6 +52,9 @@ export async function saveUserSettingsAction(
         target: userSettings.userId,
         set: {
           cloudflareAccessKeyId: normalizeValue(input.cloudflareR2AccessKeyId),
+          cloudflareR2EndpointUrl: normalizeValue(
+            input.cloudflareR2EndpointUrl
+          ),
           cloudflareSecretAccessKey: normalizeValue(
             input.cloudflareR2SecretAccessKey
           ),
