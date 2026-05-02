@@ -35,7 +35,10 @@ export async function submitVideoAction(
 
   try {
     const job = await openrouterClient.videoGeneration.generate({
-      videoGenerationRequest: request,
+      videoGenerationRequest: {
+        ...request,
+        callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/video-created`,
+      },
     })
     console.log("[generate-video] job submitted:", job)
 

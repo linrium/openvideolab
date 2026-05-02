@@ -59,8 +59,9 @@ export async function pollJobStatusAction(
 
     if (data.status === "completed" && current && !current.path) {
       const response = await fetchVideoContent(jobId)
-      const key = `videos/${jobId}.mp4`
       const contentType = response.headers.get("Content-Type") ?? "video/mp4"
+      const ext = contentType.split("/").pop()?.toLowerCase() ?? "mp4"
+      const key = `${session.user.id}/videos/${jobId}.${ext}`
       const buffer = Buffer.from(await response.arrayBuffer())
       await uploadToR2(key, buffer, contentType)
       await db

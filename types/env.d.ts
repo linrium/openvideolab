@@ -12,6 +12,8 @@ declare namespace NodeJS {
     GOOGLE_CLIENT_ID: string
     GOOGLE_CLIENT_SECRET: string
 
+    NEXT_PUBLIC_BASE_URL: string
+
     OPENROUTER_API_KEY: string
   }
 }
