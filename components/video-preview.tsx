@@ -6,7 +6,7 @@ import {
   IconRefresh,
   IconX,
 } from "@tabler/icons-react"
-import { useState, useTransition } from "react"
+import { useEffect, useEffectEvent, useState, useTransition } from "react"
 import { pollJobStatusAction } from "@/app/actions/poll-job-status"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -49,6 +49,8 @@ const TERMINAL_STATUSES = new Set([
   "cancelled",
   "expired",
 ])
+const AUTO_SYNC_STATUSES = new Set(["pending", "in_progress"])
+const AUTO_SYNC_INTERVAL_MS = 5000
 
 interface MetaRowProps {
   label: string
@@ -130,7 +132,7 @@ function SyncButton({
   const [isPending, startTransition] = useTransition()
   const isTerminal = TERMINAL_STATUSES.has(currentStatus)
 
-  const handleClick = () => {
+  const syncStatus = useEffectEvent(() => {
     startTransition(async () => {
       const result = await pollJobStatusAction(jobId)
       if (result.ok) {
@@ -140,6 +142,24 @@ function SyncButton({
         }
       }
     })
+  })
+
+  useEffect(() => {
+    if (!AUTO_SYNC_STATUSES.has(currentStatus) || isPending) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      syncStatus()
+    }, AUTO_SYNC_INTERVAL_MS)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [currentStatus, isPending])
+
+  const handleClick = () => {
+    syncStatus()
   }
 
   return (
