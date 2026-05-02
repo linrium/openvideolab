@@ -46,10 +46,12 @@ export async function pollJobStatusAction(
     const statusChanged = Boolean(current && current.status !== data.status)
 
     if (statusChanged) {
+      console.log("Status changed:", data)
       await db
         .update(videos)
         .set({
           status: data.status,
+          error: data.error ?? null,
           generationId: data.generationId ?? null,
           cost: data.usage?.cost == null ? undefined : String(data.usage.cost),
           updatedAt: new Date(),
@@ -69,7 +71,7 @@ export async function pollJobStatusAction(
       await uploadToR2(key, buffer, contentType)
       await db
         .update(videos)
-        .set({ path: key, updatedAt: new Date() })
+        .set({ error: null, path: key, updatedAt: new Date() })
         .where(eq(videos.jobId, jobId))
       const url = await getPresignedUrl({ key })
       return { ok: true, status: data.status as VideoJobStatus, url }

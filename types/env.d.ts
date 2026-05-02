@@ -15,5 +15,6 @@ declare namespace NodeJS {
     NEXT_PUBLIC_BASE_URL: string
 
     OPENROUTER_API_KEY: string
+    OPENROUTER_BASE_URL: string
   }
 }

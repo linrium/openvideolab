@@ -153,6 +153,7 @@ export interface VideoData {
   aspectRatio?: string | null
   cost?: string | null
   duration?: number | null
+  error?: string | null
   generateAudio: boolean
   generationId?: string | null
   jobId: string
@@ -245,6 +246,16 @@ export function VideoPreview({
                 value={
                   <span className="font-mono text-muted-foreground">
                     {video.generationId}
+                  </span>
+                }
+              />
+            )}
+            {video.error && (
+              <MetaRow
+                label="Error"
+                value={
+                  <span className="text-rose-600 dark:text-rose-400">
+                    {video.error}
                   </span>
                 }
               />
