@@ -5,19 +5,33 @@ import Image from "next/image"
 import { useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
-interface ImageUploadProps {
-  className?: string
-  onChange: (url: string | undefined) => void
-  value?: string
+export interface ImageValue {
+  key: string
+  url: string
 }
 
-export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
+interface ImageUploadProps {
+  className?: string
+  disabled?: boolean
+  onChange: (value: ImageValue | undefined) => void
+  value?: ImageValue
+}
+
+export function ImageUpload({
+  value,
+  onChange,
+  className,
+  disabled = false,
+}: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
 
   async function upload(file: File) {
+    if (disabled) {
+      return
+    }
     setUploading(true)
     setError(null)
     try {
@@ -28,7 +42,7 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
       if (!res.ok) {
         throw new Error(json.error ?? "Upload failed")
       }
-      onChange(json.url)
+      onChange({ url: json.url, key: json.key })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -37,6 +51,10 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
   }
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (disabled) {
+      e.target.value = ""
+      return
+    }
     const file = e.target.files?.[0]
     if (file) {
       upload(file)
@@ -47,6 +65,9 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
   function onDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragging(false)
+    if (disabled) {
+      return
+    }
     const file = e.dataTransfer.files[0]
     if (file) {
       upload(file)
@@ -55,6 +76,9 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
 
   function onRemove(e: React.MouseEvent) {
     e.stopPropagation()
+    if (disabled) {
+      return
+    }
     onChange(undefined)
     setError(null)
   }
@@ -64,6 +88,7 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
       <input
         accept="image/jpeg,image/png,image/webp,image/gif"
         className="sr-only"
+        disabled={disabled}
         onChange={onFileChange}
         ref={inputRef}
         tabIndex={-1}
@@ -74,17 +99,22 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
         <div className="group relative size-36 overflow-hidden rounded-md border">
           <Image
             alt="Uploaded image"
-            className="object-cover transition-[filter] group-hover:brightness-50"
+            className={cn(
+              "object-cover transition-[filter]",
+              !disabled && "group-hover:brightness-50"
+            )}
             fill
-            src={value}
+            src={value.url}
           />
-          <button
-            className="absolute inset-0 m-auto flex size-9 items-center justify-center rounded-full bg-white/20 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-white/30 group-hover:opacity-100"
-            onClick={onRemove}
-            type="button"
-          >
-            <IconX className="size-5" />
-          </button>
+          {!disabled && (
+            <button
+              className="absolute inset-0 m-auto flex size-9 items-center justify-center rounded-full bg-white/20 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-white/30 group-hover:opacity-100"
+              onClick={onRemove}
+              type="button"
+            >
+              <IconX className="size-5" />
+            </button>
+          )}
         </div>
       ) : (
         <button
@@ -92,17 +122,27 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
             "flex size-36 flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground transition-colors",
             "hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             dragging && "border-primary bg-primary/5 text-primary",
-            uploading && "pointer-events-none opacity-50"
+            (uploading || disabled) && "pointer-events-none opacity-50"
           )}
-          disabled={uploading}
-          onClick={() => inputRef.current?.click()}
+          disabled={disabled || uploading}
+          onClick={() => {
+            if (!disabled) {
+              inputRef.current?.click()
+            }
+          }}
           onDragLeave={() => setDragging(false)}
           onDragOver={(e) => {
             e.preventDefault()
-            setDragging(true)
+            if (!disabled) {
+              setDragging(true)
+            }
           }}
           onDrop={onDrop}
-          onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (!disabled && e.key === "Enter") {
+              inputRef.current?.click()
+            }
+          }}
           type="button"
         >
           {uploading ? (
@@ -121,9 +161,10 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
 
 interface MultiImageUploadProps {
   className?: string
+  disabled?: boolean
   max?: number
-  onChange: (urls: string[]) => void
-  values: string[]
+  onChange: (values: ImageValue[]) => void
+  values: ImageValue[]
 }
 
 export function MultiImageUpload({
@@ -131,28 +172,33 @@ export function MultiImageUpload({
   onChange,
   max = 5,
   className,
+  disabled = false,
 }: MultiImageUploadProps) {
-  function set(index: number, url: string | undefined) {
+  function set(index: number, value: ImageValue | undefined) {
     const next = [...values]
-    if (url === undefined) {
+    if (value === undefined) {
       next.splice(index, 1)
     } else {
-      next[index] = url
+      next[index] = value
     }
     onChange(next)
   }
 
   return (
     <div className={cn("flex flex-wrap gap-2", className)}>
-      {values.map((url, i) => (
+      {values.map((value, i) => (
         <ImageUpload
-          key={i.toString()}
-          onChange={(url) => set(i, url)}
-          value={url}
+          disabled={disabled}
+          key={value.key}
+          onChange={(v) => set(i, v)}
+          value={value}
         />
       ))}
       {values.length < max && (
-        <ImageUpload onChange={(url) => url && onChange([...values, url])} />
+        <ImageUpload
+          disabled={disabled}
+          onChange={(v) => v && onChange([...values, v])}
+        />
       )}
     </div>
   )

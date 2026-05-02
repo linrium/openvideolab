@@ -8,7 +8,6 @@ import { ImageUpload, MultiImageUpload } from "@/components/image-upload"
 import { Button } from "@/components/ui/button"
 import {
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -24,9 +23,8 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import type { VideoAspectRatio, VideoResolution } from "@/lib/openrouter-client"
 
-const ASPECT_RATIOS: VideoAspectRatio[] = [
+const ASPECT_RATIOS = [
   "16:9",
   "9:16",
   "1:1",
@@ -34,8 +32,8 @@ const ASPECT_RATIOS: VideoAspectRatio[] = [
   "3:4",
   "21:9",
   "9:21",
-]
-const RESOLUTIONS: VideoResolution[] = ["480p", "720p", "1080p"]
+] as const
+const RESOLUTIONS = ["480p", "720p", "1080p"] as const
 const DURATIONS = [5, 10, 15] as const
 
 const PRICING = {
@@ -48,29 +46,45 @@ const PRICING = {
 
 const schema = z.object({
   prompt: z.string().min(1, "Prompt is required"),
-  aspect_ratio: z
+  aspectRatio: z
     .enum(["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"])
     .optional(),
   resolution: z.enum(["480p", "720p", "1080p"]).optional(),
   duration: z.union([z.literal(5), z.literal(10), z.literal(15)]).optional(),
-  generate_audio: z.boolean(),
-  input_references: z.array(z.string()).optional(),
-  first_frame: z.string().optional(),
-  last_frame: z.string().optional(),
+  generateAudio: z.boolean(),
+  inputReferences: z
+    .array(z.object({ url: z.string(), key: z.string() }))
+    .optional(),
+  firstFrame: z.object({ url: z.string(), key: z.string() }).optional(),
+  lastFrame: z.object({ url: z.string(), key: z.string() }).optional(),
 })
 
-export function VideoForm() {
+export type VideoFormValues = z.infer<typeof schema>
+type VideoFormAspectRatio = NonNullable<VideoFormValues["aspectRatio"]>
+type VideoFormResolution = NonNullable<VideoFormValues["resolution"]>
+
+const DEFAULT_VALUES: VideoFormValues = {
+  prompt: "",
+  aspectRatio: "16:9",
+  resolution: "720p",
+  duration: 10,
+  generateAudio: true,
+  inputReferences: [],
+  firstFrame: undefined,
+  lastFrame: undefined,
+}
+
+interface VideoFormProps {
+  initialValues?: VideoFormValues
+  readOnly?: boolean
+}
+
+export function VideoForm({
+  initialValues = DEFAULT_VALUES,
+  readOnly = false,
+}: VideoFormProps) {
   const form = useForm({
-    defaultValues: {
-      prompt: "",
-      aspect_ratio: "16:9" as VideoAspectRatio | undefined,
-      resolution: "720p" as VideoResolution | undefined,
-      duration: 10 as 5 | 10 | 15,
-      generate_audio: true,
-      input_references: [] as string[],
-      first_frame: undefined as string | undefined,
-      last_frame: undefined as string | undefined,
-    },
+    defaultValues: initialValues,
     validators: {
       onSubmit: ({ value }) => {
         const result = schema.safeParse(value)
@@ -80,35 +94,42 @@ export function VideoForm() {
       },
     },
     onSubmit: async ({ value }) => {
-      const { input_references, first_frame, last_frame, ...rest } = value
-      const result = await submitVideoAction({
-        model: "bytedance/seedance-2.0",
-        ...rest,
-        inputReferences: input_references?.map((url) => ({
-          type: "image_url" as const,
-          imageUrl: { url },
-        })),
-        frameImages: [
-          ...(first_frame
-            ? [
-                {
-                  type: "image_url" as const,
-                  imageUrl: { url: first_frame },
-                  frameType: "first_frame" as const,
-                },
-              ]
-            : []),
-          ...(last_frame
-            ? [
-                {
-                  type: "image_url" as const,
-                  imageUrl: { url: last_frame },
-                  frameType: "last_frame" as const,
-                },
-              ]
-            : []),
-        ],
-      })
+      const { inputReferences, firstFrame, lastFrame, ...rest } = value
+      const result = await submitVideoAction(
+        {
+          model: "bytedance/seedance-2.0",
+          ...rest,
+          inputReferences: inputReferences?.map(({ url }) => ({
+            type: "image_url" as const,
+            imageUrl: { url },
+          })),
+          frameImages: [
+            ...(firstFrame
+              ? [
+                  {
+                    type: "image_url" as const,
+                    imageUrl: { url: firstFrame.url },
+                    frameType: "first_frame" as const,
+                  },
+                ]
+              : []),
+            ...(lastFrame
+              ? [
+                  {
+                    type: "image_url" as const,
+                    imageUrl: { url: lastFrame.url },
+                    frameType: "last_frame" as const,
+                  },
+                ]
+              : []),
+          ],
+        },
+        {
+          inputReferenceKeys: inputReferences?.map(({ key }) => key),
+          frameFirstKey: firstFrame?.key,
+          frameLastKey: lastFrame?.key,
+        }
+      )
       console.log("[generate-video] result:", result)
       if (!result.ok) {
         toast.error("Failed to generate video", { description: result.message })
@@ -120,11 +141,6 @@ export function VideoForm() {
     <div className="flex min-h-0 flex-col">
       <CardHeader className="border-border/70 border-b px-4 py-4 sm:px-5">
         <CardTitle>Generate Video</CardTitle>
-        <CardDescription>
-          Powered by Bytedance Seedance 2.0 via OpenRouter. Describe your scene,
-          pick a resolution and duration, then submit — the job runs
-          asynchronously and the finished video is stored in your R2 bucket.
-        </CardDescription>
         <div className="pt-2">
           <table className="w-full text-xs">
             <thead>
@@ -193,6 +209,7 @@ export function VideoForm() {
                     aria-invalid={
                       field.state.meta.errors.length > 0 || undefined
                     }
+                    disabled={readOnly}
                     id={field.name}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -212,7 +229,7 @@ export function VideoForm() {
 
             <FieldSeparator />
 
-            <form.Field name="aspect_ratio">
+            <form.Field name="aspectRatio">
               {(field) => (
                 <Field>
                   <FieldLabel>Aspect Ratio</FieldLabel>
@@ -221,9 +238,10 @@ export function VideoForm() {
                     9:16 for vertical/social, or 1:1 for square content.
                   </FieldDescription>
                   <ToggleGroup
+                    disabled={readOnly}
                     onValueChange={(val) => {
                       if (val) {
-                        field.handleChange(val as VideoAspectRatio)
+                        field.handleChange(val as VideoFormAspectRatio)
                       }
                     }}
                     type="single"
@@ -249,9 +267,10 @@ export function VideoForm() {
                     second. 720p is a good balance for most use cases.
                   </FieldDescription>
                   <ToggleGroup
+                    disabled={readOnly}
                     onValueChange={(val) => {
                       if (val) {
-                        field.handleChange(val as VideoResolution)
+                        field.handleChange(val as VideoFormResolution)
                       }
                     }}
                     type="single"
@@ -278,6 +297,7 @@ export function VideoForm() {
                     narrative, and cost proportionally more.
                   </FieldDescription>
                   <ToggleGroup
+                    disabled={readOnly}
                     onValueChange={(val) => {
                       if (val) {
                         field.handleChange(Number(val) as 5 | 10 | 15)
@@ -299,7 +319,7 @@ export function VideoForm() {
 
             <FieldSeparator />
 
-            <form.Field name="generate_audio">
+            <form.Field name="generateAudio">
               {(field) => (
                 <Field orientation="horizontal">
                   <div className="flex flex-1 flex-col gap-0.5">
@@ -312,6 +332,7 @@ export function VideoForm() {
                   </div>
                   <Switch
                     checked={field.state.value}
+                    disabled={readOnly}
                     id={field.name}
                     onCheckedChange={(checked) => field.handleChange(checked)}
                   />
@@ -321,7 +342,7 @@ export function VideoForm() {
 
             <FieldSeparator />
 
-            <form.Field name="input_references">
+            <form.Field name="inputReferences">
               {(field) => (
                 <Field>
                   <FieldLabel>Input References</FieldLabel>
@@ -332,8 +353,9 @@ export function VideoForm() {
                     exactly. Up to 5 images.
                   </FieldDescription>
                   <MultiImageUpload
-                    onChange={(urls) => field.handleChange(urls)}
-                    values={field.state.value}
+                    disabled={readOnly}
+                    onChange={(values) => field.handleChange(values)}
+                    values={field.state.value ?? []}
                   />
                 </Field>
               )}
@@ -349,28 +371,30 @@ export function VideoForm() {
                 ends at a known visual state.
               </FieldDescription>
               <div className="flex gap-2">
-                <form.Field name="first_frame">
+                <form.Field name="firstFrame">
                   {(field) => (
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground text-xs">
                         First
                       </span>
                       <ImageUpload
-                        onChange={(url) => field.handleChange(url)}
+                        disabled={readOnly}
+                        onChange={(v) => field.handleChange(v)}
                         value={field.state.value}
                       />
                     </div>
                   )}
                 </form.Field>
 
-                <form.Field name="last_frame">
+                <form.Field name="lastFrame">
                   {(field) => (
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground text-xs">
                         Last
                       </span>
                       <ImageUpload
-                        onChange={(url) => field.handleChange(url)}
+                        disabled={readOnly}
+                        onChange={(v) => field.handleChange(v)}
                         value={field.state.value}
                       />
                     </div>
@@ -386,7 +410,7 @@ export function VideoForm() {
             selector={(s) => ({
               resolution: s.values.resolution,
               duration: s.values.duration,
-              generate_audio: s.values.generate_audio,
+              generateAudio: s.values.generateAudio,
               isSubmitting: s.isSubmitting,
               canSubmit: s.canSubmit,
             })}
@@ -394,18 +418,25 @@ export function VideoForm() {
             {({
               resolution,
               duration,
-              generate_audio,
+              generateAudio,
               isSubmitting,
               canSubmit,
             }) => {
               const key = resolution as
                 | keyof typeof PRICING.per_second.with_audio
                 | undefined
-              const table = generate_audio
+              const table = generateAudio
                 ? PRICING.per_second.with_audio
                 : PRICING.per_second.no_audio
               const rate = key ? table[key] : null
               const total = rate != null && duration ? rate * duration : null
+              let submitLabel = "Generate Video"
+
+              if (readOnly) {
+                submitLabel = "Video Already Exists"
+              } else if (isSubmitting) {
+                submitLabel = "Submitting…"
+              }
 
               return (
                 <>
@@ -433,10 +464,10 @@ export function VideoForm() {
                   )}
                   <Button
                     className="w-full"
-                    disabled={!canSubmit || isSubmitting}
+                    disabled={readOnly || !canSubmit || isSubmitting}
                     type="submit"
                   >
-                    {isSubmitting ? "Submitting…" : "Generate Video"}
+                    {submitLabel}
                   </Button>
                 </>
               )

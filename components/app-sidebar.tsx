@@ -21,29 +21,29 @@ import {
 import { authClient } from "@/lib/auth-client"
 
 const mainNavigation = [
-  { href: "/", icon: AiVideoIcon, label: "Videos" },
+  { href: "/videos", icon: AiVideoIcon, label: "Videos" },
 ] as const
 
-const historyGroups = [
-  {
-    items: [
-      { status: "completed", title: "Rainy alley chase" },
-      { status: "queued", title: "Studio product teaser" },
-      { status: "rendering", title: "Golden-hour lake pan" },
-    ],
-    label: "VIDEOS",
-  },
-] as const
-
-const historyStatusDotClassName = {
+const STATUS_DOT: Record<string, string> = {
+  cancelled: "bg-zinc-400",
   completed: "bg-emerald-500",
-  draft: "bg-zinc-400",
+  expired: "bg-zinc-400",
   failed: "bg-rose-500",
-  queued: "bg-amber-500",
-  rendering: "bg-sky-500",
-} as const
+  in_progress: "bg-sky-500",
+  pending: "bg-amber-500",
+}
 
-export function AppSidebar() {
+interface VideoItem {
+  jobId: string
+  prompt: string
+  status: string
+}
+
+interface AppSidebarProps {
+  videos: VideoItem[]
+}
+
+export function AppSidebar({ videos }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { setTheme } = useTheme()
@@ -77,30 +77,37 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {historyGroups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+        {videos.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>VIDEOS</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                {videos.map((video) => (
+                  <SidebarMenuItem key={video.jobId}>
                     <SidebarMenuButton
+                      asChild
                       className="h-auto py-2 text-sidebar-foreground/85"
+                      isActive={pathname === `/videos/${video.jobId}`}
                       size="sm"
-                      tooltip={item.title}
-                      type="button"
+                      tooltip={video.prompt}
                     >
-                      <span
-                        className={`size-2 rounded-full ${historyStatusDotClassName[item.status]}`}
-                      />
-                      <span>{item.title}</span>
+                      <Link href={`/videos/${video.jobId}`}>
+                        <span
+                          className={`size-2 shrink-0 rounded-full ${STATUS_DOT[video.status] ?? "bg-zinc-400"}`}
+                        />
+                        <span className="truncate">
+                          {video.prompt.length > 40
+                            ? `${video.prompt.slice(0, 40)}…`
+                            : video.prompt}
+                        </span>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        ))}
+        )}
       </SidebarContent>
 
       <SidebarFooter>

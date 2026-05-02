@@ -1,18 +1,17 @@
 "use client"
 
-import type { VideoGenerationResponse } from "@openrouter/sdk/models"
 import {
-  IconCheck,
-  IconCloudUpload,
   IconDownload,
   IconLoader2,
+  IconRefresh,
   IconX,
 } from "@tabler/icons-react"
 import { useState, useTransition } from "react"
-import { syncVideoToR2 } from "@/app/actions/sync-video"
+import { pollJobStatusAction } from "@/app/actions/poll-job-status"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import type { VideoJobStatus } from "@/lib/openrouter-client"
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   completed: {
@@ -44,6 +43,13 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   },
 }
 
+const TERMINAL_STATUSES = new Set([
+  "completed",
+  "failed",
+  "cancelled",
+  "expired",
+])
+
 interface MetaRowProps {
   label: string
   value: React.ReactNode
@@ -58,80 +64,118 @@ function MetaRow({ label, value }: MetaRowProps) {
   )
 }
 
-interface VideoPreviewProps {
-  generation?: VideoGenerationResponse | null
-  url: string
-}
-
-type SyncState = "idle" | "syncing" | "synced" | "error"
-
-const SYNC_ICON: Record<SyncState, React.ReactNode> = {
-  idle: <IconCloudUpload size={16} />,
-  syncing: <IconLoader2 className="animate-spin" size={16} />,
-  synced: <IconCheck size={16} />,
-  error: <IconX size={16} />,
-}
-
-const SYNC_LABEL: Record<SyncState, string> = {
-  idle: "Sync to R2",
-  syncing: "Syncing…",
-  synced: "Synced",
-  error: "Retry sync",
+function VideoPlaceholder({ status }: { status: string | undefined }) {
+  if (status === "failed") {
+    return (
+      <>
+        <IconX className="text-rose-500" size={24} />
+        <span className="text-rose-500">Generation failed</span>
+      </>
+    )
+  }
+  if (status === "cancelled" || status === "expired") {
+    return (
+      <>
+        <IconX size={24} />
+        <span className="capitalize">{status}</span>
+      </>
+    )
+  }
+  return (
+    <>
+      <IconLoader2 className="animate-spin" size={24} />
+      <span>{status === "in_progress" ? "Generating…" : "Pending…"}</span>
+    </>
+  )
 }
 
 interface SyncButtonProps {
+  currentStatus?: string
   jobId: string
+  onStatusChange: (status: VideoJobStatus) => void
+  onUrlChange: (url: string) => void
 }
 
-function SyncButton({ jobId }: SyncButtonProps) {
-  const [syncState, setSyncState] = useState<SyncState>("idle")
-  const [syncError, setSyncError] = useState<string | null>(null)
+function SyncButton({
+  jobId,
+  currentStatus = "pending",
+  onStatusChange,
+  onUrlChange,
+}: SyncButtonProps) {
   const [isPending, startTransition] = useTransition()
+  const isTerminal = TERMINAL_STATUSES.has(currentStatus)
 
-  const handleSync = () => {
-    setSyncState("syncing")
-    setSyncError(null)
+  const handleClick = () => {
     startTransition(async () => {
-      const result = await syncVideoToR2(jobId)
+      const result = await pollJobStatusAction(jobId)
       if (result.ok) {
-        setSyncState("synced")
-      } else {
-        setSyncState("error")
-        setSyncError(result.message)
+        onStatusChange(result.status)
+        if (result.url) {
+          onUrlChange(result.url)
+        }
       }
     })
   }
 
   return (
-    <div className="contents">
-      <Button
-        disabled={isPending || syncState === "synced"}
-        onClick={handleSync}
-        size="sm"
-        variant="outline"
-      >
-        {SYNC_ICON[syncState]}
-        {SYNC_LABEL[syncState]}
-      </Button>
-      {syncState === "error" && syncError && (
-        <p className="w-full px-4 text-rose-500 text-xs">{syncError}</p>
+    <Button
+      disabled={isTerminal || isPending}
+      onClick={handleClick}
+      size="sm"
+      variant="outline"
+    >
+      {isPending ? (
+        <IconLoader2 className="animate-spin" size={16} />
+      ) : (
+        <IconRefresh size={16} />
       )}
-    </div>
+      Sync
+    </Button>
   )
 }
 
-export function VideoPreview({ generation, url }: VideoPreviewProps) {
-  const downloadHref = generation ? `/api/videos/${generation.id}/content` : url
+export interface VideoData {
+  aspectRatio?: string | null
+  cost?: string | null
+  duration?: number | null
+  generateAudio: boolean
+  generationId?: string | null
+  jobId: string
+  model: string
+  prompt: string
+  resolution?: string | null
+  status: string
+}
 
-  const statusConfig = generation
-    ? (STATUS_CONFIG[generation.status] ?? STATUS_CONFIG.pending)
+interface VideoPreviewProps {
+  jobId?: string
+  url: string
+  video?: VideoData
+}
+
+export function VideoPreview({ jobId, url, video }: VideoPreviewProps) {
+  const [currentStatus, setCurrentStatus] = useState(video?.status)
+  const [currentUrl, setCurrentUrl] = useState(url)
+
+  const statusConfig = currentStatus
+    ? (STATUS_CONFIG[currentStatus] ?? STATUS_CONFIG.pending)
     : null
 
   return (
     <div className="w-full max-w-4xl space-y-3">
       <div className="flex items-center justify-center px-4 pt-4">
-        {/* biome-ignore lint/a11y/useMediaCaption: no captions available for generated video */}
-        <video className="max-h-[40vh] w-full rounded-md" controls src={url} />
+        {currentStatus === "completed" ? (
+          // biome-ignore lint/a11y/useMediaCaption: no captions available for generated video
+          <video
+            className="max-h-[40vh] w-full rounded-md"
+            controls
+            src={currentUrl}
+          />
+        ) : (
+          <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-muted-foreground text-sm">
+            <VideoPlaceholder status={currentStatus} />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-4">
@@ -141,17 +185,26 @@ export function VideoPreview({ generation, url }: VideoPreviewProps) {
           </Badge>
         )}
         <div className="ml-auto flex items-center gap-2">
-          {generation && <SyncButton jobId={generation.id} />}
-          <Button asChild size="sm" variant="outline">
-            <a download href={downloadHref} rel="noopener">
-              <IconDownload size={16} />
-              Download
-            </a>
-          </Button>
+          {currentUrl && (
+            <Button asChild size="sm" variant="outline">
+              <a download href={currentUrl} rel="noopener">
+                <IconDownload size={16} />
+                Download
+              </a>
+            </Button>
+          )}
+          {jobId && (
+            <SyncButton
+              currentStatus={currentStatus}
+              jobId={jobId}
+              onStatusChange={setCurrentStatus}
+              onUrlChange={setCurrentUrl}
+            />
+          )}
         </div>
       </div>
 
-      {generation && (
+      {video && (
         <>
           <Separator />
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-4 text-xs">
@@ -159,41 +212,27 @@ export function VideoPreview({ generation, url }: VideoPreviewProps) {
               label="Job ID"
               value={
                 <span className="font-mono text-muted-foreground">
-                  {generation.id}
+                  {video.jobId}
                 </span>
               }
             />
-            {generation.generationId && (
+            {video.generationId && (
               <MetaRow
                 label="Generation ID"
                 value={
                   <span className="font-mono text-muted-foreground">
-                    {generation.generationId}
+                    {video.generationId}
                   </span>
                 }
               />
             )}
-            {generation.usage?.cost != null && (
+            {video.cost && (
               <MetaRow
                 label="Cost"
                 value={
                   <span className="tabular-nums">
-                    ${generation.usage.cost.toFixed(4)}
+                    ${Number(video.cost).toFixed(4)}
                   </span>
-                }
-              />
-            )}
-            {generation.usage?.isByok && (
-              <MetaRow label="Key" value="Bring Your Own Key" />
-            )}
-            {generation.unsignedUrls && generation.unsignedUrls.length > 0 && (
-              <MetaRow label="Outputs" value={generation.unsignedUrls.length} />
-            )}
-            {generation.error && (
-              <MetaRow
-                label="Error"
-                value={
-                  <span className="text-rose-500">{generation.error}</span>
                 }
               />
             )}
