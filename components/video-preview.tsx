@@ -206,6 +206,7 @@ function SyncButton({
 
 export interface VideoData {
   aspectRatio?: string | null
+  duration?: number | null
   error?: string | null
   estimatedCost?: string | null
   generateAudio: boolean
@@ -338,6 +339,14 @@ export function VideoPreview({
                   <span className="tabular-nums">
                     {formatMillisecondsAsMinutes(video.generationTime)}
                   </span>
+                }
+              />
+            )}
+            {video.duration && (
+              <MetaRow
+                label="Duration"
+                value={
+                  <span className="tabular-nums">{video.duration} sec</span>
                 }
               />
             )}

@@ -22,6 +22,7 @@ export default async function MainLayout({
 
   const userVideos = await db
     .select({
+      id: videos.id,
       jobId: videos.jobId,
       title: videos.title,
       prompt: videos.prompt,

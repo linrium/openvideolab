@@ -39,6 +39,7 @@ const STATUS_DOT: Record<string, string> = {
 }
 
 interface VideoItem {
+  id: string
   jobId: string
   prompt: string
   status: string
@@ -89,15 +90,15 @@ export function AppSidebar({ videos }: AppSidebarProps) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {videos.map((video) => (
-                  <SidebarMenuItem key={video.jobId}>
+                  <SidebarMenuItem key={video.id}>
                     <SidebarMenuButton
                       asChild
                       className="h-auto py-2 text-sidebar-foreground/85"
-                      isActive={pathname === `/videos/${video.jobId}`}
+                      isActive={pathname === `/videos/${video.id}`}
                       size="sm"
                       tooltip={video.title || video.prompt}
                     >
-                      <Link href={`/videos/${video.jobId}`}>
+                      <Link href={`/videos/${video.id}`}>
                         <span
                           className={`size-2 shrink-0 rounded-full ${STATUS_DOT[video.status] ?? "bg-zinc-400"}`}
                         />

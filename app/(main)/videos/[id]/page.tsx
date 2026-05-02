@@ -11,6 +11,7 @@ import { getPresignedUrl } from "@/lib/r2"
 const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"]
 
 const RESOLUTIONS = ["480p", "720p", "1080p"]
+const DURATIONS = [5, 10, 15]
 
 function normalizeAspectRatio(
   value: string | null
@@ -30,6 +31,13 @@ function normalizeResolution(
     : undefined
 }
 
+function normalizeDuration(value: number | null): VideoFormValues["duration"] {
+  return value &&
+    DURATIONS.includes(value as NonNullable<VideoFormValues["duration"]>)
+    ? (value as NonNullable<VideoFormValues["duration"]>)
+    : undefined
+}
+
 interface VideoPageProps {
   params: Promise<{ id: string }>
 }
@@ -45,7 +53,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const [video] = await db
     .select()
     .from(videos)
-    .where(eq(videos.jobId, id))
+    .where(eq(videos.id, id))
     .limit(1)
 
   if (!video || video.userId !== session.user.id) {
@@ -77,7 +85,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
   return (
     <div className="grid h-full min-h-0 w-full overflow-hidden lg:grid-cols-2">
       <section className="h-full min-h-0 overflow-y-auto">
-        <VideoPreview jobId={id} url={videoUrl} video={video} />
+        <VideoPreview jobId={video.jobId} url={videoUrl} video={video} />
       </section>
       <aside className="h-svh min-h-0 overflow-y-auto border-border/80 border-t bg-background lg:border-t-0 lg:border-l">
         <VideoForm
@@ -86,6 +94,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
             prompt: video.prompt,
             aspectRatio: normalizeAspectRatio(video.aspectRatio),
             resolution: normalizeResolution(video.resolution),
+            duration: normalizeDuration(video.duration),
             generateAudio: video.generateAudio,
             inputReferences,
             firstFrame,

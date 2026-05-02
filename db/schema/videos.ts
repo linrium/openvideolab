@@ -31,6 +31,7 @@ export const videos = pgTable(
     model: text("model").notNull(),
     aspectRatio: text("aspect_ratio"),
     resolution: text("resolution"),
+    duration: integer("duration"),
     generateAudio: boolean("generate_audio").notNull().default(true),
     estimatedCost: numeric("estimated_cost", { precision: 12, scale: 6 }),
     totalCost: numeric("total_cost", { precision: 12, scale: 6 }),

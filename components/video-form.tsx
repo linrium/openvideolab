@@ -141,7 +141,7 @@ export function VideoForm({
         return
       }
 
-      const detailPath = `/videos/${result.jobId}`
+      const detailPath = `/videos/${result.id}`
       router.push(detailPath)
     },
   })

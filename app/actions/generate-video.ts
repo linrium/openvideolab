@@ -18,7 +18,7 @@ const PRICED_RESOLUTIONS = ["480p", "720p", "1080p"] as const
 type PricedResolution = (typeof PRICED_RESOLUTIONS)[number]
 
 export interface SubmitVideoResult {
-  jobId: string
+  id: string
   ok: true
 }
 
@@ -77,23 +77,27 @@ export async function submitVideoAction(
     })
     console.log("[generate-video] job submitted:", job)
 
-    await db.insert(videos).values({
-      jobId: job.id,
-      userId: session.user.id,
-      title: metadata.title,
-      prompt: request.prompt,
-      model: request.model,
-      aspectRatio: request.aspectRatio ?? null,
-      resolution: request.resolution ?? null,
-      estimatedCost: getEstimatedCost(request),
-      generateAudio: request.generateAudio ?? true,
-      inputReferences: imageKeys.inputReferenceKeys ?? [],
-      frameFirst: imageKeys.frameFirstKey ?? null,
-      frameLast: imageKeys.frameLastKey ?? null,
-    })
+    const [insertedVideo] = await db
+      .insert(videos)
+      .values({
+        jobId: job.id,
+        userId: session.user.id,
+        title: metadata.title,
+        prompt: request.prompt,
+        model: request.model,
+        aspectRatio: request.aspectRatio ?? null,
+        resolution: request.resolution ?? null,
+        duration: request.duration ?? null,
+        estimatedCost: getEstimatedCost(request),
+        generateAudio: request.generateAudio ?? true,
+        inputReferences: imageKeys.inputReferenceKeys ?? [],
+        frameFirst: imageKeys.frameFirstKey ?? null,
+        frameLast: imageKeys.frameLastKey ?? null,
+      })
+      .returning({ id: videos.id })
     revalidatePath("/videos")
 
-    return { ok: true, jobId: job.id }
+    return { ok: true, id: insertedVideo.id }
   } catch (err) {
     console.error("[generate-video] submission failed:", err)
     return {
