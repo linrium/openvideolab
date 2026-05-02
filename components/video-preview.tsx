@@ -60,6 +60,11 @@ function formatMillisecondsAsMinutes(value: string): string {
   return `${minutes.toFixed(2)} min`
 }
 
+function formatMillisecondsAsSeconds(value: string): string {
+  const seconds = Number(value) / 1000
+  return `${seconds.toFixed(2)} sec`
+}
+
 function MetaRow({ label, value }: MetaRowProps) {
   return (
     <>
@@ -272,7 +277,7 @@ export function VideoPreview({
                 label="Latency"
                 value={
                   <span className="tabular-nums">
-                    {formatMillisecondsAsMinutes(video.latency)}
+                    {formatMillisecondsAsSeconds(video.latency)}
                   </span>
                 }
               />
