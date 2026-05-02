@@ -1,6 +1,7 @@
 "use client"
 
-import { IconUpload, IconX } from "@tabler/icons-react"
+import { Cancel01Icon, Upload01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import Image from "next/image"
 import { useRef, useState } from "react"
 import { cn } from "@/lib/utils"
@@ -112,7 +113,7 @@ export function ImageUpload({
               onClick={onRemove}
               type="button"
             >
-              <IconX className="size-5" />
+              <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={2} />
             </button>
           )}
         </div>
@@ -148,7 +149,7 @@ export function ImageUpload({
           {uploading ? (
             <span className="size-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : (
-            <IconUpload className="size-5" />
+            <HugeiconsIcon icon={Upload01Icon} size={20} strokeWidth={2} />
           )}
           <span className="text-xs">{uploading ? "Uploading…" : "Upload"}</span>
         </button>

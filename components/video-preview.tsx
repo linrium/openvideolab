@@ -1,11 +1,12 @@
 "use client"
 
 import {
-  IconDownload,
-  IconLoader2,
-  IconRefresh,
-  IconX,
-} from "@tabler/icons-react"
+  ArrowReloadHorizontalIcon,
+  Cancel01Icon,
+  Download01Icon,
+  Loading02Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useEffectEvent, useState, useTransition } from "react"
 import { pollJobStatusAction } from "@/app/actions/poll-job-status"
 import { Badge } from "@/components/ui/badge"
@@ -86,7 +87,12 @@ function VideoPlaceholder({
   if (!hasJob) {
     return (
       <>
-        <IconRefresh className="text-muted-foreground" size={24} />
+        <HugeiconsIcon
+          className="text-muted-foreground"
+          icon={ArrowReloadHorizontalIcon}
+          size={24}
+          strokeWidth={2}
+        />
         <span>Create a video to see its preview here</span>
       </>
     )
@@ -95,7 +101,12 @@ function VideoPlaceholder({
   if (status === "failed") {
     return (
       <>
-        <IconX className="text-rose-500" size={24} />
+        <HugeiconsIcon
+          className="text-rose-500"
+          icon={Cancel01Icon}
+          size={24}
+          strokeWidth={2}
+        />
         <span className="text-rose-500">Generation failed</span>
       </>
     )
@@ -103,14 +114,19 @@ function VideoPlaceholder({
   if (status === "cancelled" || status === "expired") {
     return (
       <>
-        <IconX size={24} />
+        <HugeiconsIcon icon={Cancel01Icon} size={24} strokeWidth={2} />
         <span className="capitalize">{status}</span>
       </>
     )
   }
   return (
     <>
-      <IconLoader2 className="animate-spin" size={24} />
+      <HugeiconsIcon
+        className="animate-spin"
+        icon={Loading02Icon}
+        size={24}
+        strokeWidth={2}
+      />
       <span>{status === "in_progress" ? "Generating…" : "Pending…"}</span>
     </>
   )
@@ -170,9 +186,18 @@ function SyncButton({
       variant="outline"
     >
       {isPending ? (
-        <IconLoader2 className="animate-spin" size={16} />
+        <HugeiconsIcon
+          className="animate-spin"
+          icon={Loading02Icon}
+          size={16}
+          strokeWidth={2}
+        />
       ) : (
-        <IconRefresh size={16} />
+        <HugeiconsIcon
+          icon={ArrowReloadHorizontalIcon}
+          size={16}
+          strokeWidth={2}
+        />
       )}
       Sync
     </Button>
@@ -244,7 +269,11 @@ export function VideoPreview({
           {currentUrl && (
             <Button asChild size="sm" variant="outline">
               <a download href={currentUrl} rel="noopener">
-                <IconDownload size={16} />
+                <HugeiconsIcon
+                  icon={Download01Icon}
+                  size={16}
+                  strokeWidth={2}
+                />
                 Download
               </a>
             </Button>

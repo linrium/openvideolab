@@ -1,8 +1,13 @@
 "use client"
 
-import { Settings01Icon, VideoIcon } from "@hugeicons/core-free-icons"
+import {
+  Logout01Icon,
+  Moon02Icon,
+  Settings01Icon,
+  Sun01Icon,
+  VideoIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { IconLogout, IconMoon, IconSun } from "@tabler/icons-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
@@ -125,8 +130,18 @@ export function AppSidebar({ videos }: AppSidebarProps) {
               tooltip="Toggle theme"
               type="button"
             >
-              <IconSun className="hidden dark:block" size={18} />
-              <IconMoon className="dark:hidden" size={18} />
+              <HugeiconsIcon
+                className="hidden dark:block"
+                icon={Sun01Icon}
+                size={18}
+                strokeWidth={2}
+              />
+              <HugeiconsIcon
+                className="dark:hidden"
+                icon={Moon02Icon}
+                size={18}
+                strokeWidth={2}
+              />
               <span className="hidden dark:inline">Light mode</span>
               <span className="dark:hidden">Dark mode</span>
             </SidebarMenuButton>
@@ -149,7 +164,7 @@ export function AppSidebar({ videos }: AppSidebarProps) {
               tooltip="Log out"
               type="button"
             >
-              <IconLogout size={18} />
+              <HugeiconsIcon icon={Logout01Icon} size={18} strokeWidth={2} />
               <span>Log out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

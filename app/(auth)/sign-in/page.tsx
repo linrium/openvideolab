@@ -1,6 +1,7 @@
 "use client"
 
-import { IconBrandGoogleFilled } from "@tabler/icons-react"
+import { GoogleIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { redirect } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -45,7 +46,7 @@ export default function SignInPage() {
             size="lg"
             variant="outline"
           >
-            <IconBrandGoogleFilled />
+            <HugeiconsIcon icon={GoogleIcon} size={20} strokeWidth={2} />
             {loading ? "Signing in…" : "Continue with Google"}
           </Button>
         </CardContent>

@@ -1,6 +1,6 @@
 # Icons
 
-**Always use the project's configured `iconLibrary` for imports.** Check the `iconLibrary` field from project context: `lucide` → `lucide-react`, `tabler` → `@tabler/icons-react`, etc. Never assume `lucide-react`.
+**Always use the project's configured `iconLibrary` for imports.** Check the `iconLibrary` field from project context: `lucide` → `lucide-react`, `hugeicons` → `@hugeicons/core-free-icons`, etc. Never assume `lucide-react`.
 
 ---
 
@@ -90,7 +90,7 @@ function StatusBadge({ icon }: { icon: string }) {
 **Correct:**
 
 ```tsx
-// Import from the project's configured iconLibrary (e.g. lucide-react, @tabler/icons-react).
+// Import from the project's configured iconLibrary (e.g. lucide-react, @hugeicons/core-free-icons).
 import { CheckIcon } from "lucide-react"
 
 function StatusBadge({ icon: Icon }: { icon: React.ComponentType }) {

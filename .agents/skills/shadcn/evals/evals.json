@@ -17,15 +17,15 @@
     },
     {
       "id": 2,
-      "prompt": "Create a dialog component for editing a user profile. It should have the user's avatar at the top, input fields for name and bio, and Save/Cancel buttons with appropriate icons. Using shadcn/ui with radix-nova preset and tabler icons.",
-      "expected_output": "A React component with DialogTitle, Avatar+AvatarFallback, data-icon on icon buttons, no icon sizing classes, tabler icon imports.",
+      "prompt": "Create a dialog component for editing a user profile. It should have the user's avatar at the top, input fields for name and bio, and Save/Cancel buttons with appropriate icons. Using shadcn/ui with radix-nova preset and hugeicons icons.",
+      "expected_output": "A React component with DialogTitle, Avatar+AvatarFallback, data-icon on icon buttons, no icon sizing classes, hugeicons icon imports.",
       "files": [],
       "expectations": [
         "Includes DialogTitle for accessibility (visible or with sr-only class)",
         "Avatar component includes AvatarFallback",
         "Icons on buttons use the data-icon attribute (data-icon=\"inline-start\" or data-icon=\"inline-end\")",
         "No sizing classes on icons inside components (no size-4, w-4, h-4, etc.)",
-        "Uses tabler icons (@tabler/icons-react) instead of lucide-react",
+        "Uses hugeicons icons (@hugeicons/core-free-icons) instead of lucide-react",
         "Uses asChild for custom triggers (radix preset)"
       ]
     },
