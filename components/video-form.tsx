@@ -1,6 +1,7 @@
 "use client"
 
 import { useForm } from "@tanstack/react-form"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import z from "zod/v4"
 import { submitVideoAction } from "@/app/actions/generate-video"
@@ -83,6 +84,7 @@ export function VideoForm({
   initialValues = DEFAULT_VALUES,
   readOnly = false,
 }: VideoFormProps) {
+  const router = useRouter()
   const form = useForm({
     defaultValues: initialValues,
     validators: {
@@ -133,7 +135,11 @@ export function VideoForm({
       console.log("[generate-video] result:", result)
       if (!result.ok) {
         toast.error("Failed to generate video", { description: result.message })
+        return
       }
+
+      const detailPath = `/videos/${result.jobId}`
+      router.push(detailPath)
     },
   })
 

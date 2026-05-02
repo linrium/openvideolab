@@ -1,6 +1,7 @@
 "use server"
 
 import { eq } from "drizzle-orm"
+import { refresh, revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { db } from "@/db"
 import { videos } from "@/db/schema/videos"
@@ -39,8 +40,9 @@ export async function pollJobStatusAction(
       .from(videos)
       .where(eq(videos.jobId, jobId))
       .limit(1)
+    const statusChanged = Boolean(current && current.status !== data.status)
 
-    if (current && current.status !== data.status) {
+    if (statusChanged) {
       await db
         .update(videos)
         .set({
@@ -50,6 +52,9 @@ export async function pollJobStatusAction(
           updatedAt: new Date(),
         })
         .where(eq(videos.jobId, jobId))
+
+      revalidatePath("/videos")
+      refresh()
     }
 
     if (data.status === "completed" && current && !current.path) {

@@ -1,6 +1,7 @@
 "use server"
 
 import type { VideoGenerationRequest } from "@openrouter/sdk/models"
+import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { db } from "@/db"
 import { videos } from "@/db/schema/videos"
@@ -51,6 +52,7 @@ export async function submitVideoAction(
       frameFirst: imageKeys.frameFirstKey ?? null,
       frameLast: imageKeys.frameLastKey ?? null,
     })
+    revalidatePath("/videos")
 
     return { ok: true, jobId: job.id }
   } catch (err) {
