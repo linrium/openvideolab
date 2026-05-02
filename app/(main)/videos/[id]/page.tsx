@@ -86,12 +86,6 @@ export default async function VideoPage({ params }: VideoPageProps) {
             prompt: video.prompt,
             aspectRatio: normalizeAspectRatio(video.aspectRatio),
             resolution: normalizeResolution(video.resolution),
-            duration:
-              video.duration === 5 ||
-              video.duration === 10 ||
-              video.duration === 15
-                ? video.duration
-                : undefined,
             generateAudio: video.generateAudio,
             inputReferences,
             firstFrame,

@@ -55,6 +55,11 @@ interface MetaRowProps {
   value: React.ReactNode
 }
 
+function formatMillisecondsAsMinutes(value: string): string {
+  const minutes = Number(value) / 60_000
+  return `${minutes.toFixed(2)} min`
+}
+
 function MetaRow({ label, value }: MetaRowProps) {
   return (
     <>
@@ -151,16 +156,18 @@ function SyncButton({
 
 export interface VideoData {
   aspectRatio?: string | null
-  cost?: string | null
-  duration?: number | null
   error?: string | null
+  estimatedCost?: string | null
   generateAudio: boolean
   generationId?: string | null
+  generationTime?: string | null
   jobId: string
+  latency?: string | null
   model: string
   prompt: string
   resolution?: string | null
   status: string
+  totalCost?: string | null
 }
 
 interface VideoPreviewProps {
@@ -260,12 +267,42 @@ export function VideoPreview({
                 }
               />
             )}
-            {video.cost && (
+            {video.latency && (
               <MetaRow
-                label="Cost"
+                label="Latency"
                 value={
                   <span className="tabular-nums">
-                    ${Number(video.cost).toFixed(4)}
+                    {formatMillisecondsAsMinutes(video.latency)}
+                  </span>
+                }
+              />
+            )}
+            {video.generationTime && (
+              <MetaRow
+                label="Generation Time"
+                value={
+                  <span className="tabular-nums">
+                    {formatMillisecondsAsMinutes(video.generationTime)}
+                  </span>
+                }
+              />
+            )}
+            {video.estimatedCost && (
+              <MetaRow
+                label="Estimated Cost"
+                value={
+                  <span className="tabular-nums">
+                    ${Number(video.estimatedCost).toFixed(4)}
+                  </span>
+                }
+              />
+            )}
+            {video.totalCost && (
+              <MetaRow
+                label="Total Cost"
+                value={
+                  <span className="tabular-nums">
+                    ${Number(video.totalCost).toFixed(4)}
                   </span>
                 }
               />

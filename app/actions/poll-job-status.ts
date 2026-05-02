@@ -104,16 +104,32 @@ export async function pollJobStatusAction(
     const openrouterClient = await getOpenrouterClientByUserId(userId)
     const openrouterApiKey = await getOpenRouterApiKeyByUserId(userId)
     const data = await openrouterClient.videoGeneration.getGeneration({ jobId })
+    const generation = data.generationId
+      ? await openrouterClient.generations.getGeneration({
+          id: data.generationId,
+        })
+      : null
     const statusChanged = Boolean(current && current.status !== data.status)
 
     if (statusChanged) {
       await db
         .update(videos)
         .set({
-          status: data.status,
+          totalCost:
+            generation?.data.totalCost == null
+              ? undefined
+              : String(generation.data.totalCost),
           error: data.error ?? null,
+          generationTime:
+            generation?.data.generationTime == null
+              ? null
+              : String(generation.data.generationTime),
           generationId: data.generationId ?? null,
-          cost: data.usage?.cost == null ? undefined : String(data.usage.cost),
+          latency:
+            generation?.data.latency == null
+              ? null
+              : String(generation.data.latency),
+          status: data.status,
           updatedAt: new Date(),
         })
         .where(eq(videos.jobId, jobId))
