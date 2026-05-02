@@ -1,6 +1,6 @@
 "use client"
 
-import { AiVideoIcon, Settings01Icon } from "@hugeicons/core-free-icons"
+import { Settings01Icon, VideoIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { IconLogout, IconMoon, IconSun } from "@tabler/icons-react"
 import Link from "next/link"
@@ -21,7 +21,7 @@ import {
 import { authClient } from "@/lib/auth-client"
 
 const mainNavigation = [
-  { href: "/videos", icon: AiVideoIcon, label: "Videos" },
+  { href: "/videos", icon: VideoIcon, label: "New Video" },
 ] as const
 
 const STATUS_DOT: Record<string, string> = {

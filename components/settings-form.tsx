@@ -1,8 +1,9 @@
 "use client"
 
 import { useForm } from "@tanstack/react-form"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import z from "zod/v4"
+import { saveUserSettingsAction } from "@/app/actions/save-user-settings"
 import {
   ApiKeyGuideCard,
   type ApiKeyGuideSection,
@@ -30,8 +31,6 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 
-const SETTINGS_STORAGE_KEY = "shortdrama.api-settings"
-
 const apiKeySchema = z
   .string()
   .trim()
@@ -47,8 +46,15 @@ const settingsSchema = z.object({
   openAiApiKey: apiKeySchema,
 })
 
-type SettingsValues = z.infer<typeof settingsSchema>
+export type SettingsValues = z.infer<typeof settingsSchema>
 type KeyFieldName = keyof SettingsValues
+
+const EMPTY_SETTINGS_VALUES: SettingsValues = {
+  cloudflareR2AccessKeyId: "",
+  cloudflareR2SecretAccessKey: "",
+  openAiApiKey: "",
+  openRouterApiKey: "",
+}
 
 const fieldLabels: Record<KeyFieldName, string> = {
   cloudflareR2AccessKeyId: "Cloudflare R2 Access Key ID",
@@ -63,45 +69,13 @@ const getFieldError = (fieldName: KeyFieldName, value: string) => {
   return result.success ? undefined : result.error.issues[0]?.message
 }
 
-const readStoredSettings = (): SettingsValues => {
-  if (typeof window === "undefined") {
-    return {
-      cloudflareR2AccessKeyId: "",
-      cloudflareR2SecretAccessKey: "",
-      openAiApiKey: "",
-      openRouterApiKey: "",
-    }
-  }
-
-  const storedValue = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
-  if (!storedValue) {
-    return {
-      cloudflareR2AccessKeyId: "",
-      cloudflareR2SecretAccessKey: "",
-      openAiApiKey: "",
-      openRouterApiKey: "",
-    }
-  }
-
-  try {
-    const parsedValue = JSON.parse(storedValue) as unknown
-    const result = settingsSchema.safeParse(parsedValue)
-    if (result.success) {
-      return result.data
-    }
-  } catch {
-    // Ignore malformed local storage payloads and fall back to empty values.
-  }
-
-  return {
-    cloudflareR2AccessKeyId: "",
-    cloudflareR2SecretAccessKey: "",
-    openAiApiKey: "",
-    openRouterApiKey: "",
-  }
+interface SettingsFormProps {
+  initialValues?: SettingsValues
 }
 
-export function SettingsForm() {
+export function SettingsForm({
+  initialValues = EMPTY_SETTINGS_VALUES,
+}: SettingsFormProps) {
   const [isOpenRouterVisible, setIsOpenRouterVisible] = useState(false)
   const [isOpenAiVisible, setIsOpenAiVisible] = useState(false)
   const [isR2AccessKeyVisible, setIsR2AccessKeyVisible] = useState(false)
@@ -117,40 +91,23 @@ export function SettingsForm() {
   }
 
   const form = useForm({
-    defaultValues: {
-      cloudflareR2AccessKeyId: "",
-      cloudflareR2SecretAccessKey: "",
-      openAiApiKey: "",
-      openRouterApiKey: "",
-    } satisfies SettingsValues,
-    onSubmit: ({ value }) => {
+    defaultValues: initialValues,
+    onSubmit: async ({ value }) => {
       const result = settingsSchema.safeParse(value)
       if (!result.success) {
         setStatusMessage("Fix the validation errors before saving.")
         return
       }
 
-      window.localStorage.setItem(
-        SETTINGS_STORAGE_KEY,
-        JSON.stringify(result.data)
-      )
-      setStatusMessage("Settings saved to this browser.")
+      const saveResult = await saveUserSettingsAction(result.data)
+      if (!saveResult.ok) {
+        setStatusMessage(saveResult.message)
+        return
+      }
+
+      setStatusMessage("Settings saved.")
     },
   })
-
-  useEffect(() => {
-    const storedSettings = readStoredSettings()
-    form.setFieldValue(
-      "cloudflareR2AccessKeyId",
-      storedSettings.cloudflareR2AccessKeyId
-    )
-    form.setFieldValue(
-      "cloudflareR2SecretAccessKey",
-      storedSettings.cloudflareR2SecretAccessKey
-    )
-    form.setFieldValue("openRouterApiKey", storedSettings.openRouterApiKey)
-    form.setFieldValue("openAiApiKey", storedSettings.openAiApiKey)
-  }, [form])
 
   return (
     <div className="grid w-full max-w-7xl gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)] lg:items-start">
@@ -158,8 +115,7 @@ export function SettingsForm() {
         <CardHeader className="border-border/70 border-b px-4 py-4 sm:px-5">
           <CardTitle>API Credentials</CardTitle>
           <CardDescription>
-            Save provider keys for this browser session. Keys are stored locally
-            on this device until you clear them.
+            Save provider keys to your account settings for use across sessions.
           </CardDescription>
         </CardHeader>
 
@@ -483,15 +439,22 @@ export function SettingsForm() {
                   form.setFieldValue("cloudflareR2SecretAccessKey", "")
                   form.setFieldValue("openRouterApiKey", "")
                   form.setFieldValue("openAiApiKey", "")
-                  window.localStorage.removeItem(SETTINGS_STORAGE_KEY)
-                  setStatusMessage("Saved keys cleared from this browser.")
+                  setStatusMessage(
+                    "All fields cleared. Save to persist changes."
+                  )
                 }}
                 type="button"
                 variant="outline"
               >
                 Clear
               </Button>
-              <Button type="submit">Save Keys</Button>
+              <form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
+                  <Button disabled={isSubmitting} type="submit">
+                    {isSubmitting ? "Saving..." : "Save Keys"}
+                  </Button>
+                )}
+              </form.Subscribe>
             </div>
           </CardFooter>
         </form>
