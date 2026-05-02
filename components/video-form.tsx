@@ -22,7 +22,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import type { VideoAspectRatio, VideoResolution } from "@/lib/openrouter-video"
+import type { VideoAspectRatio, VideoResolution } from "@/lib/openrouter-client"
 
 const ASPECT_RATIOS: VideoAspectRatio[] = [
   "16:9",
@@ -71,13 +71,16 @@ export function VideoForm() {
     },
     validators: {
       onSubmit: ({ value }) => {
+        console.log(value)
         const result = schema.safeParse(value)
+        console.log(result)
         if (!result.success) {
           return result.error.issues.map((i) => i.message).join(", ")
         }
       },
     },
     onSubmit: ({ value }) => {
+      console.log(value)
       const { input_references, first_frame, last_frame, ...rest } = value
       console.log({
         model: "bytedance/seedance-2.0",
@@ -166,8 +169,9 @@ export function VideoForm() {
       <form
         className="flex min-h-0 flex-1 flex-col"
         onSubmit={(e) => {
+          console.log(e)
           e.preventDefault()
-          form.handleSubmit()
+          form.handleSubmit(e)
         }}
       >
         <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">

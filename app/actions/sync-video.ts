@@ -1,6 +1,6 @@
 "use server"
 
-import { fetchVideoContent } from "@/lib/openrouter-video"
+import { fetchVideoContent } from "@/lib/openrouter-client"
 import { uploadToR2 } from "@/lib/r2"
 
 export interface SyncVideoResult {
