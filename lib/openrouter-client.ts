@@ -22,7 +22,8 @@ export interface GenerateVideoResult {
   urls: string[]
 }
 
-const BASE_URL = "https://openrouter-stub.linrium.workers.dev"
+const BASE_URL = "http://localhost:8787/api/v1"
+// const BASE_URL = "https://openrouter-stub.linrium.workers.dev"
 
 export const openrouterClient = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,

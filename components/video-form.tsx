@@ -1,7 +1,9 @@
 "use client"
 
 import { useForm } from "@tanstack/react-form"
+import { toast } from "sonner"
 import z from "zod/v4"
+import { submitVideoAction } from "@/app/actions/generate-video"
 import { ImageUpload, MultiImageUpload } from "@/components/image-upload"
 import { Button } from "@/components/ui/button"
 import {
@@ -71,31 +73,28 @@ export function VideoForm() {
     },
     validators: {
       onSubmit: ({ value }) => {
-        console.log(value)
         const result = schema.safeParse(value)
-        console.log(result)
         if (!result.success) {
           return result.error.issues.map((i) => i.message).join(", ")
         }
       },
     },
-    onSubmit: ({ value }) => {
-      console.log(value)
+    onSubmit: async ({ value }) => {
       const { input_references, first_frame, last_frame, ...rest } = value
-      console.log({
+      const result = await submitVideoAction({
         model: "bytedance/seedance-2.0",
         ...rest,
-        input_references: input_references?.map((url) => ({
+        inputReferences: input_references?.map((url) => ({
           type: "image_url" as const,
-          image_url: { url },
+          imageUrl: { url },
         })),
-        frame_images: [
+        frameImages: [
           ...(first_frame
             ? [
                 {
                   type: "image_url" as const,
-                  image_url: { url: first_frame },
-                  frame_type: "first_frame" as const,
+                  imageUrl: { url: first_frame },
+                  frameType: "first_frame" as const,
                 },
               ]
             : []),
@@ -103,13 +102,17 @@ export function VideoForm() {
             ? [
                 {
                   type: "image_url" as const,
-                  image_url: { url: last_frame },
-                  frame_type: "last_frame" as const,
+                  imageUrl: { url: last_frame },
+                  frameType: "last_frame" as const,
                 },
               ]
             : []),
         ],
       })
+      console.log("[generate-video] result:", result)
+      if (!result.ok) {
+        toast.error("Failed to generate video", { description: result.message })
+      }
     },
   })
 
@@ -169,9 +172,8 @@ export function VideoForm() {
       <form
         className="flex min-h-0 flex-1 flex-col"
         onSubmit={(e) => {
-          console.log(e)
           e.preventDefault()
-          form.handleSubmit(e)
+          form.handleSubmit()
         }}
       >
         <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
