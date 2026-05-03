@@ -28,56 +28,23 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import {
+  ASPECT_RATIOS,
+  DURATIONS,
+  MODELS,
+  type ModelValue,
+  PRICING,
+  RESOLUTIONS,
+} from "@/lib/constants"
 import { Input } from "./ui/input"
 
-const MODELS = [
-  { value: "bytedance/seedance-2.0", label: "Seedance 2", disabled: false },
-  {
-    value: "bytedance/seedance-2.0-fast",
-    label: "Seedance 2 Fast",
-    disabled: false,
-  },
-  { value: "wan/wan-2.7", label: "Wan 2.7", disabled: true },
-  {
-    value: "alibaba/happy-horse-1.0",
-    label: "Happy Horse 1.0",
-    disabled: true,
-  },
-] as const
-
-type ModelValue = (typeof MODELS)[number]["value"]
-
-const ASPECT_RATIOS = [
-  "9:16",
-  "16:9",
-  "1:1",
-  "4:3",
-  "3:4",
-  "21:9",
-  "9:21",
-] as const
-const RESOLUTIONS = ["480p", "720p", "1080p"] as const
-const DURATIONS = [5, 10, 15] as const
-
-const PRICING = {
-  "bytedance/seedance-2.0": {
-    tokens: { with_audio: 7, no_audio: 7 },
-    per_second: {
-      with_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
-      no_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
-    },
-  },
-  "bytedance/seedance-2.0-fast": {
-    tokens: { with_audio: 5.6, no_audio: 5.6 },
-    per_second: {
-      with_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
-      no_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
-    },
-  },
-} as const
-
 const schema = z.object({
-  model: z.enum(["bytedance/seedance-2.0", "bytedance/seedance-2.0-fast"]),
+  model: z.enum([
+    "bytedance/seedance-2.0",
+    "bytedance/seedance-2.0-fast",
+    "wan/wan-2.7",
+    "alibaba/happy-horse-1.0",
+  ]),
   title: z.string().trim().min(1, "Title is required"),
   prompt: z.string().min(1, "Prompt is required"),
   aspectRatio: z

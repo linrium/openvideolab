@@ -11,6 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import { v7 as uuidv7 } from "uuid"
+import type { Model } from "@/lib/constants"
 import { users } from "./auth-schema"
 
 export const videos = pgTable(
@@ -28,7 +29,7 @@ export const videos = pgTable(
     error: text("error"),
     title: text("title").notNull().default(""),
     prompt: text("prompt").notNull(),
-    model: text("model").notNull(),
+    model: text("model").$type<Model>().notNull(),
     aspectRatio: text("aspect_ratio"),
     resolution: text("resolution"),
     duration: integer("duration"),

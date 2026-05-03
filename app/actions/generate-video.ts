@@ -6,6 +6,7 @@ import { headers } from "next/headers"
 import { db } from "@/db"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
+import type { Model } from "@/lib/constants"
 import { getOpenrouterClientByUserId } from "@/lib/openrouter-client"
 
 const PRICING = {
@@ -84,7 +85,7 @@ export async function submitVideoAction(
         userId: session.user.id,
         title: metadata.title,
         prompt: request.prompt,
-        model: request.model,
+        model: request.model as Model,
         aspectRatio: request.aspectRatio ?? null,
         resolution: request.resolution ?? null,
         duration: request.duration ?? null,

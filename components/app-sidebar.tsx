@@ -74,20 +74,13 @@ export function AppSidebar({ videos }: AppSidebarProps) {
             onClick={toggleSidebar}
             type="button"
           >
-            <HugeiconsIcon icon={AiChemistry02Icon} size={18} strokeWidth={2} />
+            <HugeiconsIcon icon={AiChemistry02Icon} size={14} strokeWidth={2} />
           </button>
         ) : (
           <Link
             className="flex items-center gap-2 overflow-hidden rounded-md"
             href="/videos"
           >
-            <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <HugeiconsIcon
-                icon={AiChemistry02Icon}
-                size={14}
-                strokeWidth={2}
-              />
-            </div>
             <span className="truncate font-semibold text-sm">OpenVideoLab</span>
           </Link>
         )}
