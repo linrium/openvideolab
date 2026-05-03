@@ -4,6 +4,7 @@ import {
   AiChemistry02Icon,
   Logout01Icon,
   Moon02Icon,
+  MusicNote03FreeIcons,
   Settings01Icon,
   Sun01Icon,
   VideoIcon,
@@ -31,6 +32,7 @@ import { authClient } from "@/lib/auth-client"
 
 const mainNavigation = [
   { href: "/videos/new", icon: VideoIcon, label: "New Video" },
+  { href: "/music/new", icon: MusicNote03FreeIcons, label: "New Music" },
 ] as const
 
 const STATUS_DOT: Record<string, string> = {
