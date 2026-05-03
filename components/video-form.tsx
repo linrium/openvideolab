@@ -784,17 +784,19 @@ export function VideoForm({
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-border/50 border-t">
-                      <td className="py-1 pr-6 text-muted-foreground">
-                        Video tokens
-                      </td>
-                      <td className="px-3 py-1 text-right tabular-nums">
-                        ${p.tokens.with_audio}/M
-                      </td>
-                      <td className="px-3 py-1 text-right tabular-nums">
-                        ${p.tokens.no_audio}/M
-                      </td>
-                    </tr>
+                    {modelId !== "alibaba/wan-2.7" && (
+                      <tr className="border-border/50 border-t">
+                        <td className="py-1 pr-6 text-muted-foreground">
+                          Video tokens
+                        </td>
+                        <td className="px-3 py-1 text-right tabular-nums">
+                          ${p.tokens.with_audio}/M
+                        </td>
+                        <td className="px-3 py-1 text-right tabular-nums">
+                          ${p.tokens.no_audio}/M
+                        </td>
+                      </tr>
+                    )}
                     {Object.keys(p.per_second.with_audio).map((res) => {
                       const key = res as keyof typeof p.per_second.with_audio
                       return (
