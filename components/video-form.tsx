@@ -17,11 +17,35 @@ import {
   FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Input } from "./ui/input"
+
+const MODELS = [
+  { value: "bytedance/seedance-2.0", label: "Seedance 2", disabled: false },
+  {
+    value: "bytedance/seedance-2.0-fast",
+    label: "Seedance 2 Fast",
+    disabled: false,
+  },
+  { value: "wan/wan-2.7", label: "Wan 2.7", disabled: true },
+  {
+    value: "alibaba/happy-horse-1.0",
+    label: "Happy Horse 1.0",
+    disabled: true,
+  },
+] as const
+
+type ModelValue = (typeof MODELS)[number]["value"]
 
 const ASPECT_RATIOS = [
   "9:16",
@@ -36,14 +60,24 @@ const RESOLUTIONS = ["480p", "720p", "1080p"] as const
 const DURATIONS = [5, 10, 15] as const
 
 const PRICING = {
-  tokens: { with_audio: 7, no_audio: 7 },
-  per_second: {
-    with_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
-    no_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
+  "bytedance/seedance-2.0": {
+    tokens: { with_audio: 7, no_audio: 7 },
+    per_second: {
+      with_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
+      no_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
+    },
+  },
+  "bytedance/seedance-2.0-fast": {
+    tokens: { with_audio: 5.6, no_audio: 5.6 },
+    per_second: {
+      with_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
+      no_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
+    },
   },
 } as const
 
 const schema = z.object({
+  model: z.enum(["bytedance/seedance-2.0", "bytedance/seedance-2.0-fast"]),
   title: z.string().trim().min(1, "Title is required"),
   prompt: z.string().min(1, "Prompt is required"),
   aspectRatio: z
@@ -64,6 +98,7 @@ type VideoFormAspectRatio = NonNullable<VideoFormValues["aspectRatio"]>
 type VideoFormResolution = NonNullable<VideoFormValues["resolution"]>
 
 const DEFAULT_VALUES: VideoFormValues = {
+  model: "bytedance/seedance-2.0",
   title: "",
   prompt: "",
   aspectRatio: "9:16",
@@ -115,7 +150,6 @@ export function VideoForm({
       const { title, inputReferences, firstFrame, lastFrame, ...rest } = value
       const result = await submitVideoAction(
         {
-          model: "bytedance/seedance-2.0",
           ...rest,
           inputReferences: inputReferences?.map(({ url }) => ({
             type: "image_url" as const,
@@ -182,6 +216,38 @@ export function VideoForm({
         >
           <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
             <FieldGroup>
+              <form.Field name="model">
+                {(field) => (
+                  <Field>
+                    <FieldLabel htmlFor={field.name}>Model</FieldLabel>
+                    <Select
+                      disabled={readOnly}
+                      onValueChange={(val) =>
+                        field.handleChange(val as ModelValue)
+                      }
+                      value={field.state.value}
+                    >
+                      <SelectTrigger id={field.name}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MODELS.map((m) => (
+                          <SelectItem
+                            disabled={m.disabled}
+                            key={m.value}
+                            value={m.value}
+                          >
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
               <form.Field name="title">
                 {(field) => (
                   <Field
@@ -436,6 +502,7 @@ export function VideoForm({
           <CardFooter className="sticky bottom-0 mt-0 flex flex-col gap-3 border-border/70 border-t bg-background px-4 pt-4 pb-4 sm:px-5">
             <form.Subscribe
               selector={(s) => ({
+                model: s.values.model,
                 resolution: s.values.resolution,
                 duration: s.values.duration,
                 generateAudio: s.values.generateAudio,
@@ -444,18 +511,22 @@ export function VideoForm({
               })}
             >
               {({
+                model,
                 resolution,
                 duration,
                 generateAudio,
                 isSubmitting,
                 canSubmit,
               }) => {
+                const pricing =
+                  PRICING[model as keyof typeof PRICING] ??
+                  PRICING["bytedance/seedance-2.0"]
                 const key = resolution as
-                  | keyof typeof PRICING.per_second.with_audio
+                  | keyof typeof pricing.per_second.with_audio
                   | undefined
                 const table = generateAudio
-                  ? PRICING.per_second.with_audio
-                  : PRICING.per_second.no_audio
+                  ? pricing.per_second.with_audio
+                  : pricing.per_second.no_audio
                 const rate = key ? table[key] : null
                 const total = rate != null && duration ? rate * duration : null
                 let submitLabel = "Generate Video"
@@ -510,47 +581,62 @@ export function VideoForm({
       </TabsContent>
 
       <TabsContent value="pricing">
-        <div className="px-4 pt-4 pb-2 sm:px-5">
-          <table className="w-full text-xs">
-            <thead>
-              <tr>
-                <th className="py-1 pr-6 text-left font-normal text-muted-foreground" />
-                <th className="px-3 py-1 text-right font-normal text-muted-foreground">
-                  With audio
-                </th>
-                <th className="px-3 py-1 text-right font-normal text-muted-foreground">
-                  No audio
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-border/50 border-t">
-                <td className="py-1 pr-6 text-muted-foreground">
-                  Video tokens
-                </td>
-                <td className="px-3 py-1 text-right tabular-nums">
-                  ${PRICING.tokens.with_audio}/M
-                </td>
-                <td className="px-3 py-1 text-right tabular-nums">
-                  ${PRICING.tokens.no_audio}/M
-                </td>
-              </tr>
-              {RESOLUTIONS.map((res) => {
-                const key = res as keyof typeof PRICING.per_second.with_audio
-                return (
-                  <tr className="border-border/50 border-t" key={res}>
-                    <td className="py-1 pr-6 text-muted-foreground">{res}</td>
-                    <td className="px-3 py-1 text-right tabular-nums">
-                      ${PRICING.per_second.with_audio[key]}/s
-                    </td>
-                    <td className="px-3 py-1 text-right tabular-nums">
-                      ${PRICING.per_second.no_audio[key]}/s
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="flex flex-col gap-4 px-4 pt-4 pb-4 sm:px-5">
+          {(
+            [
+              ["bytedance/seedance-2.0", "Seedance 2"],
+              ["bytedance/seedance-2.0-fast", "Seedance 2 Fast"],
+            ] as const
+          ).map(([modelId, modelLabel]) => {
+            const p = PRICING[modelId]
+            return (
+              <div key={modelId}>
+                <p className="mb-1.5 font-medium text-xs">{modelLabel}</p>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th className="py-1 pr-6 text-left font-normal text-muted-foreground" />
+                      <th className="px-3 py-1 text-right font-normal text-muted-foreground">
+                        With audio
+                      </th>
+                      <th className="px-3 py-1 text-right font-normal text-muted-foreground">
+                        No audio
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-border/50 border-t">
+                      <td className="py-1 pr-6 text-muted-foreground">
+                        Video tokens
+                      </td>
+                      <td className="px-3 py-1 text-right tabular-nums">
+                        ${p.tokens.with_audio}/M
+                      </td>
+                      <td className="px-3 py-1 text-right tabular-nums">
+                        ${p.tokens.no_audio}/M
+                      </td>
+                    </tr>
+                    {RESOLUTIONS.map((res) => {
+                      const key = res as keyof typeof p.per_second.with_audio
+                      return (
+                        <tr className="border-border/50 border-t" key={res}>
+                          <td className="py-1 pr-6 text-muted-foreground">
+                            {res}
+                          </td>
+                          <td className="px-3 py-1 text-right tabular-nums">
+                            ${p.per_second.with_audio[key]}/s
+                          </td>
+                          <td className="px-3 py-1 text-right tabular-nums">
+                            ${p.per_second.no_audio[key]}/s
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })}
         </div>
       </TabsContent>
     </Tabs>
