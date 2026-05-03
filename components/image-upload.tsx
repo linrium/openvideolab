@@ -88,7 +88,7 @@ export function ImageUpload({
     <div className={cn("flex flex-col gap-1", className)}>
       <input
         accept="image/jpeg,image/png,image/webp,image/gif"
-        className="sr-only"
+        className="hidden h-0"
         disabled={disabled}
         onChange={onFileChange}
         ref={inputRef}
