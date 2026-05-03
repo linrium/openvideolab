@@ -3,9 +3,7 @@
   "main": ".open-next/worker.js",
   "name": "openvideolab",
   "compatibility_date": "2026-05-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -13,8 +11,8 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "openvideolab",
-    },
+      "service": "openvideolab"
+    }
   ],
   "r2_buckets": [
     {
@@ -31,5 +29,5 @@
   "vars": {
     "NEXT_PUBLIC_BASE_URL": "https://openvideolab.linrium.workers.dev",
     "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1"
-  },
+  }
 }

@@ -4,16 +4,15 @@ import {
   ArrowReloadHorizontalIcon,
   Cancel01Icon,
   Download01Icon,
-  Loading02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useEffectEvent, useState, useTransition } from "react"
 import { pollJobStatus } from "@/app/actions/poll-job-status"
-import { AnalyzingImage } from "@/components/loading-ui/analyzing-image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import type { VideoJobStatus } from "@/lib/openrouter-client"
+import { Spokes } from "./loading-ui/spokes"
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   completed: {
@@ -108,7 +107,7 @@ function VideoPlaceholder({
   }
   return (
     <>
-      <AnalyzingImage className="size-16 text-muted-foreground" />
+      <Spokes className="size-16 text-muted-foreground" />
       <span>{status === "in_progress" ? "Generating…" : "Pending…"}</span>
     </>
   )
@@ -168,12 +167,7 @@ function SyncButton({
       variant="outline"
     >
       {isPending ? (
-        <HugeiconsIcon
-          className="animate-spin"
-          icon={Loading02Icon}
-          size={16}
-          strokeWidth={2}
-        />
+        <Spokes className="size-3" />
       ) : (
         <HugeiconsIcon
           icon={ArrowReloadHorizontalIcon}
