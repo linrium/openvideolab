@@ -145,7 +145,10 @@ export function VideoForm({
 
   return (
     <Tabs className="flex min-h-0 flex-col gap-0" defaultValue="compose">
-      <CardHeader className="border-border/70 border-b px-4 pt-4 pb-0 sm:px-5">
+      <CardHeader
+        className="sticky top-0 z-10 border-border/70 border-b bg-background"
+        style={{ paddingBottom: 0 }}
+      >
         <TabsList className="" variant="line">
           <TabsTrigger value="compose">Compose</TabsTrigger>
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
