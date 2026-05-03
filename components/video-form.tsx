@@ -2,6 +2,7 @@
 
 import { useForm } from "@tanstack/react-form"
 import { useRouter } from "next/navigation"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 import z from "zod/v4"
 import { submitVideoAction } from "@/app/actions/generate-video"
@@ -23,8 +24,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Input } from "./ui/input"
 
 const ASPECT_RATIOS = [
-  "16:9",
   "9:16",
+  "16:9",
   "1:1",
   "4:3",
   "3:4",
@@ -65,9 +66,9 @@ type VideoFormResolution = NonNullable<VideoFormValues["resolution"]>
 const DEFAULT_VALUES: VideoFormValues = {
   title: "",
   prompt: "",
-  aspectRatio: "16:9",
-  resolution: "720p",
-  duration: 10,
+  aspectRatio: "9:16",
+  resolution: "480p",
+  duration: 5,
   generateAudio: true,
   inputReferences: [],
   firstFrame: undefined,
@@ -84,6 +85,22 @@ export function VideoForm({
   readOnly = false,
 }: VideoFormProps) {
   const router = useRouter()
+  const [confirming, setConfirming] = useState(false)
+  const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleGenerateClick = () => {
+    if (confirming) {
+      if (confirmTimeoutRef.current) {
+        clearTimeout(confirmTimeoutRef.current)
+      }
+      setConfirming(false)
+      form.handleSubmit()
+    } else {
+      setConfirming(true)
+      confirmTimeoutRef.current = setTimeout(() => setConfirming(false), 3000)
+    }
+  }
+
   const form = useForm({
     defaultValues: initialValues,
     validators: {
@@ -476,9 +493,13 @@ export function VideoForm({
                     <Button
                       className="w-full"
                       disabled={readOnly || !canSubmit || isSubmitting}
-                      type="submit"
+                      onClick={handleGenerateClick}
+                      type="button"
+                      variant={confirming ? "destructive" : "default"}
                     >
-                      {submitLabel}
+                      {confirming
+                        ? "Confirm — click again to generate"
+                        : submitLabel}
                     </Button>
                   </>
                 )
