@@ -30,7 +30,7 @@ import {
 import { authClient } from "@/lib/auth-client"
 
 const mainNavigation = [
-  { href: "/videos", icon: VideoIcon, label: "New Video" },
+  { href: "/videos/new", icon: VideoIcon, label: "New Video" },
 ] as const
 
 const STATUS_DOT: Record<string, string> = {
