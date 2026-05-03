@@ -156,7 +156,11 @@ export function VideoForm({
           ...restBase,
           aspectRatio: aspectRatio as AspectRatio | undefined,
           resolution: resolution as Resolution | undefined,
-          provider: atlasCloudProvider?.options,
+          provider: {
+            options: {
+              atlasCloud: atlasCloudProvider?.options?.["atlas-cloud"],
+            },
+          },
           inputReferences: inputReferences?.map(({ url }) => ({
             type: "image_url" as const,
             imageUrl: { url },
