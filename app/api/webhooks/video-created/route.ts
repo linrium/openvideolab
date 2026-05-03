@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm"
 import { type NextRequest, NextResponse } from "next/server"
 import z from "zod/v4"
-import { pollJobStatusAction } from "@/app/actions/poll-job-status"
+import { pollJobStatus } from "@/app/actions/poll-job-status"
 import { db } from "@/db"
 import { videos } from "@/db/schema/videos"
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         .limit(1)
 
       if (video) {
-        const syncResult = await pollJobStatusAction(jobId, {
+        const syncResult = await pollJobStatus(jobId, {
           refreshClient: false,
           userId: video.userId,
         })

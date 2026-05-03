@@ -8,7 +8,8 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useEffectEvent, useState, useTransition } from "react"
-import { pollJobStatusAction } from "@/app/actions/poll-job-status"
+import { pollJobStatus } from "@/app/actions/poll-job-status"
+import { AnalyzingImage } from "@/components/loading-ui/analyzing-image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -107,12 +108,7 @@ function VideoPlaceholder({
   }
   return (
     <>
-      <HugeiconsIcon
-        className="animate-spin"
-        icon={Loading02Icon}
-        size={24}
-        strokeWidth={2}
-      />
+      <AnalyzingImage className="size-16 text-muted-foreground" />
       <span>{status === "in_progress" ? "Generating…" : "Pending…"}</span>
     </>
   )
@@ -136,7 +132,7 @@ function SyncButton({
 
   const syncStatus = useEffectEvent(() => {
     startTransition(async () => {
-      const result = await pollJobStatusAction(jobId)
+      const result = await pollJobStatus(jobId)
       if (result.ok) {
         onStatusChange(result.status)
         if (result.url) {
@@ -325,14 +321,6 @@ export function VideoPreview({
                       ? `$${Number(video.totalCost).toFixed(4)}`
                       : "—"}
                   </dd>
-                </>
-              )}
-              {video.duration && (
-                <>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Duration
-                  </dt>
-                  <dd className="tabular-nums">{video.duration} sec</dd>
                 </>
               )}
               {video.error && (

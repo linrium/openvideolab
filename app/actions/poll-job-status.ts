@@ -74,23 +74,30 @@ async function syncCompletedVideo(
   jobId: string,
   openrouterApiKey: string,
   userId: string
-): Promise<string> {
-  const response = await fetchVideoContent(openrouterApiKey, jobId)
-  const contentType = response.headers.get("Content-Type") ?? "video/mp4"
-  const ext = contentType.split("/").pop()?.toLowerCase() ?? "mp4"
-  const key = `${userId}/videos/${jobId}.${ext}`
-  const buffer = Buffer.from(await response.arrayBuffer())
+): Promise<string | null> {
+  try {
+    const response = await fetchVideoContent(openrouterApiKey, jobId)
+    const contentType = response.headers.get("Content-Type") ?? "video/mp4"
+    const ext = contentType.split("/").pop()?.toLowerCase() ?? "mp4"
+    const key = `${userId}/videos/${jobId}.${ext}`
+    const buffer = Buffer.from(await response.arrayBuffer())
 
-  await uploadToR2(key, buffer, contentType)
-  await db
-    .update(videos)
-    .set({ error: null, path: key, updatedAt: new Date() })
-    .where(eq(videos.jobId, jobId))
+    await uploadToR2(key, buffer, contentType)
+    console.log("[syncCompletedVideo] uploaded", key)
+    await db
+      .update(videos)
+      .set({ error: null, path: key, updatedAt: new Date() })
+      .where(eq(videos.jobId, jobId))
 
-  return key
+    return key
+  } catch (err) {
+    console.error("[syncCompletedVideo] error", err)
+    return null
+  }
 }
 
-export async function pollJobStatusAction(
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: false positive
+export async function pollJobStatus(
   jobId: string,
   options: PollJobStatusOptions = {}
 ): Promise<PollJobStatusResult | PollJobStatusError> {
@@ -142,6 +149,9 @@ export async function pollJobStatusAction(
 
     if (data.status === "completed" && current && !current.path) {
       const key = await syncCompletedVideo(jobId, openrouterApiKey, userId)
+      if (key === null) {
+        return { ok: false, message: "Failed to sync" }
+      }
       const url = await getPresignedUrl({ key })
       return { ok: true, status: data.status as VideoJobStatus, url }
     }
