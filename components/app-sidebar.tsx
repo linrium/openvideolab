@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  AiChemistry02Icon,
   Logout01Icon,
   Moon02Icon,
   Settings01Icon,
@@ -18,10 +19,13 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { authClient } from "@/lib/auth-client"
 
@@ -54,6 +58,7 @@ export function AppSidebar({ videos }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { setTheme } = useTheme()
+  const { state, toggleSidebar } = useSidebar()
 
   const handleLogout = async () => {
     await authClient.signOut()
@@ -62,6 +67,33 @@ export function AppSidebar({ videos }: AppSidebarProps) {
 
   return (
     <Sidebar collapsible="icon">
+      <SidebarHeader className="flex flex-row items-center justify-between px-3 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        {state === "collapsed" ? (
+          <button
+            className="flex size-8 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={toggleSidebar}
+            type="button"
+          >
+            <HugeiconsIcon icon={AiChemistry02Icon} size={18} strokeWidth={2} />
+          </button>
+        ) : (
+          <Link
+            className="flex items-center gap-2 overflow-hidden rounded-md"
+            href="/videos"
+          >
+            <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <HugeiconsIcon
+                icon={AiChemistry02Icon}
+                size={14}
+                strokeWidth={2}
+              />
+            </div>
+            <span className="truncate font-semibold text-sm">OpenVideoLab</span>
+          </Link>
+        )}
+        <SidebarTrigger className="shrink-0 group-data-[collapsible=icon]:hidden" />
+      </SidebarHeader>
+
       <SidebarContent className="gap-2">
         <SidebarGroup>
           <SidebarGroupContent>
@@ -93,7 +125,7 @@ export function AppSidebar({ videos }: AppSidebarProps) {
                   <SidebarMenuItem key={video.id}>
                     <SidebarMenuButton
                       asChild
-                      className="h-auto py-2 text-sidebar-foreground/85"
+                      className="h-auto py-2 text-sidebar-foreground/85 group-data-[collapsible=icon]:h-8! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-0!"
                       isActive={pathname === `/videos/${video.id}`}
                       size="sm"
                       tooltip={video.title || video.prompt}
@@ -102,7 +134,7 @@ export function AppSidebar({ videos }: AppSidebarProps) {
                         <span
                           className={`size-2 shrink-0 rounded-full ${STATUS_DOT[video.status] ?? "bg-zinc-400"}`}
                         />
-                        <span className="truncate">
+                        <span className="truncate group-data-[collapsible=icon]:hidden">
                           {(video.title || video.prompt).length > 40
                             ? `${(video.title || video.prompt).slice(0, 40)}…`
                             : video.title || video.prompt}
