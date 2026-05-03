@@ -24,6 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Input } from "./ui/input"
 
 const ASPECT_RATIOS = [
   "16:9",
@@ -213,11 +214,10 @@ export function VideoForm({
                     Give this video a short title for your sidebar and detail
                     views.
                   </FieldDescription>
-                  <input
+                  <Input
                     aria-invalid={
                       field.state.meta.errors.length > 0 || undefined
                     }
-                    className="flex h-8 w-full rounded-md border border-input bg-input/20 px-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 md:text-xs/relaxed dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
                     disabled={readOnly}
                     id={field.name}
                     onBlur={field.handleBlur}
