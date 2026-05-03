@@ -7,12 +7,7 @@ import z from "zod/v4"
 import { submitVideoAction } from "@/app/actions/generate-video"
 import { ImageUpload, MultiImageUpload } from "@/components/image-upload"
 import { Button } from "@/components/ui/button"
-import {
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   Field,
   FieldDescription,
@@ -22,6 +17,7 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Input } from "./ui/input"
@@ -148,10 +144,349 @@ export function VideoForm({
   })
 
   return (
-    <div className="flex min-h-0 flex-col">
-      <CardHeader className="border-border/70 border-b px-4 py-4 sm:px-5">
-        <CardTitle>Generate Video</CardTitle>
-        <div className="pt-2">
+    <Tabs className="flex min-h-0 flex-col gap-0" defaultValue="compose">
+      <CardHeader className="border-border/70 border-b px-4 pt-4 pb-0 sm:px-5">
+        <TabsList className="" variant="line">
+          <TabsTrigger value="compose">Compose</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
+        </TabsList>
+      </CardHeader>
+
+      <TabsContent className="flex min-h-0 flex-1 flex-col" value="compose">
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={(e) => {
+            e.preventDefault()
+            form.handleSubmit()
+          }}
+        >
+          <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+            <FieldGroup>
+              <form.Field name="title">
+                {(field) => (
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>Title</FieldLabel>
+                    <FieldDescription>
+                      Give this video a short title for your sidebar and detail
+                      views.
+                    </FieldDescription>
+                    <Input
+                      aria-invalid={
+                        field.state.meta.errors.length > 0 || undefined
+                      }
+                      disabled={readOnly}
+                      id={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="e.g. Golden Hour Lake"
+                      spellCheck={false}
+                      type="text"
+                      value={field.state.value}
+                    />
+                    <FieldError
+                      errors={field.state.meta.errors.map((e) => ({
+                        message: String(e),
+                      }))}
+                    />
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
+              <form.Field name="prompt">
+                {(field) => (
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>Prompt</FieldLabel>
+                    <FieldDescription>
+                      Describe the scene, mood, action, and visual style you
+                      want. Be specific — include camera movement, lighting, and
+                      subject details for best results.
+                    </FieldDescription>
+                    <Textarea
+                      aria-invalid={
+                        field.state.meta.errors.length > 0 || undefined
+                      }
+                      disabled={readOnly}
+                      id={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="e.g. A serene mountain lake at golden hour, slow cinematic pan from left to right, soft warm light reflecting on calm water…"
+                      rows={10}
+                      spellCheck={false}
+                      value={field.state.value}
+                    />
+                    <FieldError
+                      errors={field.state.meta.errors.map((e) => ({
+                        message: String(e),
+                      }))}
+                    />
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
+              <form.Field name="aspectRatio">
+                {(field) => (
+                  <Field>
+                    <FieldLabel>Aspect Ratio</FieldLabel>
+                    <FieldDescription>
+                      Choose the frame shape. Use 16:9 for landscape/widescreen,
+                      9:16 for vertical/social, or 1:1 for square content.
+                    </FieldDescription>
+                    <ToggleGroup
+                      disabled={readOnly}
+                      onValueChange={(val) => {
+                        if (val) {
+                          field.handleChange(val as VideoFormAspectRatio)
+                        }
+                      }}
+                      type="single"
+                      value={field.state.value ?? ""}
+                      variant="outline"
+                    >
+                      {ASPECT_RATIOS.map((ratio) => (
+                        <ToggleGroupItem key={ratio} value={ratio}>
+                          {ratio}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </Field>
+                )}
+              </form.Field>
+
+              <form.Field name="resolution">
+                {(field) => (
+                  <Field>
+                    <FieldLabel>Resolution</FieldLabel>
+                    <FieldDescription>
+                      Higher resolution produces sharper output but costs more
+                      per second. 720p is a good balance for most use cases.
+                    </FieldDescription>
+                    <ToggleGroup
+                      disabled={readOnly}
+                      onValueChange={(val) => {
+                        if (val) {
+                          field.handleChange(val as VideoFormResolution)
+                        }
+                      }}
+                      type="single"
+                      value={field.state.value ?? ""}
+                      variant="outline"
+                    >
+                      {RESOLUTIONS.map((res) => (
+                        <ToggleGroupItem key={res} value={res}>
+                          {res}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </Field>
+                )}
+              </form.Field>
+
+              <form.Field name="duration">
+                {(field) => (
+                  <Field>
+                    <FieldLabel>Duration</FieldLabel>
+                    <FieldDescription>
+                      Total length of the generated clip in seconds. Longer
+                      durations give the model more time to develop motion and
+                      narrative, and cost proportionally more.
+                    </FieldDescription>
+                    <ToggleGroup
+                      disabled={readOnly}
+                      onValueChange={(val) => {
+                        if (val) {
+                          field.handleChange(Number(val) as 5 | 10 | 15)
+                        }
+                      }}
+                      type="single"
+                      value={field.state.value?.toString() ?? ""}
+                      variant="outline"
+                    >
+                      {DURATIONS.map((s) => (
+                        <ToggleGroupItem key={s} value={s.toString()}>
+                          {s}s
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
+              <form.Field name="generateAudio">
+                {(field) => (
+                  <Field orientation="horizontal">
+                    <div className="flex flex-1 flex-col gap-0.5">
+                      <FieldLabel htmlFor={field.name}>
+                        Generate Audio
+                      </FieldLabel>
+                      <FieldDescription>
+                        When enabled, the model generates a matching soundtrack
+                        alongside the video. Adds no extra cost over the
+                        per-second rate.
+                      </FieldDescription>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      disabled={readOnly}
+                      id={field.name}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                    />
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
+              <form.Field name="inputReferences">
+                {(field) => (
+                  <Field>
+                    <FieldLabel>Input References</FieldLabel>
+                    <FieldDescription>
+                      Upload images whose visual style, color palette, or
+                      composition should influence the output. The model uses
+                      these as soft guidance — they don't need to match the
+                      prompt exactly. Up to 5 images.
+                    </FieldDescription>
+                    <MultiImageUpload
+                      disabled={readOnly}
+                      onChange={(values) => field.handleChange(values)}
+                      values={field.state.value ?? []}
+                    />
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
+              <Field>
+                <FieldLabel>Frames</FieldLabel>
+                <FieldDescription>
+                  Pin the first or last frame of the video to a specific image.
+                  Useful for creating transitions or ensuring the clip starts or
+                  ends at a known visual state.
+                </FieldDescription>
+                <div className="flex gap-2">
+                  <form.Field name="firstFrame">
+                    {(field) => (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground text-xs">
+                          First
+                        </span>
+                        <ImageUpload
+                          disabled={readOnly}
+                          onChange={(v) => field.handleChange(v)}
+                          value={field.state.value}
+                        />
+                      </div>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="lastFrame">
+                    {(field) => (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground text-xs">
+                          Last
+                        </span>
+                        <ImageUpload
+                          disabled={readOnly}
+                          onChange={(v) => field.handleChange(v)}
+                          value={field.state.value}
+                        />
+                      </div>
+                    )}
+                  </form.Field>
+                </div>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+
+          <CardFooter className="sticky bottom-0 mt-0 flex flex-col gap-3 border-border/70 border-t bg-background px-4 pt-4 pb-4 sm:px-5">
+            <form.Subscribe
+              selector={(s) => ({
+                resolution: s.values.resolution,
+                duration: s.values.duration,
+                generateAudio: s.values.generateAudio,
+                isSubmitting: s.isSubmitting,
+                canSubmit: s.canSubmit,
+              })}
+            >
+              {({
+                resolution,
+                duration,
+                generateAudio,
+                isSubmitting,
+                canSubmit,
+              }) => {
+                const key = resolution as
+                  | keyof typeof PRICING.per_second.with_audio
+                  | undefined
+                const table = generateAudio
+                  ? PRICING.per_second.with_audio
+                  : PRICING.per_second.no_audio
+                const rate = key ? table[key] : null
+                const total = rate != null && duration ? rate * duration : null
+                let submitLabel = "Generate Video"
+
+                if (readOnly) {
+                  submitLabel = "Video Already Exists"
+                } else if (isSubmitting) {
+                  submitLabel = "Submitting…"
+                }
+
+                return (
+                  <>
+                    {total !== null && (
+                      <div className="w-full rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Rate</span>
+                            <span className="tabular-nums">
+                              ${rate?.toFixed(5)} / sec
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Duration</span>
+                            <span>{duration}s</span>
+                          </div>
+                          <div className="flex justify-between border-border/60 border-t pt-1 font-medium text-foreground">
+                            <span>Estimated cost</span>
+                            <span className="tabular-nums">
+                              ${total.toFixed(4)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <Button
+                      className="w-full"
+                      disabled={readOnly || !canSubmit || isSubmitting}
+                      type="submit"
+                    >
+                      {submitLabel}
+                    </Button>
+                  </>
+                )
+              }}
+            </form.Subscribe>
+          </CardFooter>
+        </form>
+      </TabsContent>
+
+      <TabsContent value="pricing">
+        <div className="px-4 pt-4 pb-2 sm:px-5">
           <table className="w-full text-xs">
             <thead>
               <tr>
@@ -193,332 +528,7 @@ export function VideoForm({
             </tbody>
           </table>
         </div>
-      </CardHeader>
-
-      <form
-        className="flex min-h-0 flex-1 flex-col"
-        onSubmit={(e) => {
-          e.preventDefault()
-          form.handleSubmit()
-        }}
-      >
-        <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-          <FieldGroup>
-            <form.Field name="title">
-              {(field) => (
-                <Field
-                  data-invalid={field.state.meta.errors.length > 0 || undefined}
-                >
-                  <FieldLabel htmlFor={field.name}>Title</FieldLabel>
-                  <FieldDescription>
-                    Give this video a short title for your sidebar and detail
-                    views.
-                  </FieldDescription>
-                  <Input
-                    aria-invalid={
-                      field.state.meta.errors.length > 0 || undefined
-                    }
-                    disabled={readOnly}
-                    id={field.name}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g. Golden Hour Lake"
-                    spellCheck={false}
-                    type="text"
-                    value={field.state.value}
-                  />
-                  <FieldError
-                    errors={field.state.meta.errors.map((e) => ({
-                      message: String(e),
-                    }))}
-                  />
-                </Field>
-              )}
-            </form.Field>
-
-            <FieldSeparator />
-
-            <form.Field name="prompt">
-              {(field) => (
-                <Field
-                  data-invalid={field.state.meta.errors.length > 0 || undefined}
-                >
-                  <FieldLabel htmlFor={field.name}>Prompt</FieldLabel>
-                  <FieldDescription>
-                    Describe the scene, mood, action, and visual style you want.
-                    Be specific — include camera movement, lighting, and subject
-                    details for best results.
-                  </FieldDescription>
-                  <Textarea
-                    aria-invalid={
-                      field.state.meta.errors.length > 0 || undefined
-                    }
-                    disabled={readOnly}
-                    id={field.name}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g. A serene mountain lake at golden hour, slow cinematic pan from left to right, soft warm light reflecting on calm water…"
-                    rows={10}
-                    spellCheck={false}
-                    value={field.state.value}
-                  />
-                  <FieldError
-                    errors={field.state.meta.errors.map((e) => ({
-                      message: String(e),
-                    }))}
-                  />
-                </Field>
-              )}
-            </form.Field>
-
-            <FieldSeparator />
-
-            <form.Field name="aspectRatio">
-              {(field) => (
-                <Field>
-                  <FieldLabel>Aspect Ratio</FieldLabel>
-                  <FieldDescription>
-                    Choose the frame shape. Use 16:9 for landscape/widescreen,
-                    9:16 for vertical/social, or 1:1 for square content.
-                  </FieldDescription>
-                  <ToggleGroup
-                    disabled={readOnly}
-                    onValueChange={(val) => {
-                      if (val) {
-                        field.handleChange(val as VideoFormAspectRatio)
-                      }
-                    }}
-                    type="single"
-                    value={field.state.value ?? ""}
-                    variant="outline"
-                  >
-                    {ASPECT_RATIOS.map((ratio) => (
-                      <ToggleGroupItem key={ratio} value={ratio}>
-                        {ratio}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                </Field>
-              )}
-            </form.Field>
-
-            <form.Field name="resolution">
-              {(field) => (
-                <Field>
-                  <FieldLabel>Resolution</FieldLabel>
-                  <FieldDescription>
-                    Higher resolution produces sharper output but costs more per
-                    second. 720p is a good balance for most use cases.
-                  </FieldDescription>
-                  <ToggleGroup
-                    disabled={readOnly}
-                    onValueChange={(val) => {
-                      if (val) {
-                        field.handleChange(val as VideoFormResolution)
-                      }
-                    }}
-                    type="single"
-                    value={field.state.value ?? ""}
-                    variant="outline"
-                  >
-                    {RESOLUTIONS.map((res) => (
-                      <ToggleGroupItem key={res} value={res}>
-                        {res}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                </Field>
-              )}
-            </form.Field>
-
-            <form.Field name="duration">
-              {(field) => (
-                <Field>
-                  <FieldLabel>Duration</FieldLabel>
-                  <FieldDescription>
-                    Total length of the generated clip in seconds. Longer
-                    durations give the model more time to develop motion and
-                    narrative, and cost proportionally more.
-                  </FieldDescription>
-                  <ToggleGroup
-                    disabled={readOnly}
-                    onValueChange={(val) => {
-                      if (val) {
-                        field.handleChange(Number(val) as 5 | 10 | 15)
-                      }
-                    }}
-                    type="single"
-                    value={field.state.value?.toString() ?? ""}
-                    variant="outline"
-                  >
-                    {DURATIONS.map((s) => (
-                      <ToggleGroupItem key={s} value={s.toString()}>
-                        {s}s
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                </Field>
-              )}
-            </form.Field>
-
-            <FieldSeparator />
-
-            <form.Field name="generateAudio">
-              {(field) => (
-                <Field orientation="horizontal">
-                  <div className="flex flex-1 flex-col gap-0.5">
-                    <FieldLabel htmlFor={field.name}>Generate Audio</FieldLabel>
-                    <FieldDescription>
-                      When enabled, the model generates a matching soundtrack
-                      alongside the video. Adds no extra cost over the
-                      per-second rate.
-                    </FieldDescription>
-                  </div>
-                  <Switch
-                    checked={field.state.value}
-                    disabled={readOnly}
-                    id={field.name}
-                    onCheckedChange={(checked) => field.handleChange(checked)}
-                  />
-                </Field>
-              )}
-            </form.Field>
-
-            <FieldSeparator />
-
-            <form.Field name="inputReferences">
-              {(field) => (
-                <Field>
-                  <FieldLabel>Input References</FieldLabel>
-                  <FieldDescription>
-                    Upload images whose visual style, color palette, or
-                    composition should influence the output. The model uses
-                    these as soft guidance — they don't need to match the prompt
-                    exactly. Up to 5 images.
-                  </FieldDescription>
-                  <MultiImageUpload
-                    disabled={readOnly}
-                    onChange={(values) => field.handleChange(values)}
-                    values={field.state.value ?? []}
-                  />
-                </Field>
-              )}
-            </form.Field>
-
-            <FieldSeparator />
-
-            <Field>
-              <FieldLabel>Frames</FieldLabel>
-              <FieldDescription>
-                Pin the first or last frame of the video to a specific image.
-                Useful for creating transitions or ensuring the clip starts or
-                ends at a known visual state.
-              </FieldDescription>
-              <div className="flex gap-2">
-                <form.Field name="firstFrame">
-                  {(field) => (
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground text-xs">
-                        First
-                      </span>
-                      <ImageUpload
-                        disabled={readOnly}
-                        onChange={(v) => field.handleChange(v)}
-                        value={field.state.value}
-                      />
-                    </div>
-                  )}
-                </form.Field>
-
-                <form.Field name="lastFrame">
-                  {(field) => (
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground text-xs">
-                        Last
-                      </span>
-                      <ImageUpload
-                        disabled={readOnly}
-                        onChange={(v) => field.handleChange(v)}
-                        value={field.state.value}
-                      />
-                    </div>
-                  )}
-                </form.Field>
-              </div>
-            </Field>
-          </FieldGroup>
-        </CardContent>
-
-        <CardFooter className="sticky bottom-0 mt-0 flex flex-col gap-3 border-border/70 border-t bg-background px-4 pt-4 pb-4 sm:px-5">
-          <form.Subscribe
-            selector={(s) => ({
-              resolution: s.values.resolution,
-              duration: s.values.duration,
-              generateAudio: s.values.generateAudio,
-              isSubmitting: s.isSubmitting,
-              canSubmit: s.canSubmit,
-            })}
-          >
-            {({
-              resolution,
-              duration,
-              generateAudio,
-              isSubmitting,
-              canSubmit,
-            }) => {
-              const key = resolution as
-                | keyof typeof PRICING.per_second.with_audio
-                | undefined
-              const table = generateAudio
-                ? PRICING.per_second.with_audio
-                : PRICING.per_second.no_audio
-              const rate = key ? table[key] : null
-              const total = rate != null && duration ? rate * duration : null
-              let submitLabel = "Generate Video"
-
-              if (readOnly) {
-                submitLabel = "Video Already Exists"
-              } else if (isSubmitting) {
-                submitLabel = "Submitting…"
-              }
-
-              return (
-                <>
-                  {total !== null && (
-                    <div className="w-full rounded-md border bg-muted/40 px-3 py-2 text-xs">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Rate</span>
-                          <span className="tabular-nums">
-                            ${rate?.toFixed(5)} / sec
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Duration</span>
-                          <span>{duration}s</span>
-                        </div>
-                        <div className="flex justify-between border-border/60 border-t pt-1 font-medium text-foreground">
-                          <span>Estimated cost</span>
-                          <span className="tabular-nums">
-                            ${total.toFixed(4)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <Button
-                    className="w-full"
-                    disabled={readOnly || !canSubmit || isSubmitting}
-                    type="submit"
-                  >
-                    {submitLabel}
-                  </Button>
-                </>
-              )
-            }}
-          </form.Subscribe>
-        </CardFooter>
-      </form>
-    </div>
+      </TabsContent>
+    </Tabs>
   )
 }
