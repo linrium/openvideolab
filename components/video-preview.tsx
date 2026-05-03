@@ -53,11 +53,6 @@ const TERMINAL_STATUSES = new Set([
 const AUTO_SYNC_STATUSES = new Set(["pending", "in_progress"])
 const AUTO_SYNC_INTERVAL_MS = 5000
 
-interface MetaRowProps {
-  label: string
-  value: React.ReactNode
-}
-
 function formatMillisecondsAsMinutes(value: string): string {
   const minutes = Number(value) / 60_000
   return `${minutes.toFixed(2)} min`
@@ -66,15 +61,6 @@ function formatMillisecondsAsMinutes(value: string): string {
 function formatMillisecondsAsSeconds(value: string): string {
   const seconds = Number(value) / 1000
   return `${seconds.toFixed(2)} sec`
-}
-
-function MetaRow({ label, value }: MetaRowProps) {
-  return (
-    <>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd>{value}</dd>
-    </>
-  )
 }
 
 function VideoPlaceholder({
@@ -298,84 +284,89 @@ export function VideoPreview({
       {video && (
         <>
           <Separator />
-          <dl className="mx-auto grid w-full max-w-4xl grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-4 text-xs">
-            <MetaRow
-              label="Job ID"
-              value={
-                <span className="font-mono text-muted-foreground">
-                  {video.jobId}
-                </span>
-              }
-            />
-            {video.generationId && (
-              <MetaRow
-                label="Generation ID"
-                value={
-                  <span className="font-mono text-muted-foreground">
-                    {video.generationId}
-                  </span>
-                }
-              />
-            )}
-            {video.error && (
-              <MetaRow
-                label="Error"
-                value={
-                  <span className="text-rose-600 dark:text-rose-400">
+          <div className="mx-auto flex w-full max-w-4xl gap-6 px-4 pb-4 text-xs">
+            {/* Left: time + cost */}
+            <dl className="grid flex-1 grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-0.5">
+              {(video.latency || video.generationTime) && (
+                <>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Latency
+                  </dt>
+                  <dd className="tabular-nums">
+                    {video.latency
+                      ? formatMillisecondsAsSeconds(video.latency)
+                      : "—"}
+                  </dd>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Gen Time
+                  </dt>
+                  <dd className="tabular-nums">
+                    {video.generationTime
+                      ? formatMillisecondsAsMinutes(video.generationTime)
+                      : "—"}
+                  </dd>
+                </>
+              )}
+              {(video.estimatedCost || video.totalCost) && (
+                <>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Est Cost
+                  </dt>
+                  <dd className="tabular-nums">
+                    {video.estimatedCost
+                      ? `$${Number(video.estimatedCost).toFixed(4)}`
+                      : "—"}
+                  </dd>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Total Cost
+                  </dt>
+                  <dd className="tabular-nums">
+                    {video.totalCost
+                      ? `$${Number(video.totalCost).toFixed(4)}`
+                      : "—"}
+                  </dd>
+                </>
+              )}
+              {video.duration && (
+                <>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Duration
+                  </dt>
+                  <dd className="tabular-nums">{video.duration} sec</dd>
+                </>
+              )}
+              {video.error && (
+                <>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Error
+                  </dt>
+                  <dd className="col-span-3 text-rose-600 dark:text-rose-400">
                     {video.error}
-                  </span>
-                }
-              />
-            )}
-            {video.latency && (
-              <MetaRow
-                label="Latency"
-                value={
-                  <span className="tabular-nums">
-                    {formatMillisecondsAsSeconds(video.latency)}
-                  </span>
-                }
-              />
-            )}
-            {video.generationTime && (
-              <MetaRow
-                label="Generation Time"
-                value={
-                  <span className="tabular-nums">
-                    {formatMillisecondsAsMinutes(video.generationTime)}
-                  </span>
-                }
-              />
-            )}
-            {video.duration && (
-              <MetaRow
-                label="Duration"
-                value={
-                  <span className="tabular-nums">{video.duration} sec</span>
-                }
-              />
-            )}
-            {video.estimatedCost && (
-              <MetaRow
-                label="Estimated Cost"
-                value={
-                  <span className="tabular-nums">
-                    ${Number(video.estimatedCost).toFixed(4)}
-                  </span>
-                }
-              />
-            )}
-            {video.totalCost && (
-              <MetaRow
-                label="Total Cost"
-                value={
-                  <span className="tabular-nums">
-                    ${Number(video.totalCost).toFixed(4)}
-                  </span>
-                }
-              />
-            )}
-          </dl>
+                  </dd>
+                </>
+              )}
+            </dl>
+
+            {/* Right: IDs */}
+            <dl className="grid w-52 shrink-0 grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
+              <dt className="whitespace-nowrap text-muted-foreground/70">
+                Job ID
+              </dt>
+              <dd className="min-w-0 truncate font-mono text-muted-foreground">
+                {video.jobId}
+              </dd>
+              {video.generationId && (
+                <>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Gen ID
+                  </dt>
+                  <dd className="min-w-0 truncate font-mono text-muted-foreground">
+                    {video.generationId}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
         </>
       )}
     </div>
