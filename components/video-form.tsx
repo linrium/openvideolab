@@ -35,7 +35,6 @@ import {
   MODELS,
   type ModelValue,
   PRICING,
-  RESOLUTIONS,
 } from "@/lib/constants"
 import { Input } from "./ui/input"
 
@@ -43,7 +42,7 @@ const schema = z.object({
   model: z.enum([
     "bytedance/seedance-2.0",
     "bytedance/seedance-2.0-fast",
-    "wan/wan-2.7",
+    "alibaba/wan-2.7",
     "alibaba/happy-horse-1.0",
   ]),
   title: z.string().trim().min(1, "Title is required"),
@@ -644,8 +643,9 @@ export function VideoForm({
         <div className="flex flex-col gap-4 px-4 pt-4 pb-4 sm:px-5">
           {(
             [
-              ["bytedance/seedance-2.0", "Seedance 2"],
-              ["bytedance/seedance-2.0-fast", "Seedance 2 Fast"],
+              ["bytedance/seedance-2.0", "ByteDance: Seedance 2"],
+              ["bytedance/seedance-2.0-fast", "ByteDance: Seedance 2 Fast"],
+              ["alibaba/wan-2.7", "Alibaba: Wan 2.7"],
             ] as const
           ).map(([modelId, modelLabel]) => {
             const p = PRICING[modelId]
@@ -676,7 +676,7 @@ export function VideoForm({
                         ${p.tokens.no_audio}/M
                       </td>
                     </tr>
-                    {RESOLUTIONS.map((res) => {
+                    {Object.keys(p.per_second.with_audio).map((res) => {
                       const key = res as keyof typeof p.per_second.with_audio
                       return (
                         <tr className="border-border/50 border-t" key={res}>

@@ -1,14 +1,18 @@
 export const MODELS = [
-  { value: "bytedance/seedance-2.0", label: "Seedance 2", disabled: false },
   {
-    value: "bytedance/seedance-2.0-fast",
-    label: "Seedance 2 Fast",
+    value: "bytedance/seedance-2.0",
+    label: "ByteDance: Seedance 2",
     disabled: false,
   },
-  { value: "wan/wan-2.7", label: "Wan 2.7", disabled: true },
+  {
+    value: "bytedance/seedance-2.0-fast",
+    label: "ByteDance: Seedance 2 Fast",
+    disabled: false,
+  },
+  { value: "alibaba/wan-2.7", label: "Alibaba: Wan 2.7", disabled: false },
   {
     value: "alibaba/happy-horse-1.0",
-    label: "Happy Horse 1.0",
+    label: "Alibaba: Happy Horse 1.0",
     disabled: false,
   },
 ] as const
@@ -26,6 +30,8 @@ export const ASPECT_RATIOS = [
 ] as const
 
 export const RESOLUTIONS = ["480p", "720p", "1080p"] as const
+export const WAN_ASPECT_RATIOS = ["9:16", "16:9", "1:1", "4:3", "3:4"] as const
+export const WAN_RESOLUTIONS = ["720p", "1080p"] as const
 
 export const DURATIONS = [5, 10, 15] as const
 
@@ -42,6 +48,13 @@ export const PRICING = {
     per_second: {
       with_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
       no_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
+    },
+  },
+  "alibaba/wan-2.7": {
+    tokens: { with_audio: 7, no_audio: 7 },
+    per_second: {
+      with_audio: { "720p": 0.1, "1080p": 0.1 },
+      no_audio: { "720p": 0.1, "1080p": 0.1 },
     },
   },
 } as const
@@ -88,10 +101,28 @@ const seedanceConfig: ModelFieldConfig = {
   },
 }
 
+const wanConfig: ModelFieldConfig = {
+  aspectRatios: WAN_ASPECT_RATIOS,
+  resolutions: WAN_RESOLUTIONS,
+  duration: { type: "toggle", options: DURATIONS },
+  promptMaxLength: 2500,
+  defaults: {
+    aspectRatio: "9:16",
+    resolution: "720p",
+    duration: 5,
+  },
+  features: {
+    generateAudio: true,
+    inputReferences: true,
+    frames: true,
+    watermark: false,
+  },
+}
+
 export const MODEL_CONFIGS: Record<ModelValue, ModelFieldConfig> = {
   "bytedance/seedance-2.0": seedanceConfig,
   "bytedance/seedance-2.0-fast": seedanceConfig,
-  "wan/wan-2.7": seedanceConfig,
+  "alibaba/wan-2.7": wanConfig,
   "alibaba/happy-horse-1.0": {
     aspectRatios: ["9:16", "16:9", "1:1", "4:3", "3:4"],
     resolutions: ["720P", "1080P"],

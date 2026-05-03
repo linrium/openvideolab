@@ -9,9 +9,6 @@ import { auth } from "@/lib/auth"
 import { type Model, PRICING } from "@/lib/constants"
 import { getOpenrouterClientByUserId } from "@/lib/openrouter-client"
 
-const PRICED_RESOLUTIONS = ["480p", "720p", "1080p"] as const
-type PricedResolution = (typeof PRICED_RESOLUTIONS)[number]
-
 export interface SubmitVideoResult {
   id: string
   ok: true
@@ -35,11 +32,7 @@ interface VideoMetadata {
 function getEstimatedCost(request: VideoGenerationRequest): string | null {
   const { model, resolution, duration, generateAudio } = request
 
-  if (
-    !resolution ||
-    (duration !== 5 && duration !== 10 && duration !== 15) ||
-    !PRICED_RESOLUTIONS.includes(resolution as PricedResolution)
-  ) {
+  if (!resolution || (duration !== 5 && duration !== 10 && duration !== 15)) {
     return null
   }
 
@@ -53,7 +46,11 @@ function getEstimatedCost(request: VideoGenerationRequest): string | null {
       ? modelPricing.per_second.no_audio
       : modelPricing.per_second.with_audio
 
-  const rate = table[resolution as PricedResolution]
+  const rate = table[resolution as keyof typeof table]
+  if (typeof rate !== "number") {
+    return null
+  }
+
   return String(rate * duration)
 }
 
@@ -72,7 +69,7 @@ export async function submitVideoAction(
     const job = await openrouterClient.videoGeneration.generate({
       videoGenerationRequest: {
         ...request,
-        // callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/video-created`,
+        callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhook/video-created`,
       },
     })
     console.log("[generate-video] job submitted:", job)
