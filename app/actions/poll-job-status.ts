@@ -111,35 +111,47 @@ export async function pollJobStatus(
     const openrouterClient = await getOpenrouterClientByUserId(userId)
     const openrouterApiKey = await getOpenRouterApiKeyByUserId(userId)
     const data = await openrouterClient.videoGeneration.getGeneration({ jobId })
-    const generation = data.generationId
-      ? await openrouterClient.generations.getGeneration({
-          id: data.generationId,
-        })
-      : null
     const statusChanged = Boolean(current && current.status !== data.status)
 
     if (statusChanged) {
-      await db
-        .update(videos)
-        .set({
-          totalCost:
-            generation?.data.totalCost == null
-              ? undefined
-              : String(generation.data.totalCost),
-          error: data.error ?? null,
-          generationTime:
-            generation?.data.generationTime == null
-              ? null
-              : String(generation.data.generationTime),
-          generationId: data.generationId ?? null,
-          latency:
-            generation?.data.latency == null
-              ? null
-              : String(generation.data.latency),
-          status: data.status,
-          updatedAt: new Date(),
-        })
-        .where(eq(videos.jobId, jobId))
+      if (data.status === "completed") {
+        const generation = data.generationId
+          ? await openrouterClient.generations.getGeneration({
+              id: data.generationId,
+            })
+          : null
+
+        await db
+          .update(videos)
+          .set({
+            totalCost:
+              generation?.data.totalCost == null
+                ? undefined
+                : String(generation.data.totalCost),
+            error: data.error ?? null,
+            generationTime:
+              generation?.data.generationTime == null
+                ? null
+                : String(generation.data.generationTime),
+            generationId: data.generationId ?? null,
+            latency:
+              generation?.data.latency == null
+                ? null
+                : String(generation.data.latency),
+            status: data.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(videos.jobId, jobId))
+      } else {
+        await db
+          .update(videos)
+          .set({
+            error: data.error ?? null,
+            status: data.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(videos.jobId, jobId))
+      }
 
       if (options.refreshClient !== false) {
         revalidatePath("/videos")
@@ -158,6 +170,7 @@ export async function pollJobStatus(
 
     return { ok: true, status: data.status as VideoJobStatus }
   } catch (err) {
+    console.error(err)
     return {
       ok: false,
       message: err instanceof Error ? err.message : "Failed to sync",

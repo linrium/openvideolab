@@ -1,5 +1,6 @@
 "use client"
 
+import type { AspectRatio, Resolution } from "@openrouter/sdk/models"
 import { useForm } from "@tanstack/react-form"
 import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
@@ -29,8 +30,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  ASPECT_RATIOS,
-  DURATIONS,
+  DEFAULT_MODEL_CONFIG,
+  MODEL_CONFIGS,
   MODELS,
   type ModelValue,
   PRICING,
@@ -47,22 +48,19 @@ const schema = z.object({
   ]),
   title: z.string().trim().min(1, "Title is required"),
   prompt: z.string().min(1, "Prompt is required"),
-  aspectRatio: z
-    .enum(["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"])
-    .optional(),
-  resolution: z.enum(["480p", "720p", "1080p"]).optional(),
-  duration: z.union([z.literal(5), z.literal(10), z.literal(15)]).optional(),
-  generateAudio: z.boolean(),
+  aspectRatio: z.string().optional(),
+  resolution: z.string().optional(),
+  duration: z.number().int().min(1).max(15).optional(),
+  generateAudio: z.boolean().optional(),
   inputReferences: z
     .array(z.object({ url: z.string(), key: z.string() }))
     .optional(),
   firstFrame: z.object({ url: z.string(), key: z.string() }).optional(),
   lastFrame: z.object({ url: z.string(), key: z.string() }).optional(),
+  watermark: z.boolean().optional(),
 })
 
 export type VideoFormValues = z.infer<typeof schema>
-type VideoFormAspectRatio = NonNullable<VideoFormValues["aspectRatio"]>
-type VideoFormResolution = NonNullable<VideoFormValues["resolution"]>
 
 const DEFAULT_VALUES: VideoFormValues = {
   model: "bytedance/seedance-2.0",
@@ -75,6 +73,7 @@ const DEFAULT_VALUES: VideoFormValues = {
   inputReferences: [],
   firstFrame: undefined,
   lastFrame: undefined,
+  watermark: false,
 }
 
 interface VideoFormProps {
@@ -114,10 +113,21 @@ export function VideoForm({
       },
     },
     onSubmit: async ({ value }) => {
-      const { title, inputReferences, firstFrame, lastFrame, ...rest } = value
+      const {
+        title,
+        inputReferences,
+        firstFrame,
+        lastFrame,
+        watermark: _watermark,
+        aspectRatio,
+        resolution,
+        ...restBase
+      } = value
       const result = await submitVideoAction(
         {
-          ...rest,
+          ...restBase,
+          aspectRatio: aspectRatio as AspectRatio | undefined,
+          resolution: resolution as Resolution | undefined,
           inputReferences: inputReferences?.map(({ url }) => ({
             type: "image_url" as const,
             imageUrl: { url },
@@ -189,9 +199,14 @@ export function VideoForm({
                     <FieldLabel htmlFor={field.name}>Model</FieldLabel>
                     <Select
                       disabled={readOnly}
-                      onValueChange={(val) =>
-                        field.handleChange(val as ModelValue)
-                      }
+                      onValueChange={(val) => {
+                        const model = val as ModelValue
+                        field.handleChange(model)
+                        const { defaults } = MODEL_CONFIGS[model]
+                        form.setFieldValue("aspectRatio", defaults.aspectRatio)
+                        form.setFieldValue("resolution", defaults.resolution)
+                        form.setFieldValue("duration", defaults.duration)
+                      }}
                       value={field.state.value}
                     >
                       <SelectTrigger id={field.name}>
@@ -288,181 +303,259 @@ export function VideoForm({
 
               <FieldSeparator />
 
-              <form.Field name="aspectRatio">
-                {(field) => (
-                  <Field>
-                    <FieldLabel>Aspect Ratio</FieldLabel>
-                    <FieldDescription>
-                      Choose the frame shape. Use 16:9 for landscape/widescreen,
-                      9:16 for vertical/social, or 1:1 for square content.
-                    </FieldDescription>
-                    <ToggleGroup
-                      disabled={readOnly}
-                      onValueChange={(val) => {
-                        if (val) {
-                          field.handleChange(val as VideoFormAspectRatio)
-                        }
-                      }}
-                      type="single"
-                      value={field.state.value ?? ""}
-                      variant="outline"
-                    >
-                      {ASPECT_RATIOS.map((ratio) => (
-                        <ToggleGroupItem key={ratio} value={ratio}>
-                          {ratio}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  </Field>
-                )}
-              </form.Field>
+              <form.Subscribe
+                selector={(s) =>
+                  MODEL_CONFIGS[s.values.model] ?? DEFAULT_MODEL_CONFIG
+                }
+              >
+                {(config) => (
+                  <>
+                    <form.Field name="aspectRatio">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Aspect Ratio</FieldLabel>
+                          <FieldDescription>
+                            Choose the frame shape. Use 16:9 for
+                            landscape/widescreen, 9:16 for vertical/social, or
+                            1:1 for square content.
+                          </FieldDescription>
+                          <ToggleGroup
+                            disabled={readOnly}
+                            onValueChange={(val) => {
+                              if (val) {
+                                field.handleChange(val)
+                              }
+                            }}
+                            type="single"
+                            value={field.state.value ?? ""}
+                            variant="outline"
+                          >
+                            {config.aspectRatios.map((ratio) => (
+                              <ToggleGroupItem key={ratio} value={ratio}>
+                                {ratio}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        </Field>
+                      )}
+                    </form.Field>
 
-              <form.Field name="resolution">
-                {(field) => (
-                  <Field>
-                    <FieldLabel>Resolution</FieldLabel>
-                    <FieldDescription>
-                      Higher resolution produces sharper output but costs more
-                      per second. 720p is a good balance for most use cases.
-                    </FieldDescription>
-                    <ToggleGroup
-                      disabled={readOnly}
-                      onValueChange={(val) => {
-                        if (val) {
-                          field.handleChange(val as VideoFormResolution)
-                        }
-                      }}
-                      type="single"
-                      value={field.state.value ?? ""}
-                      variant="outline"
-                    >
-                      {RESOLUTIONS.map((res) => (
-                        <ToggleGroupItem key={res} value={res}>
-                          {res}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  </Field>
-                )}
-              </form.Field>
+                    <form.Field name="resolution">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Resolution</FieldLabel>
+                          <FieldDescription>
+                            Higher resolution produces sharper output but costs
+                            more per second. 720p is a good balance for most use
+                            cases.
+                          </FieldDescription>
+                          <ToggleGroup
+                            disabled={readOnly}
+                            onValueChange={(val) => {
+                              if (val) {
+                                field.handleChange(val)
+                              }
+                            }}
+                            type="single"
+                            value={field.state.value ?? ""}
+                            variant="outline"
+                          >
+                            {config.resolutions.map((res) => (
+                              <ToggleGroupItem
+                                className="lowercase"
+                                key={res}
+                                value={res}
+                              >
+                                {res}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        </Field>
+                      )}
+                    </form.Field>
 
-              <form.Field name="duration">
-                {(field) => (
-                  <Field>
-                    <FieldLabel>Duration</FieldLabel>
-                    <FieldDescription>
-                      Total length of the generated clip in seconds. Longer
-                      durations give the model more time to develop motion and
-                      narrative, and cost proportionally more.
-                    </FieldDescription>
-                    <ToggleGroup
-                      disabled={readOnly}
-                      onValueChange={(val) => {
-                        if (val) {
-                          field.handleChange(Number(val) as 5 | 10 | 15)
-                        }
-                      }}
-                      type="single"
-                      value={field.state.value?.toString() ?? ""}
-                      variant="outline"
-                    >
-                      {DURATIONS.map((s) => (
-                        <ToggleGroupItem key={s} value={s.toString()}>
-                          {s}s
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  </Field>
-                )}
-              </form.Field>
+                    <form.Field name="duration">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Duration</FieldLabel>
+                          <FieldDescription>
+                            {config.duration.type === "toggle"
+                              ? "Total length of the generated clip in seconds. Longer durations give the model more time to develop motion and narrative, and cost proportionally more."
+                              : `Total length of the generated clip in seconds (${config.duration.min}–${config.duration.max}).`}
+                          </FieldDescription>
+                          {config.duration.type === "toggle" ? (
+                            <ToggleGroup
+                              disabled={readOnly}
+                              onValueChange={(val) => {
+                                if (val) {
+                                  field.handleChange(Number(val))
+                                }
+                              }}
+                              type="single"
+                              value={field.state.value?.toString() ?? ""}
+                              variant="outline"
+                            >
+                              {config.duration.options.map((s) => (
+                                <ToggleGroupItem key={s} value={s.toString()}>
+                                  {s}s
+                                </ToggleGroupItem>
+                              ))}
+                            </ToggleGroup>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                disabled={readOnly}
+                                max={config.duration.max}
+                                min={config.duration.min}
+                                onBlur={field.handleBlur}
+                                onChange={(e) => {
+                                  const v = Number.parseInt(e.target.value, 10)
+                                  if (!Number.isNaN(v)) {
+                                    field.handleChange(v)
+                                  }
+                                }}
+                                placeholder={`${config.duration.min}–${config.duration.max}`}
+                                type="number"
+                                value={field.state.value?.toString() ?? ""}
+                              />
+                              <span className="text-muted-foreground text-sm">
+                                sec
+                              </span>
+                            </div>
+                          )}
+                        </Field>
+                      )}
+                    </form.Field>
 
-              <FieldSeparator />
+                    <FieldSeparator />
 
-              <form.Field name="generateAudio">
-                {(field) => (
-                  <Field orientation="horizontal">
-                    <div className="flex flex-1 flex-col gap-0.5">
-                      <FieldLabel htmlFor={field.name}>
-                        Generate Audio
-                      </FieldLabel>
-                      <FieldDescription>
-                        When enabled, the model generates a matching soundtrack
-                        alongside the video. Adds no extra cost over the
-                        per-second rate.
-                      </FieldDescription>
-                    </div>
-                    <Switch
-                      checked={field.state.value}
-                      disabled={readOnly}
-                      id={field.name}
-                      onCheckedChange={(checked) => field.handleChange(checked)}
-                    />
-                  </Field>
-                )}
-              </form.Field>
-
-              <FieldSeparator />
-
-              <form.Field name="inputReferences">
-                {(field) => (
-                  <Field>
-                    <FieldLabel>Input References</FieldLabel>
-                    <FieldDescription>
-                      Upload images whose visual style, color palette, or
-                      composition should influence the output. The model uses
-                      these as soft guidance — they don't need to match the
-                      prompt exactly. Up to 5 images.
-                    </FieldDescription>
-                    <MultiImageUpload
-                      disabled={readOnly}
-                      onChange={(values) => field.handleChange(values)}
-                      values={field.state.value ?? []}
-                    />
-                  </Field>
-                )}
-              </form.Field>
-
-              <FieldSeparator />
-
-              <Field>
-                <FieldLabel>Frames</FieldLabel>
-                <FieldDescription>
-                  Pin the first or last frame of the video to a specific image.
-                  Useful for creating transitions or ensuring the clip starts or
-                  ends at a known visual state.
-                </FieldDescription>
-                <div className="flex gap-2">
-                  <form.Field name="firstFrame">
-                    {(field) => (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-muted-foreground text-xs">
-                          First
-                        </span>
-                        <ImageUpload
-                          disabled={readOnly}
-                          onChange={(v) => field.handleChange(v)}
-                          value={field.state.value}
-                        />
-                      </div>
+                    {config.features.generateAudio && (
+                      <form.Field name="generateAudio">
+                        {(field) => (
+                          <Field orientation="horizontal">
+                            <div className="flex flex-1 flex-col gap-0.5">
+                              <FieldLabel htmlFor={field.name}>
+                                Generate Audio
+                              </FieldLabel>
+                              <FieldDescription>
+                                When enabled, the model generates a matching
+                                soundtrack alongside the video. Adds no extra
+                                cost over the per-second rate.
+                              </FieldDescription>
+                            </div>
+                            <Switch
+                              checked={field.state.value ?? false}
+                              disabled={readOnly}
+                              id={field.name}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
                     )}
-                  </form.Field>
 
-                  <form.Field name="lastFrame">
-                    {(field) => (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-muted-foreground text-xs">
-                          Last
-                        </span>
-                        <ImageUpload
-                          disabled={readOnly}
-                          onChange={(v) => field.handleChange(v)}
-                          value={field.state.value}
-                        />
-                      </div>
+                    {config.features.watermark && (
+                      <form.Field name="watermark">
+                        {(field) => (
+                          <Field orientation="horizontal">
+                            <div className="flex flex-1 flex-col gap-0.5">
+                              <FieldLabel htmlFor={field.name}>
+                                Watermark
+                              </FieldLabel>
+                              <FieldDescription>
+                                When enabled, a watermark is added to the
+                                generated video.
+                              </FieldDescription>
+                            </div>
+                            <Switch
+                              checked={field.state.value ?? false}
+                              disabled={readOnly}
+                              id={field.name}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
                     )}
-                  </form.Field>
-                </div>
-              </Field>
+
+                    {(config.features.generateAudio ||
+                      config.features.watermark) &&
+                      (config.features.inputReferences ||
+                        config.features.frames) && <FieldSeparator />}
+
+                    {config.features.inputReferences && (
+                      <form.Field name="inputReferences">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Input References</FieldLabel>
+                            <FieldDescription>
+                              Upload images whose visual style, color palette,
+                              or composition should influence the output. The
+                              model uses these as soft guidance — they don't
+                              need to match the prompt exactly. Up to 5 images.
+                            </FieldDescription>
+                            <MultiImageUpload
+                              disabled={readOnly}
+                              onChange={(values) => field.handleChange(values)}
+                              values={field.state.value ?? []}
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                    )}
+
+                    {config.features.frames && (
+                      <>
+                        {config.features.inputReferences && <FieldSeparator />}
+                        <Field>
+                          <FieldLabel>Frames</FieldLabel>
+                          <FieldDescription>
+                            Pin the first or last frame of the video to a
+                            specific image. Useful for creating transitions or
+                            ensuring the clip starts or ends at a known visual
+                            state.
+                          </FieldDescription>
+                          <div className="flex gap-2">
+                            <form.Field name="firstFrame">
+                              {(field) => (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-muted-foreground text-xs">
+                                    First
+                                  </span>
+                                  <ImageUpload
+                                    disabled={readOnly}
+                                    onChange={(v) => field.handleChange(v)}
+                                    value={field.state.value}
+                                  />
+                                </div>
+                              )}
+                            </form.Field>
+
+                            <form.Field name="lastFrame">
+                              {(field) => (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-muted-foreground text-xs">
+                                    Last
+                                  </span>
+                                  <ImageUpload
+                                    disabled={readOnly}
+                                    onChange={(v) => field.handleChange(v)}
+                                    value={field.state.value}
+                                  />
+                                </div>
+                              )}
+                            </form.Field>
+                          </div>
+                        </Field>
+                      </>
+                    )}
+                  </>
+                )}
+              </form.Subscribe>
             </FieldGroup>
           </CardContent>
 

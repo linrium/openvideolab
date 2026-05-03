@@ -9,7 +9,7 @@ export const MODELS = [
   {
     value: "alibaba/happy-horse-1.0",
     label: "Happy Horse 1.0",
-    disabled: true,
+    disabled: false,
   },
 ] as const
 
@@ -47,3 +47,68 @@ export const PRICING = {
 } as const
 
 export type Model = (typeof MODELS)[number]["value"]
+
+export type DurationConfig =
+  | { type: "toggle"; options: readonly number[] }
+  | { type: "range"; min: number; max: number }
+
+export interface ModelFieldConfig {
+  aspectRatios: readonly string[]
+  defaults: {
+    aspectRatio: string
+    duration: number
+    resolution: string
+  }
+  duration: DurationConfig
+  features: {
+    generateAudio: boolean
+    inputReferences: boolean
+    frames: boolean
+    watermark: boolean
+  }
+  promptMaxLength: number
+  resolutions: readonly string[]
+}
+
+const seedanceConfig: ModelFieldConfig = {
+  aspectRatios: ASPECT_RATIOS,
+  resolutions: RESOLUTIONS,
+  duration: { type: "toggle", options: DURATIONS },
+  promptMaxLength: 2500,
+  defaults: {
+    aspectRatio: "9:16",
+    resolution: "480p",
+    duration: 5,
+  },
+  features: {
+    generateAudio: true,
+    inputReferences: true,
+    frames: true,
+    watermark: false,
+  },
+}
+
+export const MODEL_CONFIGS: Record<ModelValue, ModelFieldConfig> = {
+  "bytedance/seedance-2.0": seedanceConfig,
+  "bytedance/seedance-2.0-fast": seedanceConfig,
+  "wan/wan-2.7": seedanceConfig,
+  "alibaba/happy-horse-1.0": {
+    aspectRatios: ["9:16", "16:9", "1:1", "4:3", "3:4"],
+    resolutions: ["720P", "1080P"],
+    duration: { type: "toggle", options: DURATIONS },
+    promptMaxLength: 2500,
+    defaults: {
+      aspectRatio: "16:9",
+      resolution: "720P",
+      duration: 5,
+    },
+    features: {
+      generateAudio: false,
+      inputReferences: false,
+      frames: false,
+      watermark: true,
+    },
+  },
+}
+
+export const DEFAULT_MODEL_CONFIG: ModelFieldConfig = seedanceConfig

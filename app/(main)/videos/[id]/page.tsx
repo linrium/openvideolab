@@ -8,7 +8,7 @@ import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 import { getPresignedUrl } from "@/lib/r2"
 
-const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"]
+const ASPECT_RATIOS = ["9:16", "16:9", "1:1", "4:3", "3:4", "21:9", "9:21"]
 
 const RESOLUTIONS = ["480p", "720p", "1080p"]
 const DURATIONS = [5, 10, 15]
