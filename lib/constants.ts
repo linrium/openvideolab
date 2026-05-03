@@ -74,6 +74,9 @@ export interface ModelFieldConfig {
   }
   duration: DurationConfig
   features: {
+    atlasCloudAudioUrl: boolean
+    atlasCloudNegativePrompt: boolean
+    atlasCloudPromptExtend: boolean
     generateAudio: boolean
     inputReferences: boolean
     frames: boolean
@@ -94,6 +97,9 @@ const seedanceConfig: ModelFieldConfig = {
     duration: 5,
   },
   features: {
+    atlasCloudAudioUrl: false,
+    atlasCloudNegativePrompt: false,
+    atlasCloudPromptExtend: false,
     generateAudio: true,
     inputReferences: true,
     frames: true,
@@ -112,6 +118,9 @@ const wanConfig: ModelFieldConfig = {
     duration: 5,
   },
   features: {
+    atlasCloudAudioUrl: true,
+    atlasCloudNegativePrompt: true,
+    atlasCloudPromptExtend: true,
     generateAudio: true,
     inputReferences: true,
     frames: true,
@@ -134,6 +143,9 @@ export const MODEL_CONFIGS: Record<ModelValue, ModelFieldConfig> = {
       duration: 5,
     },
     features: {
+      atlasCloudAudioUrl: false,
+      atlasCloudNegativePrompt: false,
+      atlasCloudPromptExtend: false,
       generateAudio: false,
       inputReferences: false,
       frames: false,

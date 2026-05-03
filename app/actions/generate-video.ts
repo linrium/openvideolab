@@ -8,6 +8,7 @@ import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 import { type Model, PRICING } from "@/lib/constants"
 import { getOpenrouterClientByUserId } from "@/lib/openrouter-client"
+import type { PersistedVideoProvider } from "@/lib/video-provider"
 
 export interface SubmitVideoResult {
   id: string
@@ -20,12 +21,14 @@ export interface SubmitVideoError {
 }
 
 interface ImageKeys {
+  audioReferenceKey?: string
   frameFirstKey?: string
   frameLastKey?: string
   inputReferenceKeys?: string[]
 }
 
 interface VideoMetadata {
+  provider?: PersistedVideoProvider | null
   title: string
 }
 
@@ -90,6 +93,19 @@ export async function submitVideoAction(
         inputReferences: imageKeys.inputReferenceKeys ?? [],
         frameFirst: imageKeys.frameFirstKey ?? null,
         frameLast: imageKeys.frameLastKey ?? null,
+        provider:
+          metadata.provider == null
+            ? null
+            : {
+                ...metadata.provider,
+                metadata: {
+                  ...metadata.provider.metadata,
+                  audioKey:
+                    imageKeys.audioReferenceKey ??
+                    metadata.provider.metadata?.audioKey ??
+                    null,
+                },
+              },
       })
       .returning({ id: videos.id })
     revalidatePath("/videos")

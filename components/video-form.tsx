@@ -7,7 +7,11 @@ import { useRef, useState } from "react"
 import { toast } from "sonner"
 import z from "zod/v4"
 import { submitVideoAction } from "@/app/actions/generate-video"
-import { ImageUpload, MultiImageUpload } from "@/components/image-upload"
+import {
+  AudioUpload,
+  ImageUpload,
+  MultiImageUpload,
+} from "@/components/image-upload"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
@@ -36,6 +40,7 @@ import {
   type ModelValue,
   PRICING,
 } from "@/lib/constants"
+import type { PersistedVideoProvider } from "@/lib/video-provider"
 import { Input } from "./ui/input"
 
 const schema = z.object({
@@ -47,10 +52,13 @@ const schema = z.object({
   ]),
   title: z.string().trim().min(1, "Title is required"),
   prompt: z.string().min(1, "Prompt is required"),
+  negativePrompt: z.string().optional(),
   aspectRatio: z.string().optional(),
   resolution: z.string().optional(),
   duration: z.number().int().min(1).max(15).optional(),
   generateAudio: z.boolean().optional(),
+  promptExtend: z.boolean().optional(),
+  audioReference: z.object({ url: z.string(), key: z.string() }).optional(),
   inputReferences: z
     .array(z.object({ url: z.string(), key: z.string() }))
     .optional(),
@@ -65,10 +73,13 @@ const DEFAULT_VALUES: VideoFormValues = {
   model: "bytedance/seedance-2.0",
   title: "",
   prompt: "",
+  negativePrompt: "",
   aspectRatio: "9:16",
   resolution: "480p",
   duration: 5,
   generateAudio: true,
+  promptExtend: false,
+  audioReference: undefined,
   inputReferences: [],
   firstFrame: undefined,
   lastFrame: undefined,
@@ -114,19 +125,38 @@ export function VideoForm({
     onSubmit: async ({ value }) => {
       const {
         title,
+        negativePrompt,
         inputReferences,
         firstFrame,
         lastFrame,
+        audioReference,
+        promptExtend,
         watermark: _watermark,
         aspectRatio,
         resolution,
         ...restBase
       } = value
+      const isWanModel = value.model === "alibaba/wan-2.7"
+      const atlasCloudProvider: PersistedVideoProvider | null = isWanModel
+        ? {
+            metadata: {
+              audioKey: audioReference?.key ?? null,
+            },
+            options: {
+              "atlas-cloud": {
+                audio_url: audioReference?.url,
+                negative_prompt: negativePrompt?.trim() || undefined,
+                prompt_extend: promptExtend ?? false,
+              },
+            },
+          }
+        : null
       const result = await submitVideoAction(
         {
           ...restBase,
           aspectRatio: aspectRatio as AspectRatio | undefined,
           resolution: resolution as Resolution | undefined,
+          provider: atlasCloudProvider?.options,
           inputReferences: inputReferences?.map(({ url }) => ({
             type: "image_url" as const,
             imageUrl: { url },
@@ -152,8 +182,9 @@ export function VideoForm({
               : []),
           ],
         },
-        { title },
+        { provider: atlasCloudProvider, title },
         {
+          audioReferenceKey: audioReference?.key,
           inputReferenceKeys: inputReferences?.map(({ key }) => key),
           frameFirstKey: firstFrame?.key,
           frameLastKey: lastFrame?.key,
@@ -303,6 +334,44 @@ export function VideoForm({
               <FieldSeparator />
 
               <form.Subscribe
+                selector={(s) => s.values.model === "alibaba/wan-2.7"}
+              >
+                {(isWanModel) =>
+                  isWanModel && (
+                    <>
+                      <form.Field name="negativePrompt">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel htmlFor={field.name}>
+                              Negative Prompt
+                            </FieldLabel>
+                            <FieldDescription>
+                              Describe content, motion, or artifacts the model
+                              should avoid for Wan 2.7.
+                            </FieldDescription>
+                            <Textarea
+                              disabled={readOnly}
+                              id={field.name}
+                              onBlur={field.handleBlur}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
+                              placeholder="e.g. blurry faces, flickering lights, low detail hands"
+                              rows={4}
+                              spellCheck={false}
+                              value={field.state.value ?? ""}
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+
+                      <FieldSeparator />
+                    </>
+                  )
+                }
+              </form.Subscribe>
+
+              <form.Subscribe
                 selector={(s) =>
                   MODEL_CONFIGS[s.values.model] ?? DEFAULT_MODEL_CONFIG
                 }
@@ -449,6 +518,52 @@ export function VideoForm({
                               onCheckedChange={(checked) =>
                                 field.handleChange(checked)
                               }
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                    )}
+
+                    {config.features.atlasCloudPromptExtend && (
+                      <form.Field name="promptExtend">
+                        {(field) => (
+                          <Field orientation="horizontal">
+                            <div className="flex flex-1 flex-col gap-0.5">
+                              <FieldLabel htmlFor={field.name}>
+                                Prompt Extend
+                              </FieldLabel>
+                              <FieldDescription>
+                                Whether to use AI to enhance the prompt for
+                                better video quality. Increases generation time.
+                              </FieldDescription>
+                            </div>
+                            <Switch
+                              checked={field.state.value ?? false}
+                              disabled={readOnly}
+                              id={field.name}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                    )}
+
+                    {config.features.atlasCloudAudioUrl && (
+                      <form.Field name="audioReference">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Audio Reference</FieldLabel>
+                            <FieldDescription>
+                              URL of an audio file to use as the video
+                              soundtrack. Supported formats: wav, mp3. Duration:
+                              2–30 seconds. Maximum file size: 15 MB.
+                            </FieldDescription>
+                            <AudioUpload
+                              disabled={readOnly}
+                              onChange={(value) => field.handleChange(value)}
+                              value={field.state.value}
                             />
                           </Field>
                         )}

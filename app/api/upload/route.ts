@@ -4,13 +4,33 @@ import { v7 as uuidv7 } from "uuid"
 import { auth } from "@/lib/auth"
 import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
 
-const MAX_SIZE = 10 * 1024 * 1024
-const ALLOWED_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-])
+const MAX_SIZE = 15 * 1024 * 1024
+const UPLOAD_CONFIG = {
+  "audio/mpeg": {
+    category: "audio",
+  },
+  "audio/wav": {
+    category: "audio",
+  },
+  "audio/wave": {
+    category: "audio",
+  },
+  "audio/x-wav": {
+    category: "audio",
+  },
+  "image/gif": {
+    category: "images",
+  },
+  "image/jpeg": {
+    category: "images",
+  },
+  "image/png": {
+    category: "images",
+  },
+  "image/webp": {
+    category: "images",
+  },
+} as const
 
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -25,22 +45,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 })
   }
 
-  if (!ALLOWED_TYPES.has(file.type)) {
+  const uploadConfig = UPLOAD_CONFIG[file.type as keyof typeof UPLOAD_CONFIG]
+
+  if (!uploadConfig) {
     return NextResponse.json(
-      { error: "Only JPEG, PNG, WebP, and GIF images are allowed" },
+      { error: "Only JPEG, PNG, WebP, GIF, MP3, and WAV files are allowed" },
       { status: 400 }
     )
   }
 
   if (file.size > MAX_SIZE) {
     return NextResponse.json(
-      { error: "File exceeds the 10 MB limit" },
+      { error: "File exceeds the 15 MB limit" },
       { status: 400 }
     )
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg"
-  const key = `${session.user.id}/images/${uuidv7()}.${ext}`
+  const ext =
+    file.name.split(".").pop()?.toLowerCase() ??
+    (uploadConfig.category === "audio" ? "mp3" : "jpg")
+  const key = `${session.user.id}/${uploadConfig.category}/${uuidv7()}.${ext}`
 
   const buffer = await file.arrayBuffer()
   await uploadToR2(key, Buffer.from(buffer), file.type)

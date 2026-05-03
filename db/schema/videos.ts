@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -12,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core"
 import { v7 as uuidv7 } from "uuid"
 import type { Model } from "@/lib/constants"
+import type { PersistedVideoProvider } from "@/lib/video-provider"
 import { users } from "./auth-schema"
 
 export const videos = pgTable(
@@ -42,6 +44,7 @@ export const videos = pgTable(
     inputReferences: text("input_references").array(),
     frameFirst: text("frame_first"),
     frameLast: text("frame_last"),
+    provider: jsonb("provider").$type<PersistedVideoProvider | null>(),
     elapsed: integer("elapsed").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

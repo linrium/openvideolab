@@ -11,6 +11,21 @@ export interface ImageValue {
   url: string
 }
 
+export type AudioValue = ImageValue
+
+async function uploadAsset(file: File): Promise<ImageValue> {
+  const body = new FormData()
+  body.append("file", file)
+
+  const res = await fetch("/api/upload", { method: "POST", body })
+  const json = await res.json()
+  if (!res.ok) {
+    throw new Error(json.error ?? "Upload failed")
+  }
+
+  return { url: json.url, key: json.key }
+}
+
 interface ImageUploadProps {
   className?: string
   disabled?: boolean
@@ -36,14 +51,7 @@ export function ImageUpload({
     setUploading(true)
     setError(null)
     try {
-      const body = new FormData()
-      body.append("file", file)
-      const res = await fetch("/api/upload", { method: "POST", body })
-      const json = await res.json()
-      if (!res.ok) {
-        throw new Error(json.error ?? "Upload failed")
-      }
-      onChange({ url: json.url, key: json.key })
+      onChange(await uploadAsset(file))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -202,5 +210,156 @@ export function MultiImageUpload({
         />
       )}
     </div>
+  )
+}
+
+interface AudioUploadProps {
+  className?: string
+  disabled?: boolean
+  onChange: (value: AudioValue | undefined) => void
+  value?: AudioValue
+}
+
+export function AudioUpload({
+  value,
+  onChange,
+  className,
+  disabled = false,
+}: AudioUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+
+  async function upload(file: File) {
+    if (disabled) {
+      return
+    }
+
+    setUploading(true)
+    setError(null)
+    try {
+      onChange(await uploadAsset(file))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (disabled) {
+      e.target.value = ""
+      return
+    }
+
+    const file = e.target.files?.[0]
+    if (file) {
+      upload(file)
+    }
+    e.target.value = ""
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    if (disabled) {
+      return
+    }
+
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      upload(file)
+    }
+  }
+
+  function onRemove(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (disabled) {
+      return
+    }
+
+    onChange(undefined)
+    setError(null)
+  }
+
+  return (
+    <div className={cn("flex flex-col gap-2", className)}>
+      <input
+        accept="audio/mpeg,audio/wav,audio/x-wav,audio/wave"
+        className="hidden h-0"
+        disabled={disabled}
+        onChange={onFileChange}
+        ref={inputRef}
+        tabIndex={-1}
+        type="file"
+      />
+
+      {value ? (
+        <div className="space-y-2 rounded-md border p-3">
+          {/* biome-ignore lint/a11y/useMediaCaption: uploaded reference audio has no caption track */}
+          <audio className="w-full" controls src={value.url} />
+          {!disabled && <ButtonLike onClick={onRemove} text="Remove audio" />}
+        </div>
+      ) : (
+        <button
+          className={cn(
+            "flex min-h-24 w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground transition-colors",
+            "hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            dragging && "border-primary bg-primary/5 text-primary",
+            (uploading || disabled) && "pointer-events-none opacity-50"
+          )}
+          disabled={disabled || uploading}
+          onClick={() => {
+            if (!disabled) {
+              inputRef.current?.click()
+            }
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDragOver={(e) => {
+            e.preventDefault()
+            if (!disabled) {
+              setDragging(true)
+            }
+          }}
+          onDrop={onDrop}
+          onKeyDown={(e) => {
+            if (!disabled && e.key === "Enter") {
+              inputRef.current?.click()
+            }
+          }}
+          type="button"
+        >
+          {uploading ? (
+            <span className="size-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <HugeiconsIcon icon={Upload01Icon} size={20} strokeWidth={2} />
+          )}
+          <span className="text-xs">
+            {uploading ? "Uploading…" : "Upload MP3 or WAV"}
+          </span>
+        </button>
+      )}
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
+    </div>
+  )
+}
+
+function ButtonLike({
+  onClick,
+  text,
+}: {
+  onClick: (e: React.MouseEvent) => void
+  text: string
+}) {
+  return (
+    <button
+      className="text-left text-destructive text-xs hover:underline"
+      onClick={onClick}
+      type="button"
+    >
+      {text}
+    </button>
   )
 }
