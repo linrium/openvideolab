@@ -6,15 +6,9 @@ import { headers } from "next/headers"
 import { db } from "@/db"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
-import type { Model } from "@/lib/constants"
+import { type Model, PRICING } from "@/lib/constants"
 import { getOpenrouterClientByUserId } from "@/lib/openrouter-client"
 
-const PRICING = {
-  perSecond: {
-    withAudio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
-    noAudio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
-  },
-} as const
 const PRICED_RESOLUTIONS = ["480p", "720p", "1080p"] as const
 type PricedResolution = (typeof PRICED_RESOLUTIONS)[number]
 
@@ -39,8 +33,7 @@ interface VideoMetadata {
 }
 
 function getEstimatedCost(request: VideoGenerationRequest): string | null {
-  const resolution = request.resolution
-  const duration = request.duration
+  const { model, resolution, duration, generateAudio } = request
 
   if (
     !resolution ||
@@ -50,11 +43,17 @@ function getEstimatedCost(request: VideoGenerationRequest): string | null {
     return null
   }
 
-  const rate =
-    request.generateAudio === false
-      ? PRICING.perSecond.noAudio[resolution as PricedResolution]
-      : PRICING.perSecond.withAudio[resolution as PricedResolution]
+  const modelPricing = PRICING[model as keyof typeof PRICING]
+  if (!modelPricing) {
+    return null
+  }
 
+  const table =
+    generateAudio === false
+      ? modelPricing.per_second.no_audio
+      : modelPricing.per_second.with_audio
+
+  const rate = table[resolution as PricedResolution]
   return String(rate * duration)
 }
 
@@ -73,7 +72,7 @@ export async function submitVideoAction(
     const job = await openrouterClient.videoGeneration.generate({
       videoGenerationRequest: {
         ...request,
-        callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/video-created`,
+        // callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/video-created`,
       },
     })
     console.log("[generate-video] job submitted:", job)

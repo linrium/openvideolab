@@ -107,7 +107,7 @@ function VideoPlaceholder({
   }
   return (
     <>
-      <Spokes className="size-16 text-muted-foreground" />
+      <Spokes className="size-8 text-muted-foreground" />
       <span>{status === "in_progress" ? "Generating…" : "Pending…"}</span>
     </>
   )
