@@ -244,56 +244,61 @@ export function VideoPreview({
     : null
 
   return (
-    <div className="w-full max-w-4xl space-y-3">
-      <div className="flex items-center justify-center px-4 pt-4">
-        {currentStatus === "completed" ? (
-          // biome-ignore lint/a11y/useMediaCaption: no captions available for generated video
-          <video
-            className="max-h-[40vh] w-full rounded-md"
-            controls
-            src={currentUrl}
-          />
-        ) : (
-          <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-muted-foreground text-sm">
-            <VideoPlaceholder hasJob={Boolean(jobId)} status={currentStatus} />
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4">
-        {statusConfig && (
-          <Badge className={statusConfig.className} variant="outline">
-            {statusConfig.label}
-          </Badge>
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          {currentUrl && (
-            <Button asChild size="sm" variant="outline">
-              <a download href={currentUrl} rel="noopener">
-                <HugeiconsIcon
-                  icon={Download01Icon}
-                  size={16}
-                  strokeWidth={2}
-                />
-                Download
-              </a>
-            </Button>
-          )}
-          {jobId && (
-            <SyncButton
-              currentStatus={currentStatus}
-              jobId={jobId}
-              onStatusChange={setCurrentStatus}
-              onUrlChange={setCurrentUrl}
+    <div className="w-full space-y-3">
+      <div className="mx-auto w-full max-w-4xl space-y-3">
+        <div className="flex items-center justify-center px-4 pt-4">
+          {currentStatus === "completed" ? (
+            // biome-ignore lint/a11y/useMediaCaption: no captions available for generated video
+            <video
+              className="max-h-[40vh] w-full rounded-md"
+              controls
+              src={currentUrl}
             />
+          ) : (
+            <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-muted-foreground text-sm">
+              <VideoPlaceholder
+                hasJob={Boolean(jobId)}
+                status={currentStatus}
+              />
+            </div>
           )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4">
+          {statusConfig && (
+            <Badge className={statusConfig.className} variant="outline">
+              {statusConfig.label}
+            </Badge>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            {currentUrl && (
+              <Button asChild size="sm" variant="outline">
+                <a download href={currentUrl} rel="noopener">
+                  <HugeiconsIcon
+                    icon={Download01Icon}
+                    size={16}
+                    strokeWidth={2}
+                  />
+                  Download
+                </a>
+              </Button>
+            )}
+            {jobId && (
+              <SyncButton
+                currentStatus={currentStatus}
+                jobId={jobId}
+                onStatusChange={setCurrentStatus}
+                onUrlChange={setCurrentUrl}
+              />
+            )}
+          </div>
         </div>
       </div>
 
       {video && (
         <>
           <Separator />
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-4 text-xs">
+          <dl className="mx-auto grid w-full max-w-4xl grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-4 text-xs">
             <MetaRow
               label="Job ID"
               value={
