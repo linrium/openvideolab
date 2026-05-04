@@ -3,6 +3,7 @@
 import { Image01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Image from "next/image"
+import { useEffect, useRef, useState } from "react"
 import type {
   AssetGenerationFormApi,
   GeneratedAssetsState,
@@ -43,9 +44,34 @@ export function AssetPreview({
   form: AssetGenerationFormApi
   generatedAssets: GeneratedAssetsState | null
 }) {
+  const [confirming, setConfirming] = useState(false)
+  const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dimensions = generatedAssets
     ? ASSET_SIZE_DIMENSIONS[generatedAssets.size]
     : null
+
+  useEffect(
+    () => () => {
+      if (confirmTimeoutRef.current) {
+        clearTimeout(confirmTimeoutRef.current)
+      }
+    },
+    []
+  )
+
+  const handleGenerateClick = () => {
+    if (confirming) {
+      if (confirmTimeoutRef.current) {
+        clearTimeout(confirmTimeoutRef.current)
+      }
+      setConfirming(false)
+      form.handleSubmit()
+      return
+    }
+
+    setConfirming(true)
+    confirmTimeoutRef.current = setTimeout(() => setConfirming(false), 3000)
+  }
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
@@ -74,7 +100,7 @@ export function AssetPreview({
               ) : (
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (
-                    <div className="flex aspect-square w-full max-w-2xl flex-col items-center justify-center gap-4 rounded-3xl border border-border/70 border-dashed bg-muted/20 px-6 text-center text-muted-foreground text-sm">
+                    <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
                       <AssetPlaceholder isGenerating={isSubmitting} />
                     </div>
                   )}
@@ -112,17 +138,30 @@ export function AssetPreview({
             selector={(state) => ({
               canSubmit: state.canSubmit,
               isSubmitting: state.isSubmitting,
+              prompt: state.values.prompt,
             })}
           >
-            {({ canSubmit, isSubmitting }) => (
-              <Button
-                disabled={!canSubmit || isSubmitting}
-                onClick={() => form.handleSubmit()}
-                type="button"
-              >
-                {isSubmitting ? "Generating…" : "Generate Asset"}
-              </Button>
-            )}
+            {({ canSubmit, isSubmitting, prompt }) => {
+              let submitLabel = "Generate Asset"
+              if (isSubmitting) {
+                submitLabel = "Generating…"
+              } else if (confirming) {
+                submitLabel = "Click again to confirm"
+              }
+
+              const hasPrompt = prompt.trim().length > 0
+
+              return (
+                <Button
+                  disabled={!(canSubmit && hasPrompt) || isSubmitting}
+                  onClick={handleGenerateClick}
+                  type="button"
+                  variant={confirming ? "destructive" : "default"}
+                >
+                  {submitLabel}
+                </Button>
+              )
+            }}
           </form.Subscribe>
         </div>
       </div>

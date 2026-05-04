@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm"
 import { refresh, revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { db } from "@/db"
+import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 import {
@@ -35,7 +36,12 @@ async function resolvePollJobContext(
   options: PollJobStatusOptions
 ): Promise<
   | {
-      current: { path: string | null; status: string; userId: string }
+      current: {
+        generationRecordId: string
+        path: string | null
+        status: string
+        userId: string
+      }
       userId: string
     }
   | PollJobStatusError
@@ -50,11 +56,13 @@ async function resolvePollJobContext(
 
   const [current] = await db
     .select({
+      generationRecordId: generations.id,
       path: videos.path,
-      status: videos.status,
-      userId: videos.userId,
+      status: generations.status,
+      userId: generations.userId,
     })
     .from(videos)
+    .innerJoin(generations, eq(videos.generationRecordId, generations.id))
     .where(eq(videos.jobId, jobId))
     .limit(1)
 
@@ -84,10 +92,7 @@ async function syncCompletedVideoAction(
 
     await uploadToR2(key, buffer, contentType)
     console.log("[syncCompletedVideo] uploaded", key)
-    await db
-      .update(videos)
-      .set({ error: null, path: key, updatedAt: new Date() })
-      .where(eq(videos.jobId, jobId))
+    await db.update(videos).set({ path: key }).where(eq(videos.jobId, jobId))
 
     return key
   } catch (err) {
@@ -122,35 +127,35 @@ export async function pollJobStatusAction(
           : null
 
         await db
-          .update(videos)
+          .update(generations)
           .set({
-            totalCost:
-              generation?.data.totalCost == null
-                ? undefined
-                : String(generation.data.totalCost),
             error: data.error ?? null,
             generationTime:
               generation?.data.generationTime == null
                 ? null
                 : String(generation.data.generationTime),
-            generationId: data.generationId ?? null,
             latency:
               generation?.data.latency == null
                 ? null
                 : String(generation.data.latency),
+            referenceId: data.generationId ?? null,
             status: data.status,
+            totalCost:
+              generation?.data.totalCost == null
+                ? undefined
+                : String(generation.data.totalCost),
             updatedAt: new Date(),
           })
-          .where(eq(videos.jobId, jobId))
+          .where(eq(generations.id, current.generationRecordId))
       } else {
         await db
-          .update(videos)
+          .update(generations)
           .set({
             error: data.error ?? null,
             status: data.status,
             updatedAt: new Date(),
           })
-          .where(eq(videos.jobId, jobId))
+          .where(eq(generations.id, current.generationRecordId))
       }
 
       if (options.refreshClient !== false) {

@@ -4,6 +4,7 @@ import type { VideoGenerationRequest } from "@openrouter/sdk/models"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { db } from "@/db"
+import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 import { type Model, PRICING } from "@/lib/constants"
@@ -30,6 +31,20 @@ interface ImageKeys {
 interface VideoMetadata {
   provider?: PersistedVideoProvider | null
   title: string
+}
+
+const TITLE_MAX_LENGTH = 80
+
+function getVideoTitle(metadataTitle: string, prompt: string): string {
+  const trimmedTitle = metadataTitle.trim()
+  if (trimmedTitle) {
+    return trimmedTitle
+  }
+
+  const trimmedPrompt = prompt.trim()
+  return trimmedPrompt.length > TITLE_MAX_LENGTH
+    ? `${trimmedPrompt.slice(0, TITLE_MAX_LENGTH).trimEnd()}…`
+    : trimmedPrompt
 }
 
 function getEstimatedCost(request: VideoGenerationRequest): string | null {
@@ -65,31 +80,39 @@ export async function submitVideoAction(
   }
 
   try {
+    const title = getVideoTitle(metadata.title, request.prompt)
     const openrouterClient = await getOpenrouterClientByUserId(session.user.id)
     const job = await openrouterClient.videoGeneration.generate({
       videoGenerationRequest: {
         ...request,
-        callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhook/video-created`,
+        callbackUrl: `${process.env.OPENROUTER_BASE_WEBHOOK_URL}/api/webhook/video-created`,
       },
     })
     console.log("[generate-video] job submitted:", job)
 
+    const [insertedGeneration] = await db
+      .insert(generations)
+      .values({
+        estimatedCost: getEstimatedCost(request),
+        model: request.model as Model,
+        prompt: request.prompt,
+        title,
+        type: "video",
+        userId: session.user.id,
+      })
+      .returning({ id: generations.id })
+
     const [insertedVideo] = await db
       .insert(videos)
       .values({
-        jobId: job.id,
-        userId: session.user.id,
-        title: metadata.title,
-        prompt: request.prompt,
-        model: request.model as Model,
         aspectRatio: request.aspectRatio ?? null,
-        resolution: request.resolution ?? null,
         duration: request.duration ?? null,
-        estimatedCost: getEstimatedCost(request),
-        generateAudio: request.generateAudio ?? true,
-        inputReferences: imageKeys.inputReferenceKeys ?? [],
         frameFirst: imageKeys.frameFirstKey ?? null,
         frameLast: imageKeys.frameLastKey ?? null,
+        generateAudio: request.generateAudio ?? true,
+        generationRecordId: insertedGeneration.id,
+        inputReferences: imageKeys.inputReferenceKeys ?? [],
+        jobId: job.id,
         provider:
           metadata.provider == null
             ? null
@@ -103,6 +126,7 @@ export async function submitVideoAction(
                     null,
                 },
               },
+        resolution: request.resolution ?? null,
       })
       .returning({ id: videos.id })
     revalidatePath("/videos")

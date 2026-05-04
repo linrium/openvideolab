@@ -16,5 +16,6 @@ declare namespace NodeJS {
 
     OPENROUTER_API_KEY: string
     OPENROUTER_BASE_URL: string
+    OPENROUTER_BASE_WEBHOOK_URL: string
   }
 }

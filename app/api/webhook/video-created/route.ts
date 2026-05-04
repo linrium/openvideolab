@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import z from "zod/v4"
 import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
 import { db } from "@/db"
+import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
 
 const webhookBodySchema = z.object({
@@ -49,8 +50,9 @@ export async function POST(request: NextRequest) {
 
       const jobId = result.data.data.id
       const [video] = await db
-        .select({ userId: videos.userId })
+        .select({ userId: generations.userId })
         .from(videos)
+        .innerJoin(generations, eq(videos.generationRecordId, generations.id))
         .where(eq(videos.jobId, jobId))
         .limit(1)
 

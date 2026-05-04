@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { db } from "@/db"
+import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 
@@ -24,13 +25,14 @@ export default async function MainLayout({
     .select({
       id: videos.id,
       jobId: videos.jobId,
-      title: videos.title,
-      prompt: videos.prompt,
-      status: videos.status,
+      title: generations.title,
+      prompt: generations.prompt,
+      status: generations.status,
     })
     .from(videos)
-    .where(eq(videos.userId, session.user.id))
-    .orderBy(desc(videos.createdAt))
+    .innerJoin(generations, eq(videos.generationRecordId, generations.id))
+    .where(eq(generations.userId, session.user.id))
+    .orderBy(desc(generations.createdAt))
     .limit(50)
 
   return (

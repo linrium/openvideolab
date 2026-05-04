@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { VideoForm, type VideoFormValues } from "@/components/video-form"
 import { VideoPreview } from "@/components/video-preview"
 import { db } from "@/db"
+import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 import { getPresignedUrl } from "@/lib/r2"
@@ -52,8 +53,32 @@ export default async function VideoPage({ params }: VideoPageProps) {
   }
 
   const [video] = await db
-    .select()
+    .select({
+      aspectRatio: videos.aspectRatio,
+      duration: videos.duration,
+      error: generations.error,
+      estimatedCost: generations.estimatedCost,
+      frameFirst: videos.frameFirst,
+      frameLast: videos.frameLast,
+      generateAudio: videos.generateAudio,
+      generationId: generations.referenceId,
+      generationTime: generations.generationTime,
+      inputReferences: videos.inputReferences,
+      jobId: videos.jobId,
+      latency: generations.latency,
+      model: generations.model,
+      path: videos.path,
+      prompt: generations.prompt,
+      provider: videos.provider,
+      resolution: videos.resolution,
+      status: generations.status,
+      title: generations.title,
+      totalCost: generations.totalCost,
+      userId: generations.userId,
+      videoId: videos.id,
+    })
     .from(videos)
+    .innerJoin(generations, eq(videos.generationRecordId, generations.id))
     .where(eq(videos.id, id))
     .limit(1)
 

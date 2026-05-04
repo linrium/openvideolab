@@ -1,15 +1,24 @@
 "use server"
 
 import { headers } from "next/headers"
+import { db } from "@/db"
+import { generations } from "@/db/schema/generations"
+import { images as imagesTable } from "@/db/schema/images"
 import {
+  ASSET_SIZE_DIMENSIONS,
   type AssetSize,
   assetGenerationSchema,
+  getEstimatedAssetCost,
   SUPPORTED_ASSET_MODEL,
 } from "@/lib/asset-generation"
 import { auth } from "@/lib/auth"
 import { getOpenAiClientByUserId } from "@/lib/openai-client"
 
+const DEFAULT_IMAGE_MIME_TYPE = "image/webp"
+const TITLE_MAX_LENGTH = 80
+
 export interface SubmitAssetSuccess {
+  generationId: string
   images: string[]
   ok: true
   size: AssetSize
@@ -39,17 +48,17 @@ export async function submitAssetAction(
   }
 
   try {
+    const { data } = parsedInput
     const openAiClient = await getOpenAiClientByUserId(session.user.id)
     const response = await openAiClient.images.generate({
-      background: parsedInput.data.background,
+      background: data.background,
       model: SUPPORTED_ASSET_MODEL,
-      moderation: parsedInput.data.moderation,
-      n: parsedInput.data.n,
+      moderation: data.moderation,
+      n: data.n,
       output_format: "webp",
-      prompt: parsedInput.data.prompt,
-      quality: parsedInput.data.quality,
-      response_format: "url",
-      size: parsedInput.data.size,
+      prompt: data.prompt,
+      quality: data.quality,
+      size: data.size,
     })
 
     const images =
@@ -74,12 +83,55 @@ export async function submitAssetAction(
       }
     }
 
+    const prompt = data.prompt.trim()
+    const dimensions = ASSET_SIZE_DIMENSIONS[data.size]
+    const title =
+      prompt.length > TITLE_MAX_LENGTH
+        ? `${prompt.slice(0, TITLE_MAX_LENGTH).trimEnd()}…`
+        : prompt
+    const totalCost = String(
+      getEstimatedAssetCost({
+        n: images.length,
+        quality: data.quality,
+        size: data.size,
+      })
+    )
+
+    const [generation] = await db
+      .insert(generations)
+      .values({
+        estimatedCost: totalCost,
+        model: SUPPORTED_ASSET_MODEL,
+        prompt,
+        referenceId: String(response.created ?? ""),
+        status: "completed",
+        title,
+        totalCost,
+        type: "image",
+        userId: session.user.id,
+      })
+      .returning({ id: generations.id })
+
+    await db.insert(imagesTable).values(
+      images.map((image, index) => ({
+        generationId: generation.id,
+        height: dimensions.height,
+        mimeType: DEFAULT_IMAGE_MIME_TYPE,
+        path: image.startsWith("data:") ? null : image,
+        position: index,
+        sourceUrl: image,
+        width: dimensions.width,
+      }))
+    )
+
     return {
+      generationId: generation.id,
       ok: true,
       images,
-      size: parsedInput.data.size,
+      size: data.size,
     }
   } catch (error) {
+    console.error(error)
     return {
       ok: false,
       message:

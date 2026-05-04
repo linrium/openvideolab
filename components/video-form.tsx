@@ -50,7 +50,7 @@ const schema = z.object({
     "alibaba/wan-2.7",
     "alibaba/happy-horse-1.0",
   ]),
-  title: z.string().trim().min(1, "Title is required"),
+  title: z.string().trim(),
   prompt: z.string().min(1, "Prompt is required"),
   negativePrompt: z.string().optional(),
   aspectRatio: z.string().optional(),
@@ -273,8 +273,8 @@ export function VideoForm({
                   >
                     <FieldLabel htmlFor={field.name}>Title</FieldLabel>
                     <FieldDescription>
-                      Give this video a short title for your sidebar and detail
-                      views.
+                      Optional. Give this video a short title for your sidebar
+                      and detail views.
                     </FieldDescription>
                     <Input
                       aria-invalid={
