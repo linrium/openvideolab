@@ -36,7 +36,6 @@ interface AssetGenerationConfig {
   moderation: ModerationValue
   n: number
   outputCompression: number
-  partialImages: number
   quality: QualityValue
   size: SizeValue
   style: StyleValue
@@ -138,7 +137,6 @@ const MODEL_DEFAULTS: Record<ImageModel, AssetGenerationConfig> = {
     moderation: "auto",
     n: 1,
     outputCompression: 100,
-    partialImages: 0,
     quality: "standard",
     size: "1024x1024",
     style: "vivid",
@@ -149,7 +147,6 @@ const MODEL_DEFAULTS: Record<ImageModel, AssetGenerationConfig> = {
     moderation: "auto",
     n: 1,
     outputCompression: 100,
-    partialImages: 0,
     quality: "hd",
     size: "1024x1024",
     style: "vivid",
@@ -160,7 +157,6 @@ const MODEL_DEFAULTS: Record<ImageModel, AssetGenerationConfig> = {
     moderation: "auto",
     n: 1,
     outputCompression: 100,
-    partialImages: 0,
     quality: "auto",
     size: "auto",
     style: "vivid",
@@ -171,7 +167,6 @@ const MODEL_DEFAULTS: Record<ImageModel, AssetGenerationConfig> = {
     moderation: "auto",
     n: 1,
     outputCompression: 100,
-    partialImages: 0,
     quality: "auto",
     size: "auto",
     style: "vivid",
@@ -182,7 +177,6 @@ const MODEL_DEFAULTS: Record<ImageModel, AssetGenerationConfig> = {
     moderation: "auto",
     n: 1,
     outputCompression: 100,
-    partialImages: 0,
     quality: "auto",
     size: "auto",
     style: "vivid",
@@ -459,35 +453,6 @@ export function AssetForm() {
                     }}
                     type="number"
                     value={config.outputCompression}
-                  />
-                </Field>
-              )}
-
-              {isGptModel && (
-                <Field>
-                  <FieldLabel htmlFor="asset-partial-images">
-                    Partial Images
-                  </FieldLabel>
-                  <FieldDescription>
-                    Show a few in-progress previews before the final image is
-                    ready.
-                  </FieldDescription>
-                  <Input
-                    id="asset-partial-images"
-                    max={3}
-                    min={0}
-                    onChange={(event) => {
-                      const nextValue = Number.parseInt(event.target.value, 10)
-
-                      if (!Number.isNaN(nextValue)) {
-                        setConfig((current) => ({
-                          ...current,
-                          partialImages: Math.min(3, Math.max(0, nextValue)),
-                        }))
-                      }
-                    }}
-                    type="number"
-                    value={config.partialImages}
                   />
                 </Field>
               )}
