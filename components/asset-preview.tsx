@@ -1,5 +1,6 @@
 import { Image01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
 export function AssetPreview() {
@@ -32,12 +33,15 @@ export function AssetPreview() {
       </div>
 
       <div className="sticky bottom-0 border-border/70 border-t bg-background px-4 pt-4 pb-4">
-        <div className="mx-auto w-full max-w-4xl">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
           <Textarea
             placeholder="Describe the asset you want to generate…"
             rows={10}
             spellCheck={false}
           />
+          <Button disabled type="button">
+            Generate Asset
+          </Button>
         </div>
       </div>
     </div>
