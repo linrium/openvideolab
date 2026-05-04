@@ -70,7 +70,7 @@ async function resolvePollJobContext(
   return { current, userId }
 }
 
-async function syncCompletedVideo(
+async function syncCompletedVideoAction(
   jobId: string,
   openrouterApiKey: string,
   userId: string
@@ -97,7 +97,7 @@ async function syncCompletedVideo(
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: false positive
-export async function pollJobStatus(
+export async function pollJobStatusAction(
   jobId: string,
   options: PollJobStatusOptions = {}
 ): Promise<PollJobStatusResult | PollJobStatusError> {
@@ -160,7 +160,11 @@ export async function pollJobStatus(
     }
 
     if (data.status === "completed" && current && !current.path) {
-      const key = await syncCompletedVideo(jobId, openrouterApiKey, userId)
+      const key = await syncCompletedVideoAction(
+        jobId,
+        openrouterApiKey,
+        userId
+      )
       if (key === null) {
         return { ok: false, message: "Failed to sync" }
       }

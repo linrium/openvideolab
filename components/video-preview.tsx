@@ -7,7 +7,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useEffectEvent, useState, useTransition } from "react"
-import { pollJobStatus } from "@/app/actions/poll-job-status"
+import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -131,7 +131,7 @@ function SyncButton({
 
   const syncStatus = useEffectEvent(() => {
     startTransition(async () => {
-      const result = await pollJobStatus(jobId)
+      const result = await pollJobStatusAction(jobId)
       if (result.ok) {
         onStatusChange(result.status)
         if (result.url) {

@@ -50,9 +50,6 @@ function getEstimatedCost(request: VideoGenerationRequest): string | null {
       : modelPricing.per_second.with_audio
 
   const rate = table[resolution as keyof typeof table]
-  if (typeof rate !== "number") {
-    return null
-  }
 
   return String(rate * duration)
 }
