@@ -21,23 +21,24 @@ export default async function MainLayout({
     return redirect("/sign-in")
   }
 
-  const userVideos = await db
+  const recents = await db
     .select({
-      id: videos.id,
-      jobId: videos.jobId,
+      id: generations.id,
       title: generations.title,
       prompt: generations.prompt,
       status: generations.status,
+      type: generations.type,
+      videoId: videos.id,
     })
-    .from(videos)
-    .innerJoin(generations, eq(videos.generationRecordId, generations.id))
+    .from(generations)
+    .leftJoin(videos, eq(videos.generationRecordId, generations.id))
     .where(eq(generations.userId, session.user.id))
     .orderBy(desc(generations.createdAt))
-    .limit(50)
+    .limit(20)
 
   return (
     <SidebarProvider>
-      <AppSidebar videos={userVideos} />
+      <AppSidebar recents={recents} />
       <SidebarInset>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </SidebarInset>

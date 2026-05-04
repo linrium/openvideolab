@@ -37,28 +37,48 @@ const mainNavigation = [
   { href: "/music/new", icon: MusicNote03FreeIcons, label: "New Music" },
 ] as const
 
-const STATUS_DOT: Record<string, string> = {
-  cancelled: "bg-zinc-400",
-  completed: "bg-emerald-500",
-  expired: "bg-zinc-400",
-  failed: "bg-rose-500",
-  in_progress: "bg-sky-500",
-  pending: "bg-amber-500",
+const STATUS_ICON: Record<string, string> = {
+  cancelled: "text-zinc-400",
+  completed: "text-emerald-500",
+  expired: "text-zinc-400",
+  failed: "text-rose-500",
+  in_progress: "text-sky-500",
+  pending: "text-amber-500",
 }
 
-interface VideoItem {
+const RECENT_ICON = {
+  image: Image01Icon,
+  music: MusicNote03FreeIcons,
+  storyboard: Image01Icon,
+  video: VideoIcon,
+} as const
+
+interface RecentItem {
   id: string
-  jobId: string
   prompt: string
   status: string
   title: string
+  type: string
+  videoId: string | null
 }
 
 interface AppSidebarProps {
-  videos: VideoItem[]
+  recents: RecentItem[]
 }
 
-export function AppSidebar({ videos }: AppSidebarProps) {
+function getRecentHref(item: RecentItem): string {
+  if (item.type === "video" && item.videoId) {
+    return `/videos/${item.videoId}`
+  }
+
+  if (item.type === "music") {
+    return "/music/new"
+  }
+
+  return "/assets/new"
+}
+
+export function AppSidebar({ recents }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { setTheme } = useTheme()
@@ -113,33 +133,44 @@ export function AppSidebar({ videos }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {videos.length > 0 && (
+        {recents.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>VIDEOS</SidebarGroupLabel>
+            <SidebarGroupLabel>Recents</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {videos.map((video) => (
-                  <SidebarMenuItem key={video.id}>
-                    <SidebarMenuButton
-                      asChild
-                      className="h-auto py-2 text-sidebar-foreground/85 group-data-[collapsible=icon]:h-8! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-0!"
-                      isActive={pathname === `/videos/${video.id}`}
-                      size="sm"
-                      tooltip={video.title || video.prompt}
-                    >
-                      <Link href={`/videos/${video.id}`}>
-                        <span
-                          className={`size-2 shrink-0 rounded-full ${STATUS_DOT[video.status] ?? "bg-zinc-400"}`}
-                        />
-                        <span className="truncate group-data-[collapsible=icon]:hidden">
-                          {(video.title || video.prompt).length > 40
-                            ? `${(video.title || video.prompt).slice(0, 40)}…`
-                            : video.title || video.prompt}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {recents.map((item) => {
+                  const href = getRecentHref(item)
+                  const icon =
+                    RECENT_ICON[item.type as keyof typeof RECENT_ICON] ??
+                    Image01Icon
+                  const title = item.title || item.prompt
+
+                  return (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton
+                        asChild
+                        className="h-auto py-1.5 text-sidebar-foreground/85 group-data-[collapsible=icon]:h-8! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-0!"
+                        isActive={pathname === href}
+                        size="sm"
+                        tooltip={title}
+                      >
+                        <Link href={href}>
+                          <HugeiconsIcon
+                            className={`shrink-0 group-data-[collapsible=icon]:hidden ${STATUS_ICON[item.status] ?? "text-zinc-400"}`}
+                            icon={icon}
+                            size={14}
+                            strokeWidth={2}
+                          />
+                          <span className="truncate text-sm group-data-[collapsible=icon]:hidden">
+                            {title.length > 40
+                              ? `${title.slice(0, 40)}…`
+                              : title}
+                          </span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
