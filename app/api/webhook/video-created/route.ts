@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       const [video] = await db
         .select({ userId: generations.userId })
         .from(videos)
-        .innerJoin(generations, eq(videos.generationRecordId, generations.id))
+        .innerJoin(generations, eq(videos.generationId, generations.id))
         .where(eq(videos.jobId, jobId))
         .limit(1)
 

@@ -15,7 +15,7 @@ export const videos = pgTable("videos", {
   id: uuid("id")
     .primaryKey()
     .$defaultFn(() => uuidv7()),
-  generationRecordId: uuid("generation_record_id")
+  generationId: uuid("generation_id")
     .notNull()
     .unique()
     .references(() => generations.id, { onDelete: "cascade" }),
@@ -34,7 +34,7 @@ export const videos = pgTable("videos", {
 
 export const videosRelations = relations(videos, ({ one }) => ({
   generation: one(generations, {
-    fields: [videos.generationRecordId],
+    fields: [videos.generationId],
     references: [generations.id],
   }),
 }))

@@ -110,7 +110,7 @@ export async function submitVideoAction(
         frameFirst: imageKeys.frameFirstKey ?? null,
         frameLast: imageKeys.frameLastKey ?? null,
         generateAudio: request.generateAudio ?? true,
-        generationRecordId: insertedGeneration.id,
+        generationId: insertedGeneration.id,
         inputReferences: imageKeys.inputReferenceKeys ?? [],
         jobId: job.id,
         provider:

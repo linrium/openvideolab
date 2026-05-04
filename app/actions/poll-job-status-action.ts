@@ -37,7 +37,7 @@ async function resolvePollJobContext(
 ): Promise<
   | {
       current: {
-        generationRecordId: string
+        generationId: string
         path: string | null
         status: string
         userId: string
@@ -56,13 +56,13 @@ async function resolvePollJobContext(
 
   const [current] = await db
     .select({
-      generationRecordId: generations.id,
+      generationId: generations.id,
       path: videos.path,
       status: generations.status,
       userId: generations.userId,
     })
     .from(videos)
-    .innerJoin(generations, eq(videos.generationRecordId, generations.id))
+    .innerJoin(generations, eq(videos.generationId, generations.id))
     .where(eq(videos.jobId, jobId))
     .limit(1)
 
@@ -146,7 +146,7 @@ export async function pollJobStatusAction(
                 : String(generation.data.totalCost),
             updatedAt: new Date(),
           })
-          .where(eq(generations.id, current.generationRecordId))
+          .where(eq(generations.id, current.generationId))
       } else {
         await db
           .update(generations)
@@ -155,7 +155,7 @@ export async function pollJobStatusAction(
             status: data.status,
             updatedAt: new Date(),
           })
-          .where(eq(generations.id, current.generationRecordId))
+          .where(eq(generations.id, current.generationId))
       }
 
       if (options.refreshClient !== false) {

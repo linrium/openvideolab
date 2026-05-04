@@ -78,7 +78,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       videoId: videos.id,
     })
     .from(videos)
-    .innerJoin(generations, eq(videos.generationRecordId, generations.id))
+    .innerJoin(generations, eq(videos.generationId, generations.id))
     .where(eq(videos.id, id))
     .limit(1)
 

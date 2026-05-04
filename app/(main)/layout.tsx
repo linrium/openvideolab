@@ -31,7 +31,7 @@ export default async function MainLayout({
       videoId: videos.id,
     })
     .from(generations)
-    .leftJoin(videos, eq(videos.generationRecordId, generations.id))
+    .leftJoin(videos, eq(videos.generationId, generations.id))
     .where(eq(generations.userId, session.user.id))
     .orderBy(desc(generations.createdAt))
     .limit(20)
