@@ -4,40 +4,40 @@ import { headers } from "next/headers"
 import { db } from "@/db"
 import { generations } from "@/db/schema/generations"
 import { images as imagesTable } from "@/db/schema/images"
-import {
-  ASSET_SIZE_DIMENSIONS,
-  type AssetSize,
-  assetGenerationSchema,
-  getEstimatedAssetCost,
-  SUPPORTED_ASSET_MODEL,
-} from "@/lib/asset-generation"
 import { auth } from "@/lib/auth"
+import {
+  getEstimatedImageCost,
+  IMAGE_SIZE_DIMENSIONS,
+  type ImageSize,
+  imageGenerationSchema,
+  SUPPORTED_IMAGE_MODEL,
+} from "@/lib/image-generation"
 import { getOpenAiClientByUserId } from "@/lib/openai-client"
 
 const DEFAULT_IMAGE_MIME_TYPE = "image/webp"
 const TITLE_MAX_LENGTH = 80
 
-export interface SubmitAssetSuccess {
+export interface SubmitImageSuccess {
   generationId: string
   images: string[]
   ok: true
-  size: AssetSize
+  size: ImageSize
 }
 
-export interface SubmitAssetError {
+export interface SubmitImageError {
   message: string
   ok: false
 }
 
-export async function submitAssetAction(
+export async function submitImageAction(
   input: unknown
-): Promise<SubmitAssetSuccess | SubmitAssetError> {
+): Promise<SubmitImageSuccess | SubmitImageError> {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) {
     return { ok: false, message: "Unauthorized" }
   }
 
-  const parsedInput = assetGenerationSchema.safeParse(input)
+  const parsedInput = imageGenerationSchema.safeParse(input)
   if (!parsedInput.success) {
     return {
       ok: false,
@@ -52,7 +52,7 @@ export async function submitAssetAction(
     const openAiClient = await getOpenAiClientByUserId(session.user.id)
     const response = await openAiClient.images.generate({
       background: data.background,
-      model: SUPPORTED_ASSET_MODEL,
+      model: SUPPORTED_IMAGE_MODEL,
       moderation: data.moderation,
       n: data.n,
       output_format: "webp",
@@ -84,13 +84,13 @@ export async function submitAssetAction(
     }
 
     const prompt = data.prompt.trim()
-    const dimensions = ASSET_SIZE_DIMENSIONS[data.size]
+    const dimensions = IMAGE_SIZE_DIMENSIONS[data.size]
     const title =
       prompt.length > TITLE_MAX_LENGTH
         ? `${prompt.slice(0, TITLE_MAX_LENGTH).trimEnd()}…`
         : prompt
     const totalCost = String(
-      getEstimatedAssetCost({
+      getEstimatedImageCost({
         n: images.length,
         quality: data.quality,
         size: data.size,
@@ -101,7 +101,7 @@ export async function submitAssetAction(
       .insert(generations)
       .values({
         estimatedCost: totalCost,
-        model: SUPPORTED_ASSET_MODEL,
+        model: SUPPORTED_IMAGE_MODEL,
         prompt,
         referenceId: String(response.created ?? ""),
         status: "completed",
@@ -135,7 +135,7 @@ export async function submitAssetAction(
     return {
       ok: false,
       message:
-        error instanceof Error ? error.message : "Failed to generate asset",
+        error instanceof Error ? error.message : "Failed to generate image",
     }
   }
 }

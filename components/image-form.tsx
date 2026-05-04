@@ -1,6 +1,6 @@
 "use client"
 
-import type { AssetGenerationFormApi } from "@/components/asset-studio"
+import type { ImageGenerationFormApi } from "@/components/image-studio"
 import { CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   Field,
@@ -20,14 +20,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  ASSET_BACKGROUND_OPTIONS,
-  ASSET_MODERATION_OPTIONS,
-  ASSET_PRICING,
-  ASSET_QUALITY_OPTIONS,
-  ASSET_SIZE_OPTIONS,
-  getEstimatedAssetCost,
-  SUPPORTED_ASSET_MODEL,
-} from "@/lib/asset-generation"
+  getEstimatedImageCost,
+  IMAGE_BACKGROUND_OPTIONS,
+  IMAGE_MODERATION_OPTIONS,
+  IMAGE_PRICING,
+  IMAGE_QUALITY_OPTIONS,
+  IMAGE_SIZE_OPTIONS,
+  SUPPORTED_IMAGE_MODEL,
+} from "@/lib/image-generation"
 
 const MODEL_LABEL = "gpt-image-2-2026-04-21"
 const LABEL_SPLIT_PATTERN = /[-x]/
@@ -38,7 +38,7 @@ const labelFromValue = (value: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ")
 
-export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
+export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
   return (
     <Tabs className="flex h-full min-h-0 flex-col gap-0" defaultValue="compose">
       <CardHeader
@@ -60,14 +60,14 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                   <Field>
                     <FieldLabel>Model</FieldLabel>
                     <FieldDescription>
-                      This asset flow currently supports one OpenAI snapshot.
+                      This image flow currently supports one OpenAI snapshot.
                     </FieldDescription>
                     <Select disabled value={field.state.value}>
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={SUPPORTED_ASSET_MODEL}>
+                        <SelectItem value={SUPPORTED_IMAGE_MODEL}>
                           {MODEL_LABEL}
                         </SelectItem>
                       </SelectContent>
@@ -89,7 +89,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(
-                            value as (typeof ASSET_SIZE_OPTIONS)[number]
+                            value as (typeof IMAGE_SIZE_OPTIONS)[number]
                           )
                         }
                       }}
@@ -97,7 +97,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       value={field.state.value}
                       variant="outline"
                     >
-                      {ASSET_SIZE_OPTIONS.map((option) => (
+                      {IMAGE_SIZE_OPTIONS.map((option) => (
                         <ToggleGroupItem key={option} value={option}>
                           {option.replace("x", " × ")}
                         </ToggleGroupItem>
@@ -118,7 +118,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(
-                            value as (typeof ASSET_QUALITY_OPTIONS)[number]
+                            value as (typeof IMAGE_QUALITY_OPTIONS)[number]
                           )
                         }
                       }}
@@ -126,7 +126,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       value={field.state.value}
                       variant="outline"
                     >
-                      {ASSET_QUALITY_OPTIONS.map((option) => (
+                      {IMAGE_QUALITY_OPTIONS.map((option) => (
                         <ToggleGroupItem key={option} value={option}>
                           {labelFromValue(option)}
                         </ToggleGroupItem>
@@ -188,7 +188,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(
-                            value as (typeof ASSET_BACKGROUND_OPTIONS)[number]
+                            value as (typeof IMAGE_BACKGROUND_OPTIONS)[number]
                           )
                         }
                       }}
@@ -196,7 +196,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       value={field.state.value}
                       variant="outline"
                     >
-                      {ASSET_BACKGROUND_OPTIONS.map((option) => (
+                      {IMAGE_BACKGROUND_OPTIONS.map((option) => (
                         <ToggleGroupItem key={option} value={option}>
                           {labelFromValue(option)}
                         </ToggleGroupItem>
@@ -217,7 +217,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(
-                            value as (typeof ASSET_MODERATION_OPTIONS)[number]
+                            value as (typeof IMAGE_MODERATION_OPTIONS)[number]
                           )
                         }
                       }}
@@ -225,7 +225,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       value={field.state.value}
                       variant="outline"
                     >
-                      {ASSET_MODERATION_OPTIONS.map((option) => (
+                      {IMAGE_MODERATION_OPTIONS.map((option) => (
                         <ToggleGroupItem key={option} value={option}>
                           {labelFromValue(option)}
                         </ToggleGroupItem>
@@ -256,7 +256,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       <span>Estimated cost</span>
                       <span className="tabular-nums">
                         $
-                        {getEstimatedAssetCost({ n, quality, size }).toFixed(3)}
+                        {getEstimatedImageCost({ n, quality, size }).toFixed(3)}
                       </span>
                     </div>
                   </div>
@@ -295,7 +295,7 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                 </tr>
               </thead>
               <tbody>
-                {ASSET_QUALITY_OPTIONS.map((quality) => (
+                {IMAGE_QUALITY_OPTIONS.map((quality) => (
                   <tr
                     className="border-border/60 border-b last:border-b-0"
                     key={quality}
@@ -304,13 +304,13 @@ export function AssetForm({ form }: { form: AssetGenerationFormApi }) {
                       {labelFromValue(quality)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      ${ASSET_PRICING[quality]["1024x1024"].toFixed(3)}
+                      ${IMAGE_PRICING[quality]["1024x1024"].toFixed(3)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      ${ASSET_PRICING[quality]["1024x1536"].toFixed(3)}
+                      ${IMAGE_PRICING[quality]["1024x1536"].toFixed(3)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      ${ASSET_PRICING[quality]["1536x1024"].toFixed(3)}
+                      ${IMAGE_PRICING[quality]["1536x1024"].toFixed(3)}
                     </td>
                   </tr>
                 ))}

@@ -33,7 +33,7 @@ import { authClient } from "@/lib/auth-client"
 
 const mainNavigation = [
   { href: "/videos/new", icon: VideoIcon, label: "New Video" },
-  { href: "/assets/new", icon: Image01Icon, label: "New Asset" },
+  { href: "/images/new", icon: Image01Icon, label: "New Image" },
   { href: "/music/new", icon: MusicNote03FreeIcons, label: "New Music" },
 ] as const
 
@@ -75,7 +75,7 @@ function getRecentHref(item: RecentItem): string {
     return "/music/new"
   }
 
-  return "/assets/new"
+  return "/images/new"
 }
 
 export function AppSidebar({ recents }: AppSidebarProps) {

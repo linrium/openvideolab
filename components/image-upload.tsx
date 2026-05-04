@@ -13,7 +13,7 @@ export interface ImageValue {
 
 export type AudioValue = ImageValue
 
-async function uploadAsset(file: File): Promise<ImageValue> {
+async function uploadImage(file: File): Promise<ImageValue> {
   const body = new FormData()
   body.append("file", file)
 
@@ -51,7 +51,7 @@ export function ImageUpload({
     setUploading(true)
     setError(null)
     try {
-      onChange(await uploadAsset(file))
+      onChange(await uploadImage(file))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -239,7 +239,7 @@ export function AudioUpload({
     setUploading(true)
     setError(null)
     try {
-      onChange(await uploadAsset(file))
+      onChange(await uploadImage(file))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {

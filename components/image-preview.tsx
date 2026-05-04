@@ -5,21 +5,21 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import type {
-  AssetGenerationFormApi,
-  GeneratedAssetsState,
-} from "@/components/asset-studio"
+  GeneratedImagesState,
+  ImageGenerationFormApi,
+} from "@/components/image-studio"
 import { Spokes } from "@/components/loading-ui/spokes"
 import { Button } from "@/components/ui/button"
 import { FieldError } from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
-import { ASSET_SIZE_DIMENSIONS } from "@/lib/asset-generation"
+import { IMAGE_SIZE_DIMENSIONS } from "@/lib/image-generation"
 
-function AssetPlaceholder({ isGenerating }: { isGenerating: boolean }) {
+function ImagePlaceholder({ isGenerating }: { isGenerating: boolean }) {
   if (isGenerating) {
     return (
       <>
         <Spokes className="size-8 text-muted-foreground" />
-        <span>Generating assets…</span>
+        <span>Generating images…</span>
       </>
     )
   }
@@ -37,17 +37,17 @@ function AssetPlaceholder({ isGenerating }: { isGenerating: boolean }) {
   )
 }
 
-export function AssetPreview({
+export function ImagePreview({
   form,
-  generatedAssets,
+  generatedImages,
 }: {
-  form: AssetGenerationFormApi
-  generatedAssets: GeneratedAssetsState | null
+  form: ImageGenerationFormApi
+  generatedImages: GeneratedImagesState | null
 }) {
   const [confirming, setConfirming] = useState(false)
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const dimensions = generatedAssets
-    ? ASSET_SIZE_DIMENSIONS[generatedAssets.size]
+  const dimensions = generatedImages
+    ? IMAGE_SIZE_DIMENSIONS[generatedImages.size]
     : null
 
   useEffect(
@@ -79,15 +79,15 @@ export function AssetPreview({
         <div className="w-full space-y-3">
           <div className="mx-auto w-full max-w-4xl space-y-3">
             <div className="px-4 pt-4">
-              {generatedAssets && dimensions ? (
+              {generatedImages && dimensions ? (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {generatedAssets.images.map((image) => (
+                  {generatedImages.images.map((image) => (
                     <div
                       className="overflow-hidden rounded-2xl border border-border/70 bg-muted/20"
                       key={image}
                     >
                       <Image
-                        alt="Generated asset"
+                        alt="Generated image"
                         className="h-auto w-full"
                         height={dimensions.height}
                         src={image}
@@ -101,7 +101,7 @@ export function AssetPreview({
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (
                     <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
-                      <AssetPlaceholder isGenerating={isSubmitting} />
+                      <ImagePlaceholder isGenerating={isSubmitting} />
                     </div>
                   )}
                 </form.Subscribe>
@@ -142,7 +142,7 @@ export function AssetPreview({
             })}
           >
             {({ canSubmit, isSubmitting, prompt }) => {
-              let submitLabel = "Generate Asset"
+              let submitLabel = "Generate Image"
               if (isSubmitting) {
                 submitLabel = "Generating…"
               } else if (confirming) {
