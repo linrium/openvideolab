@@ -43,7 +43,7 @@ export function MusicForm() {
   const [lyricsOptimizer, setLyricsOptimizer] = useState(false)
 
   return (
-    <Tabs className="flex min-h-0 flex-col gap-0" defaultValue="compose">
+    <Tabs className="flex h-full min-h-0 flex-col gap-0" defaultValue="compose">
       <CardHeader
         className="sticky top-0 z-10 border-border/70 border-b bg-background"
         style={{ paddingBottom: 0 }}

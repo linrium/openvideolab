@@ -206,7 +206,7 @@ export function VideoForm({
   })
 
   return (
-    <Tabs className="flex min-h-0 flex-col gap-0" defaultValue="compose">
+    <Tabs className="flex h-full min-h-0 flex-col gap-0" defaultValue="compose">
       <CardHeader
         className="sticky top-0 z-10 border-border/70 border-b bg-background"
         style={{ paddingBottom: 0 }}
@@ -769,52 +769,66 @@ export function VideoForm({
           ).map(([modelId, modelLabel]) => {
             const p = PRICING[modelId]
             return (
-              <div key={modelId}>
-                <p className="mb-1.5 font-medium text-xs">{modelLabel}</p>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr>
-                      <th className="py-1 pr-6 text-left font-normal text-muted-foreground" />
-                      <th className="px-3 py-1 text-right font-normal text-muted-foreground">
-                        With audio
-                      </th>
-                      <th className="px-3 py-1 text-right font-normal text-muted-foreground">
-                        No audio
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modelId !== "alibaba/wan-2.7" && (
-                      <tr className="border-border/50 border-t">
-                        <td className="py-1 pr-6 text-muted-foreground">
-                          Video tokens
-                        </td>
-                        <td className="px-3 py-1 text-right tabular-nums">
-                          ${p.tokens.with_audio}/M
-                        </td>
-                        <td className="px-3 py-1 text-right tabular-nums">
-                          ${p.tokens.no_audio}/M
-                        </td>
+              <div className="space-y-3" key={modelId}>
+                <p className="font-medium text-xs">{modelLabel}</p>
+                <div className="overflow-hidden rounded-lg border border-border/70">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/30">
+                      <tr className="border-border/70 border-b">
+                        <th className="px-3 py-2 text-left font-medium text-foreground">
+                          Type
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium text-foreground">
+                          With audio
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium text-foreground">
+                          No audio
+                        </th>
                       </tr>
-                    )}
-                    {Object.keys(p.per_second.with_audio).map((res) => {
-                      const key = res as keyof typeof p.per_second.with_audio
-                      return (
-                        <tr className="border-border/50 border-t" key={res}>
-                          <td className="py-1 pr-6 text-muted-foreground">
-                            {res}
+                    </thead>
+                    <tbody>
+                      {modelId !== "alibaba/wan-2.7" && (
+                        <tr className="border-border/60 border-b">
+                          <td className="px-3 py-2 text-muted-foreground">
+                            Video tokens
                           </td>
-                          <td className="px-3 py-1 text-right tabular-nums">
-                            ${p.per_second.with_audio[key]}/s
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            ${p.tokens.with_audio}/M
                           </td>
-                          <td className="px-3 py-1 text-right tabular-nums">
-                            ${p.per_second.no_audio[key]}/s
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            ${p.tokens.no_audio}/M
                           </td>
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      )}
+                      {Object.keys(p.per_second.with_audio).map(
+                        (res, index, array) => {
+                          const key =
+                            res as keyof typeof p.per_second.with_audio
+                          const isLastRow = index === array.length - 1
+
+                          return (
+                            <tr
+                              className={
+                                isLastRow ? "" : "border-border/60 border-b"
+                              }
+                              key={res}
+                            >
+                              <td className="px-3 py-2 text-muted-foreground">
+                                {res}
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums">
+                                ${p.per_second.with_audio[key]}/s
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums">
+                                ${p.per_second.no_audio[key]}/s
+                              </td>
+                            </tr>
+                          )
+                        }
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )
           })}

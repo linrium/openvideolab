@@ -2,6 +2,7 @@
 
 import {
   AiChemistry02Icon,
+  Image01Icon,
   Logout01Icon,
   Moon02Icon,
   MusicNote03FreeIcons,
@@ -32,6 +33,7 @@ import { authClient } from "@/lib/auth-client"
 
 const mainNavigation = [
   { href: "/videos/new", icon: VideoIcon, label: "New Video" },
+  { href: "/assets/new", icon: Image01Icon, label: "New Asset" },
   { href: "/music/new", icon: MusicNote03FreeIcons, label: "New Music" },
 ] as const
 
