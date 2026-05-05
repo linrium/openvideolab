@@ -80,6 +80,7 @@ function useImageGenerationForm(
           JSON.stringify(parsedValue.data)
         )
         router.push(`/images/${createResult.generationId}?generate=1`)
+        router.refresh()
         return
       }
 
@@ -98,6 +99,7 @@ function useImageGenerationForm(
         metadata: result.metadata,
         size: result.size,
       })
+      router.refresh()
     },
   })
 }

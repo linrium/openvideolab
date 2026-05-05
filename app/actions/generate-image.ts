@@ -1,6 +1,7 @@
 "use server"
 
 import { eq } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import type { ImagesResponse } from "openai/resources/images"
 import { v7 as uuidv7 } from "uuid"
@@ -188,6 +189,9 @@ export async function createImageGenerationAction(
     userId: session.user.id,
   })
 
+  revalidatePath("/", "layout")
+  revalidatePath("/images")
+
   return { generationId, ok: true }
 }
 
@@ -317,6 +321,10 @@ export async function submitImageAction(
         width: dimensions?.width ?? null,
       }))
     )
+
+    revalidatePath("/", "layout")
+    revalidatePath(`/images/${sessionId}`)
+    revalidatePath("/images")
 
     return {
       generationId: sessionId,
