@@ -192,6 +192,18 @@ export function ImagePreview({
                     },
                   ].filter((item) => item.value)
 
+                  if (batch.error) {
+                    return (
+                      <div key={batchKey}>
+                        {batchIndex > 0 && <Separator className="mb-4" />}
+                        <ImageError
+                          createdAt={batch.metadata.createdAt}
+                          message={batch.error}
+                        />
+                      </div>
+                    )
+                  }
+
                   return (
                     <div key={batchKey}>
                       {batchIndex > 0 && <Separator className="mb-4" />}

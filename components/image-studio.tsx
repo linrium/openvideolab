@@ -30,6 +30,7 @@ export interface GeneratedImageMetadata {
 }
 
 export interface GeneratedImagesState {
+  error?: string | null
   images: string[]
   metadata: GeneratedImageMetadata
   size: ImageSize

@@ -47,6 +47,94 @@ function normalizeImageModel(value: string): ImageGenerationValues["model"] {
     : IMAGE_DEFAULT_VALUES.model
 }
 
+type ImageRow = Awaited<ReturnType<typeof fetchImageRows>>[number]
+
+async function fetchImageRows(generationId: string) {
+  return db
+    .select({
+      batchId: images.batchId,
+      createdAt: images.createdAt,
+      error: images.error,
+      estimatedCost: images.estimatedCost,
+      height: images.height,
+      model: images.model,
+      path: images.path,
+      position: images.position,
+      prompt: images.prompt,
+      quality: images.quality,
+      referenceId: images.referenceId,
+      size: images.size,
+      sourceUrl: images.sourceUrl,
+      status: images.status,
+      totalCost: images.totalCost,
+      width: images.width,
+    })
+    .from(images)
+    .where(eq(images.generationId, generationId))
+    .orderBy(desc(images.createdAt), asc(images.position))
+}
+
+function buildBatchMetadata(image: ImageRow, resolvedSize: ImageSize) {
+  return {
+    cost: image.estimatedCost,
+    createdAt: image.createdAt.toISOString(),
+    model: image.model,
+    quality: image.quality,
+    size: resolvedSize,
+    totalCost: image.totalCost,
+  }
+}
+
+async function resolveImageUrl(image: ImageRow): Promise<string> {
+  if (image.path) {
+    return getPresignedUrl({ key: image.path }).catch(() => "")
+  }
+  return image.sourceUrl ?? ""
+}
+
+async function buildGeneratedBatches(
+  imageRows: ImageRow[]
+): Promise<GeneratedImagesState[]> {
+  const batchMap = new Map<string, GeneratedImagesState>()
+
+  for (const image of imageRows) {
+    const isFailed = image.status === "failed"
+    const resolvedSize = image.size ?? inferImageSize(image.width, image.height)
+    const existingBatch = batchMap.get(image.batchId)
+
+    if (existingBatch) {
+      if (!isFailed) {
+        const imageUrl = await resolveImageUrl(image)
+        if (imageUrl) {
+          existingBatch.images.push(imageUrl)
+        }
+      }
+      continue
+    }
+
+    if (isFailed) {
+      batchMap.set(image.batchId, {
+        error: image.error ?? "Generation failed",
+        images: [],
+        metadata: buildBatchMetadata(image, resolvedSize),
+        size: resolvedSize,
+      })
+      continue
+    }
+
+    const imageUrl = await resolveImageUrl(image)
+    if (imageUrl) {
+      batchMap.set(image.batchId, {
+        images: [imageUrl],
+        metadata: buildBatchMetadata(image, resolvedSize),
+        size: resolvedSize,
+      })
+    }
+  }
+
+  return Array.from(batchMap.values())
+}
+
 export default async function ImagePage({
   params,
   searchParams,
@@ -74,61 +162,8 @@ export default async function ImagePage({
     notFound()
   }
 
-  const imageRows = await db
-    .select({
-      batchId: images.batchId,
-      createdAt: images.createdAt,
-      estimatedCost: images.estimatedCost,
-      height: images.height,
-      model: images.model,
-      path: images.path,
-      position: images.position,
-      prompt: images.prompt,
-      quality: images.quality,
-      referenceId: images.referenceId,
-      sourceUrl: images.sourceUrl,
-      totalCost: images.totalCost,
-      width: images.width,
-      size: images.size,
-    })
-    .from(images)
-    .where(eq(images.generationId, generation.generationId))
-    .orderBy(desc(images.createdAt), asc(images.position))
-
-  const batchMap = new Map<string, GeneratedImagesState>()
-
-  for (const image of imageRows) {
-    const imageUrl = image.path
-      ? await getPresignedUrl({ key: image.path }).catch(() => "")
-      : (image.sourceUrl ?? "")
-
-    if (!imageUrl) {
-      continue
-    }
-
-    const resolvedSize = image.size ?? inferImageSize(image.width, image.height)
-    const existingBatch = batchMap.get(image.batchId)
-
-    if (existingBatch) {
-      existingBatch.images.push(imageUrl)
-      continue
-    }
-
-    batchMap.set(image.batchId, {
-      images: [imageUrl],
-      metadata: {
-        cost: image.estimatedCost,
-        createdAt: image.createdAt.toISOString(),
-        model: image.model,
-        quality: image.quality,
-        size: resolvedSize,
-        totalCost: image.totalCost,
-      },
-      size: resolvedSize,
-    })
-  }
-
-  const generatedBatches = Array.from(batchMap.values())
+  const imageRows = await fetchImageRows(generation.generationId)
+  const generatedBatches = await buildGeneratedBatches(imageRows)
 
   const latestBatch = imageRows[0]
   const initialValues: ImageGenerationValues = {
