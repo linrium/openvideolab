@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm"
 import {
   check,
   index,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -10,6 +11,26 @@ import {
 } from "drizzle-orm/pg-core"
 import { v7 as uuidv7 } from "uuid"
 import { users } from "./auth"
+
+export interface PersistedGenerationUsage {
+  image?: {
+    quality?: "auto" | "low" | "medium" | "high" | null
+    size?: "auto" | "1024x1024" | "1024x1536" | "1536x1024" | null
+  }
+  provider?: {
+    inputTokens?: number
+    inputTokensDetails?: {
+      imageTokens?: number
+      textTokens?: number
+    }
+    outputTokens?: number
+    outputTokensDetails?: {
+      imageTokens?: number
+      textTokens?: number
+    }
+    totalTokens?: number
+  }
+}
 
 export const GENERATION_TYPES = [
   "video",
@@ -43,6 +64,7 @@ export const generations = pgTable(
     prompt: text("prompt").notNull().default(""),
     model: text("model").notNull(),
     referenceId: text("reference_id"),
+    usage: jsonb("usage").$type<PersistedGenerationUsage | null>(),
     estimatedCost: numeric("estimated_cost", { precision: 12, scale: 6 }),
     totalCost: numeric("total_cost", { precision: 12, scale: 6 }),
     generationTime: numeric("generation_time", { precision: 12, scale: 3 }),

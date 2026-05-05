@@ -1,8 +1,14 @@
 "use server"
 
 import { headers } from "next/headers"
+import type { ImagesResponse } from "openai/resources/images"
+import { v7 as uuidv7 } from "uuid"
+import type { GeneratedImageMetadata } from "@/components/image-studio"
 import { db } from "@/db"
-import { generations } from "@/db/schema/generations"
+import {
+  generations,
+  type PersistedGenerationUsage,
+} from "@/db/schema/generations"
 import { images as imagesTable } from "@/db/schema/images"
 import { auth } from "@/lib/auth"
 import {
@@ -13,13 +19,124 @@ import {
   SUPPORTED_IMAGE_MODEL,
 } from "@/lib/image-generation"
 import { getOpenAiClientByUserId } from "@/lib/openai-client"
+import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
 
 const DEFAULT_IMAGE_MIME_TYPE = "image/webp"
 const TITLE_MAX_LENGTH = 80
+const DEFAULT_IMAGE_EXTENSION = "webp"
+
+interface GeneratedImageAsset {
+  key: string
+  previewUrl: string
+  sourceUrl: string | null
+}
+
+function resolveImageQuality(
+  requestedQuality: GeneratedImageMetadata["quality"],
+  response: ImagesResponse
+): NonNullable<GeneratedImageMetadata["quality"]> {
+  return response.quality ?? requestedQuality ?? "auto"
+}
+
+function resolveImageSize(
+  requestedSize: ImageSize,
+  response: ImagesResponse
+): ImageSize {
+  return response.size ?? requestedSize
+}
+
+function buildGenerationUsage(
+  response: ImagesResponse,
+  resolved: {
+    quality: NonNullable<GeneratedImageMetadata["quality"]>
+    size: ImageSize
+  }
+): PersistedGenerationUsage {
+  return {
+    image: {
+      quality: resolved.quality,
+      size: resolved.size,
+    },
+    provider: response.usage
+      ? {
+          inputTokens: response.usage.input_tokens,
+          inputTokensDetails: {
+            imageTokens: response.usage.input_tokens_details.image_tokens,
+            textTokens: response.usage.input_tokens_details.text_tokens,
+          },
+          outputTokens: response.usage.output_tokens,
+          outputTokensDetails: response.usage.output_tokens_details
+            ? {
+                imageTokens: response.usage.output_tokens_details.image_tokens,
+                textTokens: response.usage.output_tokens_details.text_tokens,
+              }
+            : undefined,
+          totalTokens: response.usage.total_tokens,
+        }
+      : undefined,
+  }
+}
+
+function getImageTitle(inputTitle: string, prompt: string): string {
+  const trimmedTitle = inputTitle.trim()
+  if (trimmedTitle) {
+    return trimmedTitle
+  }
+
+  const trimmedPrompt = prompt.trim()
+  return trimmedPrompt.length > TITLE_MAX_LENGTH
+    ? `${trimmedPrompt.slice(0, TITLE_MAX_LENGTH).trimEnd()}…`
+    : trimmedPrompt
+}
+
+function getImageBufferFromBase64(base64Content: string): Buffer {
+  return Buffer.from(base64Content, "base64")
+}
+
+async function getImageBufferFromUrl(url: string): Promise<Buffer> {
+  const response = await fetch(url)
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch generated image: ${response.status} ${response.statusText}`
+    )
+  }
+
+  return Buffer.from(await response.arrayBuffer())
+}
+
+async function uploadGeneratedImageToR2(options: {
+  image: { b64_json?: string | null; url?: string | null }
+  userId: string
+}): Promise<GeneratedImageAsset> {
+  const key = `${options.userId}/images/${uuidv7()}.${DEFAULT_IMAGE_EXTENSION}`
+  const sourceUrl = options.image.url ?? null
+
+  let body: Buffer | null = null
+
+  if (options.image.b64_json) {
+    body = getImageBufferFromBase64(options.image.b64_json)
+  } else if (options.image.url) {
+    body = await getImageBufferFromUrl(options.image.url)
+  }
+
+  if (!body) {
+    throw new Error("Generated image payload is missing")
+  }
+
+  await uploadToR2(key, body, DEFAULT_IMAGE_MIME_TYPE)
+
+  return {
+    key,
+    previewUrl: await getPresignedUrl({ key }),
+    sourceUrl,
+  }
+}
 
 export interface SubmitImageSuccess {
   generationId: string
   images: string[]
+  metadata: GeneratedImageMetadata
   ok: true
   size: ImageSize
 }
@@ -61,22 +178,18 @@ export async function submitImageAction(
       size: data.size,
     })
 
-    const images =
-      response.data
-        ?.flatMap((image) => {
-          if (image.url) {
-            return [image.url]
-          }
+    const uploadedImages = await Promise.all(
+      (response.data ?? [])
+        .filter((image) => image.url || image.b64_json)
+        .map((image) =>
+          uploadGeneratedImageToR2({
+            image,
+            userId: session.user.id,
+          })
+        )
+    )
 
-          if (image.b64_json) {
-            return [`data:image/webp;base64,${image.b64_json}`]
-          }
-
-          return []
-        })
-        .filter(Boolean) ?? []
-
-    if (images.length === 0) {
+    if (uploadedImages.length === 0) {
       return {
         ok: false,
         message: "OpenAI returned no images for this request",
@@ -84,18 +197,22 @@ export async function submitImageAction(
     }
 
     const prompt = data.prompt.trim()
-    const dimensions = IMAGE_SIZE_DIMENSIONS[data.size]
-    const title =
-      prompt.length > TITLE_MAX_LENGTH
-        ? `${prompt.slice(0, TITLE_MAX_LENGTH).trimEnd()}…`
-        : prompt
+    const resolvedSize = resolveImageSize(data.size, response)
+    const resolvedQuality = resolveImageQuality(data.quality, response)
+    const dimensions =
+      resolvedSize === "auto" ? null : IMAGE_SIZE_DIMENSIONS[resolvedSize]
+    const title = getImageTitle(data.title, prompt)
     const totalCost = String(
       getEstimatedImageCost({
-        n: images.length,
-        quality: data.quality,
-        size: data.size,
+        n: uploadedImages.length,
+        quality: resolvedQuality,
+        size: resolvedSize,
       })
     )
+    const usage = buildGenerationUsage(response, {
+      quality: resolvedQuality,
+      size: resolvedSize,
+    })
 
     const [generation] = await db
       .insert(generations)
@@ -108,27 +225,35 @@ export async function submitImageAction(
         title,
         totalCost,
         type: "image",
+        usage,
         userId: session.user.id,
       })
-      .returning({ id: generations.id })
+      .returning({ createdAt: generations.createdAt, id: generations.id })
 
     await db.insert(imagesTable).values(
-      images.map((image, index) => ({
+      uploadedImages.map((image, index) => ({
         generationId: generation.id,
-        height: dimensions.height,
+        height: dimensions?.height ?? null,
         mimeType: DEFAULT_IMAGE_MIME_TYPE,
-        path: image.startsWith("data:") ? null : image,
+        path: image.key,
         position: index,
-        sourceUrl: image,
-        width: dimensions.width,
+        sourceUrl: image.sourceUrl,
+        width: dimensions?.width ?? null,
       }))
     )
 
     return {
       generationId: generation.id,
       ok: true,
-      images,
-      size: data.size,
+      images: uploadedImages.map((image) => image.previewUrl),
+      metadata: {
+        cost: totalCost,
+        createdAt: generation.createdAt.toISOString(),
+        model: SUPPORTED_IMAGE_MODEL,
+        quality: resolvedQuality,
+        size: resolvedSize,
+      },
+      size: resolvedSize,
     }
   } catch (error) {
     console.error(error)

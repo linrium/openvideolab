@@ -71,6 +71,10 @@ function getRecentHref(item: RecentItem): string {
     return `/videos/${item.videoId}`
   }
 
+  if (item.type === "image") {
+    return `/images/${item.id}`
+  }
+
   if (item.type === "music") {
     return "/music/new"
   }

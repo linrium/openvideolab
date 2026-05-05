@@ -21,13 +21,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   getEstimatedImageCost,
+  getEstimatedImageCostRange,
   IMAGE_BACKGROUND_OPTIONS,
+  IMAGE_EXPLICIT_QUALITY_OPTIONS,
   IMAGE_MODERATION_OPTIONS,
   IMAGE_PRICING,
   IMAGE_QUALITY_OPTIONS,
   IMAGE_SIZE_OPTIONS,
   SUPPORTED_IMAGE_MODEL,
 } from "@/lib/image-generation"
+import { Input } from "./ui/input"
 
 const MODEL_LABEL = "gpt-image-2-2026-04-21"
 const LABEL_SPLIT_PATTERN = /[-x]/
@@ -38,7 +41,27 @@ const labelFromValue = (value: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ")
 
-export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
+function formatEstimatedCost(values: {
+  n: number
+  quality: (typeof IMAGE_QUALITY_OPTIONS)[number]
+  size: (typeof IMAGE_SIZE_OPTIONS)[number]
+}): string {
+  const range = getEstimatedImageCostRange(values)
+
+  if (range.min === range.max) {
+    return `$${getEstimatedImageCost(values).toFixed(3)}`
+  }
+
+  return `$${range.min.toFixed(3)}-$${range.max.toFixed(3)}`
+}
+
+export function ImageForm({
+  form,
+  readOnly = false,
+}: {
+  form: ImageGenerationFormApi
+  readOnly?: boolean
+}) {
   return (
     <Tabs className="flex h-full min-h-0 flex-col gap-0" defaultValue="compose">
       <CardHeader
@@ -78,14 +101,40 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
 
               <FieldSeparator />
 
+              <form.Field name="title">
+                {(field) => (
+                  <Field>
+                    <FieldLabel htmlFor={field.name}>Title</FieldLabel>
+                    <FieldDescription>
+                      Optional. Leave blank to derive a title from the prompt.
+                    </FieldDescription>
+                    <Input
+                      disabled={readOnly}
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder="Name this image set"
+                      value={field.state.value}
+                    />
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
               <form.Field name="size">
                 {(field) => (
                   <Field>
                     <FieldLabel>Size</FieldLabel>
                     <FieldDescription>
-                      Pick the image shape and resolution.
+                      Pick the image shape and resolution, or let the model
+                      decide.
                     </FieldDescription>
                     <ToggleGroup
+                      disabled={readOnly}
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(
@@ -98,7 +147,11 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
                       variant="outline"
                     >
                       {IMAGE_SIZE_OPTIONS.map((option) => (
-                        <ToggleGroupItem key={option} value={option}>
+                        <ToggleGroupItem
+                          className="capitalize"
+                          key={option}
+                          value={option}
+                        >
                           {option.replace("x", " × ")}
                         </ToggleGroupItem>
                       ))}
@@ -113,8 +166,10 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
                     <FieldLabel>Quality</FieldLabel>
                     <FieldDescription>
                       Higher quality usually gives more detail but costs more.
+                      Auto lets the model choose.
                     </FieldDescription>
                     <ToggleGroup
+                      disabled={readOnly}
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(
@@ -150,6 +205,7 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
                       How many images to generate in one request.
                     </FieldDescription>
                     <ToggleGroup
+                      disabled={readOnly}
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(Number(value))
@@ -185,6 +241,7 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
                       solid, or transparent.
                     </FieldDescription>
                     <ToggleGroup
+                      disabled={readOnly}
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(
@@ -214,6 +271,7 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
                       Choose how strict safety filtering should be.
                     </FieldDescription>
                     <ToggleGroup
+                      disabled={readOnly}
                       onValueChange={(value) => {
                         if (value) {
                           field.handleChange(
@@ -255,10 +313,14 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
                     <div className="flex justify-between text-muted-foreground">
                       <span>Estimated cost</span>
                       <span className="tabular-nums">
-                        $
-                        {getEstimatedImageCost({ n, quality, size }).toFixed(3)}
+                        {formatEstimatedCost({ n, quality, size })}
                       </span>
                     </div>
+                    {(quality === "auto" || size === "auto") && (
+                      <div className="text-muted-foreground/80">
+                        Auto mode shows an estimated price range.
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -295,7 +357,7 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
                 </tr>
               </thead>
               <tbody>
-                {IMAGE_QUALITY_OPTIONS.map((quality) => (
+                {IMAGE_EXPLICIT_QUALITY_OPTIONS.map((quality) => (
                   <tr
                     className="border-border/60 border-b last:border-b-0"
                     key={quality}
@@ -314,9 +376,28 @@ export function ImageForm({ form }: { form: ImageGenerationFormApi }) {
                     </td>
                   </tr>
                 ))}
+                <tr className="border-border/60 border-b last:border-b-0">
+                  <td className="px-3 py-2 text-muted-foreground">Auto</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    ${IMAGE_PRICING.low["1024x1024"].toFixed(3)}-$
+                    {IMAGE_PRICING.high["1024x1024"].toFixed(3)}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    ${IMAGE_PRICING.low["1024x1536"].toFixed(3)}-$
+                    {IMAGE_PRICING.high["1024x1536"].toFixed(3)}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    ${IMAGE_PRICING.low["1536x1024"].toFixed(3)}-$
+                    {IMAGE_PRICING.high["1536x1024"].toFixed(3)}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
+          <p className="text-muted-foreground text-xs/relaxed">
+            If size is also set to auto, the total estimate spans the full range
+            across all supported resolutions.
+          </p>
         </div>
       </TabsContent>
     </Tabs>
