@@ -66,7 +66,7 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "auth:gen": "npx auth@latest generate --output ./db/schema/auth-schema.ts"
+    "auth:gen": "npx auth@latest generate --output ./db/schema/auth.ts"
   },
   "version": "0.1.0",
   "private": true,
