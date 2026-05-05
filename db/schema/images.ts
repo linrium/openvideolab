@@ -2,13 +2,32 @@ import { relations } from "drizzle-orm"
 import {
   index,
   integer,
+  jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core"
 import { v7 as uuidv7 } from "uuid"
+import type { ImageQuality, ImageSize } from "@/lib/image-generation"
 import { generations } from "./generations"
+
+export interface PersistedImageUsage {
+  provider?: {
+    inputTokens?: number
+    inputTokensDetails?: {
+      imageTokens?: number
+      textTokens?: number
+    }
+    outputTokens?: number
+    outputTokensDetails?: {
+      imageTokens?: number
+      textTokens?: number
+    }
+    totalTokens?: number
+  }
+}
 
 export const images = pgTable(
   "images",
@@ -19,6 +38,21 @@ export const images = pgTable(
     generationId: uuid("generation_id")
       .notNull()
       .references(() => generations.id, { onDelete: "cascade" }),
+    batchId: uuid("batch_id")
+      .notNull()
+      .$defaultFn(() => uuidv7()),
+    status: text("status").notNull().default("completed"),
+    error: text("error"),
+    prompt: text("prompt").notNull().default(""),
+    model: text("model").notNull().default(""),
+    referenceId: text("reference_id"),
+    usage: jsonb("usage").$type<PersistedImageUsage | null>(),
+    estimatedCost: numeric("estimated_cost", { precision: 12, scale: 6 }),
+    totalCost: numeric("total_cost", { precision: 12, scale: 6 }),
+    generationTime: numeric("generation_time", { precision: 12, scale: 3 }),
+    latency: numeric("latency", { precision: 12, scale: 3 }),
+    quality: text("quality").$type<ImageQuality | null>(),
+    size: text("size").$type<ImageSize | null>(),
     path: text("path"),
     sourceUrl: text("source_url"),
     mimeType: text("mime_type"),
@@ -32,7 +66,10 @@ export const images = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("images_generation_id_idx").on(t.generationId)]
+  (t) => [
+    index("images_generation_id_idx").on(t.generationId),
+    index("images_batch_id_idx").on(t.batchId),
+  ]
 )
 
 export const imagesRelations = relations(images, ({ one }) => ({

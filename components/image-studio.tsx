@@ -1,9 +1,13 @@
 "use client"
 
 import { useForm } from "@tanstack/react-form"
-import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import { submitImageAction } from "@/app/actions/generate-image"
+import {
+  createImageGenerationAction,
+  submitImageAction,
+} from "@/app/actions/generate-image"
 import { ImageForm } from "@/components/image-form"
 import { ImagePreview } from "@/components/image-preview"
 import {
@@ -13,6 +17,8 @@ import {
   type ImageSize,
   imageGenerationSchema,
 } from "@/lib/image-generation"
+
+const PENDING_IMAGE_GENERATION_KEY_PREFIX = "pending-image-generation:"
 
 export interface GeneratedImageMetadata {
   cost: string | null
@@ -34,8 +40,11 @@ function useImageGenerationForm(
   options: {
     defaultValues?: ImageGenerationValues
     readOnly?: boolean
+    sessionId?: string
   } = {}
 ) {
+  const router = useRouter()
+
   return useForm({
     defaultValues: options.defaultValues ?? IMAGE_DEFAULT_VALUES,
     validators: {
@@ -57,9 +66,28 @@ function useImageGenerationForm(
         return
       }
 
+      if (!options.sessionId) {
+        const createResult = await createImageGenerationAction(parsedValue.data)
+        if (!createResult.ok) {
+          toast.error("Failed to create image session", {
+            description: createResult.message,
+          })
+          return
+        }
+
+        window.sessionStorage.setItem(
+          `${PENDING_IMAGE_GENERATION_KEY_PREFIX}${createResult.generationId}`,
+          JSON.stringify(parsedValue.data)
+        )
+        router.push(`/images/${createResult.generationId}?generate=1`)
+        return
+      }
+
       onGenerated(null)
 
-      const result = await submitImageAction(parsedValue.data)
+      const result = await submitImageAction(parsedValue.data, {
+        sessionId: options.sessionId,
+      })
       if (!result.ok) {
         toast.error("Failed to generate image", { description: result.message })
         return
@@ -78,19 +106,24 @@ export type ImageGenerationFormApi = ReturnType<typeof useImageGenerationForm>
 export type ImageGenerationFormValues = ImageGenerationValues
 
 interface ImageStudioProps {
-  initialGeneratedImages?: GeneratedImagesState | null
+  autoGenerate?: boolean
+  initialGeneratedImages?: GeneratedImagesState[]
   initialValues?: ImageGenerationValues
   readOnly?: boolean
+  sessionId?: string
 }
 
 export function ImageStudio({
-  initialGeneratedImages = null,
+  autoGenerate = false,
+  initialGeneratedImages = [],
   initialValues = IMAGE_DEFAULT_VALUES,
   readOnly = false,
+  sessionId,
 }: ImageStudioProps = {}) {
   const [generatedImages, setGeneratedImages] = useState<
     GeneratedImagesState[]
-  >(initialGeneratedImages ? [initialGeneratedImages] : [])
+  >(initialGeneratedImages)
+  const hasAttemptedAutoGenerationRef = useRef(false)
 
   const handleGenerated = (result: GeneratedImagesState | null) => {
     if (result === null) {
@@ -102,7 +135,53 @@ export function ImageStudio({
   const form = useImageGenerationForm(handleGenerated, {
     defaultValues: initialValues,
     readOnly,
+    sessionId,
   })
+
+  useEffect(() => {
+    if (
+      !(autoGenerate && sessionId) ||
+      readOnly ||
+      generatedImages.length > 0 ||
+      hasAttemptedAutoGenerationRef.current
+    ) {
+      return
+    }
+
+    const pendingGeneration = window.sessionStorage.getItem(
+      `${PENDING_IMAGE_GENERATION_KEY_PREFIX}${sessionId}`
+    )
+    if (!pendingGeneration) {
+      return
+    }
+
+    hasAttemptedAutoGenerationRef.current = true
+
+    const parsedGeneration = imageGenerationSchema.safeParse(
+      JSON.parse(pendingGeneration)
+    )
+    if (!parsedGeneration.success) {
+      window.sessionStorage.removeItem(
+        `${PENDING_IMAGE_GENERATION_KEY_PREFIX}${sessionId}`
+      )
+      toast.error("Failed to restore pending image generation")
+      return
+    }
+
+    form.reset(parsedGeneration.data)
+
+    const submitPendingGeneration = async () => {
+      try {
+        await form.handleSubmit()
+      } finally {
+        window.sessionStorage.removeItem(
+          `${PENDING_IMAGE_GENERATION_KEY_PREFIX}${sessionId}`
+        )
+      }
+    }
+
+    submitPendingGeneration()
+  }, [autoGenerate, form, generatedImages.length, readOnly, sessionId])
 
   return (
     <div className="flex h-svh w-full overflow-hidden">

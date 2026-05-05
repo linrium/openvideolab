@@ -58,7 +58,7 @@ async function resolvePollJobContext(
     .select({
       generationId: generations.id,
       path: videos.path,
-      status: generations.status,
+      status: videos.status,
       userId: generations.userId,
     })
     .from(videos)
@@ -127,7 +127,7 @@ export async function pollJobStatusAction(
           : null
 
         await db
-          .update(generations)
+          .update(videos)
           .set({
             error: data.error ?? null,
             generationTime:
@@ -146,17 +146,25 @@ export async function pollJobStatusAction(
                 : String(generation.data.totalCost),
             updatedAt: new Date(),
           })
-          .where(eq(generations.id, current.generationId))
+          .where(eq(videos.jobId, jobId))
       } else {
         await db
-          .update(generations)
+          .update(videos)
           .set({
             error: data.error ?? null,
             status: data.status,
             updatedAt: new Date(),
           })
-          .where(eq(generations.id, current.generationId))
+          .where(eq(videos.jobId, jobId))
       }
+
+      await db
+        .update(generations)
+        .set({
+          status: data.status,
+          updatedAt: new Date(),
+        })
+        .where(eq(generations.id, current.generationId))
 
       if (options.refreshClient !== false) {
         revalidatePath("/videos")

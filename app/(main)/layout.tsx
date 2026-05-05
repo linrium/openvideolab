@@ -25,7 +25,6 @@ export default async function MainLayout({
     .select({
       id: generations.id,
       title: generations.title,
-      prompt: generations.prompt,
       status: generations.status,
       type: generations.type,
       videoId: videos.id,

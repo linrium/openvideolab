@@ -93,9 +93,6 @@ export async function submitVideoAction(
     const [insertedGeneration] = await db
       .insert(generations)
       .values({
-        estimatedCost: getEstimatedCost(request),
-        model: request.model as Model,
-        prompt: request.prompt,
         title,
         type: "video",
         userId: session.user.id,
@@ -107,12 +104,14 @@ export async function submitVideoAction(
       .values({
         aspectRatio: request.aspectRatio ?? null,
         duration: request.duration ?? null,
+        estimatedCost: getEstimatedCost(request),
         frameFirst: imageKeys.frameFirstKey ?? null,
         frameLast: imageKeys.frameLastKey ?? null,
         generateAudio: request.generateAudio ?? true,
         generationId: insertedGeneration.id,
         inputReferences: imageKeys.inputReferenceKeys ?? [],
         jobId: job.id,
+        model: request.model as Model,
         provider:
           metadata.provider == null
             ? null
@@ -126,7 +125,9 @@ export async function submitVideoAction(
                     null,
                 },
               },
+        prompt: request.prompt,
         resolution: request.resolution ?? null,
+        status: "pending",
       })
       .returning({ id: videos.id })
     revalidatePath("/videos")

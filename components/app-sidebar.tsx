@@ -55,7 +55,6 @@ const RECENT_ICON = {
 
 interface RecentItem {
   id: string
-  prompt: string
   status: string
   title: string
   type: string
@@ -147,7 +146,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
                   const icon =
                     RECENT_ICON[item.type as keyof typeof RECENT_ICON] ??
                     Image01Icon
-                  const title = item.title || item.prompt
+                  const title = item.title
 
                   return (
                     <SidebarMenuItem key={item.id}>

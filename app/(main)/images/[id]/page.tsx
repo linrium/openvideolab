@@ -1,7 +1,10 @@
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, desc, eq } from "drizzle-orm"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
-import { ImageStudio } from "@/components/image-studio"
+import {
+  type GeneratedImagesState,
+  ImageStudio,
+} from "@/components/image-studio"
 import { db } from "@/db"
 import { generations } from "@/db/schema/generations"
 import { images } from "@/db/schema/images"
@@ -16,6 +19,7 @@ import { getPresignedUrl } from "@/lib/r2"
 
 interface ImagePageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ generate?: string }>
 }
 
 function inferImageSize(
@@ -43,8 +47,12 @@ function normalizeImageModel(value: string): ImageGenerationValues["model"] {
     : IMAGE_DEFAULT_VALUES.model
 }
 
-export default async function ImagePage({ params }: ImagePageProps) {
+export default async function ImagePage({
+  params,
+  searchParams,
+}: ImagePageProps) {
   const { id } = await params
+  const { generate } = await searchParams
 
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) {
@@ -53,14 +61,9 @@ export default async function ImagePage({ params }: ImagePageProps) {
 
   const [generation] = await db
     .select({
-      estimatedCost: generations.estimatedCost,
-      createdAt: generations.createdAt,
+      count: generations.count,
       generationId: generations.id,
-      model: generations.model,
-      prompt: generations.prompt,
       title: generations.title,
-      totalCost: generations.totalCost,
-      usage: generations.usage,
       userId: generations.userId,
     })
     .from(generations)
@@ -73,65 +76,82 @@ export default async function ImagePage({ params }: ImagePageProps) {
 
   const imageRows = await db
     .select({
+      batchId: images.batchId,
+      createdAt: images.createdAt,
+      estimatedCost: images.estimatedCost,
       height: images.height,
+      model: images.model,
       path: images.path,
       position: images.position,
+      prompt: images.prompt,
+      quality: images.quality,
+      referenceId: images.referenceId,
       sourceUrl: images.sourceUrl,
+      totalCost: images.totalCost,
       width: images.width,
+      size: images.size,
     })
     .from(images)
     .where(eq(images.generationId, generation.generationId))
-    .orderBy(asc(images.position))
+    .orderBy(desc(images.createdAt), asc(images.position))
 
-  if (imageRows.length === 0) {
-    notFound()
+  const batchMap = new Map<string, GeneratedImagesState>()
+
+  for (const image of imageRows) {
+    const imageUrl = image.path
+      ? await getPresignedUrl({ key: image.path }).catch(() => "")
+      : (image.sourceUrl ?? "")
+
+    if (!imageUrl) {
+      continue
+    }
+
+    const resolvedSize = image.size ?? inferImageSize(image.width, image.height)
+    const existingBatch = batchMap.get(image.batchId)
+
+    if (existingBatch) {
+      existingBatch.images.push(imageUrl)
+      continue
+    }
+
+    batchMap.set(image.batchId, {
+      images: [imageUrl],
+      metadata: {
+        cost: image.estimatedCost,
+        createdAt: image.createdAt.toISOString(),
+        model: image.model,
+        quality: image.quality,
+        size: resolvedSize,
+        totalCost: image.totalCost,
+      },
+      size: resolvedSize,
+    })
   }
 
-  const imageUrls = (
-    await Promise.all(
-      imageRows.map(async (image) => {
-        if (image.path) {
-          return await getPresignedUrl({ key: image.path }).catch(() => "")
-        }
+  const generatedBatches = Array.from(batchMap.values())
 
-        return image.sourceUrl ?? ""
-      })
-    )
-  ).filter((url) => url.length > 0)
-
-  if (imageUrls.length === 0) {
-    notFound()
-  }
-
-  const firstImage = imageRows[0]
-  const resolvedSize =
-    generation.usage?.image?.size ??
-    inferImageSize(firstImage.width, firstImage.height)
+  const latestBatch = imageRows[0]
   const initialValues: ImageGenerationValues = {
     ...IMAGE_DEFAULT_VALUES,
-    model: normalizeImageModel(generation.model),
-    n: imageRows.length,
-    prompt: generation.prompt,
-    quality: generation.usage?.image?.quality ?? IMAGE_DEFAULT_VALUES.quality,
-    size: resolvedSize,
+    model: normalizeImageModel(
+      latestBatch?.model || IMAGE_DEFAULT_VALUES.model
+    ),
+    n: generation.count,
+    prompt: latestBatch?.prompt || "",
+    quality: latestBatch?.quality ?? IMAGE_DEFAULT_VALUES.quality,
+    size:
+      latestBatch?.size ??
+      generatedBatches[0]?.size ??
+      IMAGE_DEFAULT_VALUES.size,
     title: generation.title,
   }
 
   return (
     <ImageStudio
-      initialGeneratedImages={{
-        images: imageUrls,
-        metadata: {
-          cost: generation.estimatedCost,
-          createdAt: generation.createdAt.toISOString(),
-          model: generation.model,
-          quality: initialValues.quality,
-          size: resolvedSize,
-          totalCost: generation.totalCost,
-        },
-        size: resolvedSize,
-      }}
+      autoGenerate={generate === "1"}
+      initialGeneratedImages={generatedBatches}
       initialValues={initialValues}
+      sessionId={generation.generationId}
     />
   )
 }

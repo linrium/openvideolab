@@ -28,9 +28,10 @@ function formatTimestamp(value: string | null): string | null {
     return null
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "UTC",
   }).format(new Date(value))
 }
 
@@ -120,7 +121,7 @@ export function ImagePreview({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="w-full">
           <div className="mx-auto w-full max-w-4xl">
-            <div className="space-y-6 px-4 pt-4">
+            <div className="space-y-4 px-4 pt-4 pb-4">
               <form.Subscribe selector={(state) => state.isSubmitting}>
                 {(isSubmitting) =>
                   isSubmitting ? (
@@ -160,7 +161,7 @@ export function ImagePreview({
 
                   return (
                     <div key={batchKey}>
-                      {batchIndex > 0 && <Separator className="mb-6" />}
+                      {batchIndex > 0 && <Separator className="mb-4" />}
                       <div className="grid gap-3 2xl:grid-cols-2">
                         {batch.images.map((image) => (
                           <div className="space-y-2" key={image}>

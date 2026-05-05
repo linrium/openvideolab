@@ -15,6 +15,27 @@
       "when": 1777899920816,
       "tag": "0001_add_generation_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777899920817,
+      "tag": "0002_sessionize_generations",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777899920818,
+      "tag": "0003_remove_duplicated_generation_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777899920819,
+      "tag": "0004_add_generation_count",
+      "breakpoints": true
     }
   ]
 }

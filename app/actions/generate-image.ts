@@ -1,15 +1,16 @@
 "use server"
 
+import { eq } from "drizzle-orm"
 import { headers } from "next/headers"
 import type { ImagesResponse } from "openai/resources/images"
 import { v7 as uuidv7 } from "uuid"
 import type { GeneratedImageMetadata } from "@/components/image-studio"
 import { db } from "@/db"
+import { generations } from "@/db/schema/generations"
 import {
-  generations,
-  type PersistedGenerationUsage,
-} from "@/db/schema/generations"
-import { images as imagesTable } from "@/db/schema/images"
+  images as imagesTable,
+  type PersistedImageUsage,
+} from "@/db/schema/images"
 import { auth } from "@/lib/auth"
 import {
   getEstimatedImageCost,
@@ -45,18 +46,14 @@ function resolveImageSize(
   return response.size ?? requestedSize
 }
 
-function buildGenerationUsage(
+function buildImageUsage(
   response: ImagesResponse,
-  resolved: {
+  _resolved: {
     quality: NonNullable<GeneratedImageMetadata["quality"]>
     size: ImageSize
   }
-): PersistedGenerationUsage {
+): PersistedImageUsage {
   return {
-    image: {
-      quality: resolved.quality,
-      size: resolved.size,
-    },
     provider: response.usage
       ? {
           inputTokens: response.usage.input_tokens,
@@ -146,8 +143,57 @@ export interface SubmitImageError {
   ok: false
 }
 
-export async function submitImageAction(
+interface SubmitImageOptions {
+  sessionId?: string
+}
+
+export interface CreateImageGenerationSuccess {
+  generationId: string
+  ok: true
+}
+
+export interface CreateImageGenerationError {
+  message: string
+  ok: false
+}
+
+export async function createImageGenerationAction(
   input: unknown
+): Promise<CreateImageGenerationSuccess | CreateImageGenerationError> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) {
+    return { ok: false, message: "Unauthorized" }
+  }
+
+  const parsedInput = imageGenerationSchema.safeParse(input)
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: parsedInput.error.issues
+        .map((issue) => issue.message)
+        .join(", "),
+    }
+  }
+
+  const prompt = parsedInput.data.prompt.trim()
+  const title = getImageTitle(parsedInput.data.title, prompt)
+  const generationId = uuidv7()
+
+  await db.insert(generations).values({
+    count: parsedInput.data.n,
+    id: generationId,
+    status: "pending",
+    title,
+    type: "image",
+    userId: session.user.id,
+  })
+
+  return { generationId, ok: true }
+}
+
+export async function submitImageAction(
+  input: unknown,
+  options: SubmitImageOptions = {}
 ): Promise<SubmitImageSuccess | SubmitImageError> {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) {
@@ -202,6 +248,7 @@ export async function submitImageAction(
     const dimensions =
       resolvedSize === "auto" ? null : IMAGE_SIZE_DIMENSIONS[resolvedSize]
     const title = getImageTitle(data.title, prompt)
+    const batchId = uuidv7()
     const estimatedCost = String(
       getEstimatedImageCost({
         n: uploadedImages.length,
@@ -216,30 +263,52 @@ export async function submitImageAction(
         size: resolvedSize,
       })
     )
-    const usage = buildGenerationUsage(response, {
+    const usage = buildImageUsage(response, {
       quality: resolvedQuality,
       size: resolvedSize,
     })
+    const sessionId = options.sessionId ?? uuidv7()
 
-    const [generation] = await db
-      .insert(generations)
-      .values({
-        estimatedCost,
-        model: SUPPORTED_IMAGE_MODEL,
-        prompt,
-        referenceId: String(response.created ?? ""),
+    if (options.sessionId) {
+      await db
+        .update(generations)
+        .set({
+          count: data.n,
+          status: "completed",
+          title,
+          updatedAt: new Date(),
+        })
+        .where(eq(generations.id, sessionId))
+    } else {
+      await db.insert(generations).values({
+        count: data.n,
+        id: sessionId,
         status: "completed",
         title,
-        totalCost,
         type: "image",
-        usage,
         userId: session.user.id,
       })
-      .returning({ createdAt: generations.createdAt, id: generations.id })
+    }
+
+    const [generation] = await db
+      .select({ createdAt: generations.createdAt, id: generations.id })
+      .from(generations)
+      .where(eq(generations.id, sessionId))
+      .limit(1)
 
     await db.insert(imagesTable).values(
       uploadedImages.map((image, index) => ({
-        generationId: generation.id,
+        batchId,
+        estimatedCost,
+        generationId: sessionId,
+        model: SUPPORTED_IMAGE_MODEL,
+        prompt,
+        quality: resolvedQuality,
+        referenceId: String(response.created ?? ""),
+        size: resolvedSize,
+        status: "completed",
+        totalCost,
+        usage,
         height: dimensions?.height ?? null,
         mimeType: DEFAULT_IMAGE_MIME_TYPE,
         path: image.key,
@@ -250,7 +319,7 @@ export async function submitImageAction(
     )
 
     return {
-      generationId: generation.id,
+      generationId: sessionId,
       ok: true,
       images: uploadedImages.map((image) => image.previewUrl),
       metadata: {
