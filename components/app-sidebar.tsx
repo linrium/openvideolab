@@ -34,7 +34,6 @@ import { authClient } from "@/lib/auth-client"
 const mainNavigation = [
   { href: "/videos/new", icon: VideoIcon, label: "New Video" },
   { href: "/images/new", icon: Image01Icon, label: "New Image" },
-  { href: "/music/new", icon: MusicNote03FreeIcons, label: "New Music" },
 ] as const
 
 const STATUS_ICON: Record<string, string> = {

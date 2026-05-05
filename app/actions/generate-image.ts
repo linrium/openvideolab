@@ -334,6 +334,7 @@ export async function submitImageAction(
         cost: estimatedCost,
         createdAt: generation.createdAt.toISOString(),
         model: SUPPORTED_IMAGE_MODEL,
+        prompt,
         quality: resolvedQuality,
         size: resolvedSize,
         totalCost,

@@ -24,6 +24,7 @@ export interface GeneratedImageMetadata {
   cost: string | null
   createdAt: string | null
   model: string
+  prompt?: string | null
   quality: ImageQuality | null
   size: ImageSize
   totalCost: string | null

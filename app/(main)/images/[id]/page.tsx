@@ -79,6 +79,7 @@ function buildBatchMetadata(image: ImageRow, resolvedSize: ImageSize) {
     cost: image.estimatedCost,
     createdAt: image.createdAt.toISOString(),
     model: image.model,
+    prompt: image.prompt,
     quality: image.quality,
     size: resolvedSize,
     totalCost: image.totalCost,
