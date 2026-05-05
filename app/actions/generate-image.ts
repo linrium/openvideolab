@@ -342,10 +342,49 @@ export async function submitImageAction(
     }
   } catch (error) {
     console.error(error)
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to generate image"
+
+    const { data } = parsedInput
+    const prompt = data.prompt.trim()
+    const sessionId = options.sessionId ?? uuidv7()
+    const batchId = uuidv7()
+
+    if (options.sessionId) {
+      await db
+        .update(generations)
+        .set({ status: "failed", updatedAt: new Date() })
+        .where(eq(generations.id, sessionId))
+    } else {
+      await db.insert(generations).values({
+        count: data.n,
+        id: sessionId,
+        status: "failed",
+        title: getImageTitle(data.title, prompt),
+        type: "image",
+        userId: session.user.id,
+      })
+    }
+
+    await db.insert(imagesTable).values(
+      Array.from({ length: data.n }, (_, index) => ({
+        batchId,
+        error: errorMessage,
+        generationId: sessionId,
+        model: SUPPORTED_IMAGE_MODEL,
+        position: index,
+        prompt,
+        status: "failed",
+      }))
+    )
+
+    revalidatePath("/", "layout")
+    revalidatePath(`/images/${sessionId}`)
+    revalidatePath("/images")
+
     return {
       ok: false,
-      message:
-        error instanceof Error ? error.message : "Failed to generate image",
+      message: errorMessage,
     }
   }
 }

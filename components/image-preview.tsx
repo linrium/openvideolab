@@ -50,6 +50,26 @@ function labelFromValue(value: string): string {
     .join(" ")
 }
 
+function ImageError({
+  createdAt,
+  message,
+}: {
+  createdAt: string | null
+  message: string
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-muted-foreground text-xs">
+        <span>{formatTimestamp(createdAt) ?? " "}</span>
+      </div>
+      <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-8 text-center text-destructive text-sm">
+        <span className="font-medium">Generation failed</span>
+        <span className="text-xs opacity-70">{message}</span>
+      </div>
+    </div>
+  )
+}
+
 function ImagePlaceholder({ isGenerating }: { isGenerating: boolean }) {
   if (isGenerating) {
     return (
@@ -76,10 +96,12 @@ function ImagePlaceholder({ isGenerating }: { isGenerating: boolean }) {
 export function ImagePreview({
   form,
   generatedImages,
+  generationError = null,
   readOnly = false,
 }: {
   form: ImageGenerationFormApi
   generatedImages: GeneratedImagesState[]
+  generationError?: { createdAt: string; message: string } | null
   readOnly?: boolean
 }) {
   const [confirming, setConfirming] = useState(false)
@@ -123,13 +145,24 @@ export function ImagePreview({
           <div className="mx-auto w-full max-w-4xl">
             <div className="space-y-4 px-4 pt-4 pb-4">
               <form.Subscribe selector={(state) => state.isSubmitting}>
-                {(isSubmitting) =>
-                  isSubmitting ? (
-                    <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
-                      <ImagePlaceholder isGenerating />
-                    </div>
-                  ) : null
-                }
+                {(isSubmitting) => {
+                  if (isSubmitting) {
+                    return (
+                      <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
+                        <ImagePlaceholder isGenerating />
+                      </div>
+                    )
+                  }
+                  if (generationError) {
+                    return (
+                      <ImageError
+                        createdAt={generationError.createdAt}
+                        message={generationError.message}
+                      />
+                    )
+                  }
+                  return null
+                }}
               </form.Subscribe>
 
               {generatedImages.length > 0 ? (
@@ -232,7 +265,7 @@ export function ImagePreview({
               ) : (
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) =>
-                    isSubmitting ? null : (
+                    isSubmitting || generationError ? null : (
                       <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
                         <ImagePlaceholder isGenerating={false} />
                       </div>

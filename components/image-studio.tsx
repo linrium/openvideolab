@@ -37,6 +37,7 @@ export interface GeneratedImagesState {
 
 function useImageGenerationForm(
   onGenerated: (result: GeneratedImagesState | null) => void,
+  onError: (message: string) => void,
   options: {
     defaultValues?: ImageGenerationValues
     readOnly?: boolean
@@ -91,6 +92,7 @@ function useImageGenerationForm(
       })
       if (!result.ok) {
         toast.error("Failed to generate image", { description: result.message })
+        onError(result.message)
         return
       }
 
@@ -125,16 +127,25 @@ export function ImageStudio({
   const [generatedImages, setGeneratedImages] = useState<
     GeneratedImagesState[]
   >(initialGeneratedImages)
+  const [generationError, setGenerationError] = useState<{
+    message: string
+    createdAt: string
+  } | null>(null)
   const hasAttemptedAutoGenerationRef = useRef(false)
 
   const handleGenerated = (result: GeneratedImagesState | null) => {
     if (result === null) {
+      setGenerationError(null)
       return
     }
     setGeneratedImages((prev) => [result, ...prev])
   }
 
-  const form = useImageGenerationForm(handleGenerated, {
+  const handleError = (message: string) => {
+    setGenerationError({ message, createdAt: new Date().toISOString() })
+  }
+
+  const form = useImageGenerationForm(handleGenerated, handleError, {
     defaultValues: initialValues,
     readOnly,
     sessionId,
@@ -191,6 +202,7 @@ export function ImageStudio({
         <ImagePreview
           form={form}
           generatedImages={generatedImages}
+          generationError={generationError}
           readOnly={readOnly}
         />
       </section>
