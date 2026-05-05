@@ -202,6 +202,13 @@ export async function submitImageAction(
     const dimensions =
       resolvedSize === "auto" ? null : IMAGE_SIZE_DIMENSIONS[resolvedSize]
     const title = getImageTitle(data.title, prompt)
+    const estimatedCost = String(
+      getEstimatedImageCost({
+        n: uploadedImages.length,
+        quality: data.quality,
+        size: data.size,
+      })
+    )
     const totalCost = String(
       getEstimatedImageCost({
         n: uploadedImages.length,
@@ -217,7 +224,7 @@ export async function submitImageAction(
     const [generation] = await db
       .insert(generations)
       .values({
-        estimatedCost: totalCost,
+        estimatedCost,
         model: SUPPORTED_IMAGE_MODEL,
         prompt,
         referenceId: String(response.created ?? ""),
@@ -247,11 +254,12 @@ export async function submitImageAction(
       ok: true,
       images: uploadedImages.map((image) => image.previewUrl),
       metadata: {
-        cost: totalCost,
+        cost: estimatedCost,
         createdAt: generation.createdAt.toISOString(),
         model: SUPPORTED_IMAGE_MODEL,
         quality: resolvedQuality,
         size: resolvedSize,
+        totalCost,
       },
       size: resolvedSize,
     }

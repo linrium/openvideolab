@@ -59,6 +59,7 @@ export default async function ImagePage({ params }: ImagePageProps) {
       model: generations.model,
       prompt: generations.prompt,
       title: generations.title,
+      totalCost: generations.totalCost,
       usage: generations.usage,
       userId: generations.userId,
     })
@@ -126,6 +127,7 @@ export default async function ImagePage({ params }: ImagePageProps) {
           model: generation.model,
           quality: initialValues.quality,
           size: resolvedSize,
+          totalCost: generation.totalCost,
         },
         size: resolvedSize,
       }}

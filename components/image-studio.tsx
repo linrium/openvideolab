@@ -20,6 +20,7 @@ export interface GeneratedImageMetadata {
   model: string
   quality: ImageQuality | null
   size: ImageSize
+  totalCost: string | null
 }
 
 export interface GeneratedImagesState {
@@ -113,7 +114,11 @@ export function ImageStudio({
         />
       </section>
       <aside className="h-svh min-h-0 w-full max-w-lg shrink-0 overflow-y-auto border-border/80 border-t bg-background lg:border-t-0 lg:border-l">
-        <ImageForm form={form} readOnly={readOnly} />
+        <ImageForm
+          form={form}
+          generatedImages={generatedImages}
+          readOnly={readOnly}
+        />
       </aside>
     </div>
   )

@@ -1,6 +1,9 @@
 "use client"
 
-import type { ImageGenerationFormApi } from "@/components/image-studio"
+import type {
+  GeneratedImagesState,
+  ImageGenerationFormApi,
+} from "@/components/image-studio"
 import { CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   Field,
@@ -55,13 +58,31 @@ function formatEstimatedCost(values: {
   return `$${range.min.toFixed(3)}-$${range.max.toFixed(3)}`
 }
 
+function formatCurrency(value: string | null): string | null {
+  if (!value) {
+    return null
+  }
+
+  return `$${Number(value).toFixed(3)}`
+}
+
 export function ImageForm({
   form,
+  generatedImages = [],
   readOnly = false,
 }: {
   form: ImageGenerationFormApi
+  generatedImages?: GeneratedImagesState[]
   readOnly?: boolean
 }) {
+  const totalSessionCost =
+    generatedImages.length > 0
+      ? generatedImages.reduce(
+          (sum, batch) => sum + Number(batch.metadata.totalCost ?? 0),
+          0
+        )
+      : null
+
   return (
     <Tabs className="flex h-full min-h-0 flex-col gap-0" defaultValue="compose">
       <CardHeader
@@ -319,6 +340,14 @@ export function ImageForm({
                     {(quality === "auto" || size === "auto") && (
                       <div className="text-muted-foreground/80">
                         Auto mode shows an estimated price range.
+                      </div>
+                    )}
+                    {totalSessionCost === null ? null : (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Total cost</span>
+                        <span className="tabular-nums">
+                          {formatCurrency(String(totalSessionCost))}
+                        </span>
                       </div>
                     )}
                   </div>
