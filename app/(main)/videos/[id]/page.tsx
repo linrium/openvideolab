@@ -121,7 +121,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       <section className="flex h-full min-h-0 flex-1 justify-center overflow-y-auto">
         <VideoPreview jobId={video.jobId} url={videoUrl} video={video} />
       </section>
-      <aside className="h-svh min-h-0 w-full max-w-lg shrink-0 overflow-y-auto border-border/80 border-t bg-background lg:border-t-0 lg:border-l">
+      <aside className="h-svh min-h-0 w-full max-w-sm shrink-0 overflow-y-auto border-border/80 border-t bg-background md:max-w-md lg:border-t-0 lg:border-l xl:max-w-lg">
         <VideoForm
           initialValues={{
             model: video.model,

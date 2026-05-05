@@ -40,7 +40,7 @@ export default function Loading() {
       </section>
 
       {/* Form aside */}
-      <aside className="h-svh min-h-0 w-full max-w-lg shrink-0 overflow-y-auto border-border/80 border-t bg-background lg:border-t-0 lg:border-l">
+      <aside className="h-svh min-h-0 w-full max-w-sm shrink-0 overflow-y-auto border-border/80 border-t bg-background md:max-w-md lg:border-t-0 lg:border-l xl:max-w-lg">
         {/* Sticky header with tabs */}
         <div className="sticky top-0 z-10 border-border/70 border-b bg-background px-4 py-3 sm:px-5">
           <div className="flex gap-4">
