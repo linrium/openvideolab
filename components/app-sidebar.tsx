@@ -80,7 +80,7 @@ function getRecentHref(item: RecentItem): string {
   }
 
   if (item.type === "storyboard") {
-    return "/storyboard/new"
+    return `/storyboard/${item.id}`
   }
 
   return "/images/new"
