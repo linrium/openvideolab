@@ -1,10 +1,11 @@
 "use server"
 
-import { eq } from "drizzle-orm"
+import { desc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import type { ImagesResponse } from "openai/resources/images"
 import { v7 as uuidv7 } from "uuid"
+import z from "zod/v4"
 import type { GeneratedImageMetadata } from "@/components/image-studio"
 import { db } from "@/db"
 import { generations } from "@/db/schema/generations"
@@ -87,6 +88,11 @@ function getImageTitle(inputTitle: string, prompt: string): string {
     : trimmedPrompt
 }
 
+const updateImageTitleSchema = z.object({
+  sessionId: z.string().min(1),
+  title: z.string().trim(),
+})
+
 function getImageBufferFromBase64(base64Content: string): Buffer {
   return Buffer.from(base64Content, "base64")
 }
@@ -158,6 +164,16 @@ export interface CreateImageGenerationError {
   ok: false
 }
 
+export interface UpdateImageTitleSuccess {
+  ok: true
+  title: string
+}
+
+export interface UpdateImageTitleError {
+  message: string
+  ok: false
+}
+
 export async function createImageGenerationAction(
   input: unknown
 ): Promise<CreateImageGenerationSuccess | CreateImageGenerationError> {
@@ -193,6 +209,62 @@ export async function createImageGenerationAction(
   revalidatePath("/images")
 
   return { generationId, ok: true }
+}
+
+export async function updateImageGenerationTitleAction(
+  input: unknown
+): Promise<UpdateImageTitleSuccess | UpdateImageTitleError> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) {
+    return { ok: false, message: "Unauthorized" }
+  }
+
+  const parsedInput = updateImageTitleSchema.safeParse(input)
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: parsedInput.error.issues
+        .map((issue) => issue.message)
+        .join(", "),
+    }
+  }
+
+  const [generation] = await db
+    .select({
+      userId: generations.userId,
+    })
+    .from(generations)
+    .where(eq(generations.id, parsedInput.data.sessionId))
+    .limit(1)
+
+  if (!generation || generation.userId !== session.user.id) {
+    return { ok: false, message: "Unauthorized" }
+  }
+
+  const [latestImage] = await db
+    .select({
+      prompt: imagesTable.prompt,
+    })
+    .from(imagesTable)
+    .where(eq(imagesTable.generationId, parsedInput.data.sessionId))
+    .orderBy(desc(imagesTable.createdAt), desc(imagesTable.position))
+    .limit(1)
+
+  const title = getImageTitle(parsedInput.data.title, latestImage?.prompt ?? "")
+
+  await db
+    .update(generations)
+    .set({
+      title,
+      updatedAt: new Date(),
+    })
+    .where(eq(generations.id, parsedInput.data.sessionId))
+
+  revalidatePath("/", "layout")
+  revalidatePath(`/images/${parsedInput.data.sessionId}`)
+  revalidatePath("/images")
+
+  return { ok: true, title }
 }
 
 export async function submitImageAction(

@@ -69,10 +69,12 @@ function formatCurrency(value: string | null): string | null {
 export function ImageForm({
   form,
   generatedImages = [],
+  onTitleBlur,
   readOnly = false,
 }: {
   form: ImageGenerationFormApi
   generatedImages?: GeneratedImagesState[]
+  onTitleBlur?: (title: string) => void | Promise<void>
   readOnly?: boolean
 }) {
   const totalSessionCost =
@@ -133,7 +135,12 @@ export function ImageForm({
                       disabled={readOnly}
                       id={field.name}
                       name={field.name}
-                      onBlur={field.handleBlur}
+                      onBlur={() => {
+                        field.handleBlur()
+                        Promise.resolve(onTitleBlur?.(field.state.value)).catch(
+                          () => undefined
+                        )
+                      }}
                       onChange={(event) =>
                         field.handleChange(event.target.value)
                       }

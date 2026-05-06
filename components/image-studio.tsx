@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import {
   createImageGenerationAction,
   submitImageAction,
+  updateImageGenerationTitleAction,
 } from "@/app/actions/generate-image"
 import { ImageForm } from "@/components/image-form"
 import { ImagePreview } from "@/components/image-preview"
@@ -126,6 +127,7 @@ export function ImageStudio({
   readOnly = false,
   sessionId,
 }: ImageStudioProps = {}) {
+  const router = useRouter()
   const [generatedImages, setGeneratedImages] = useState<
     GeneratedImagesState[]
   >(initialGeneratedImages)
@@ -133,6 +135,7 @@ export function ImageStudio({
     message: string
     createdAt: string
   } | null>(null)
+  const savedTitleRef = useRef(initialValues.title)
   const hasAttemptedAutoGenerationRef = useRef(false)
 
   const handleGenerated = (result: GeneratedImagesState | null) => {
@@ -147,11 +150,41 @@ export function ImageStudio({
     setGenerationError({ message, createdAt: new Date().toISOString() })
   }
 
+  const handleTitleBlur = async (title: string) => {
+    if (!sessionId || readOnly) {
+      return
+    }
+
+    const trimmedTitle = title.trim()
+    if (trimmedTitle === savedTitleRef.current) {
+      return
+    }
+
+    const result = await updateImageGenerationTitleAction({
+      sessionId,
+      title: trimmedTitle,
+    })
+
+    if (!result.ok) {
+      toast.error("Failed to save image title", {
+        description: result.message,
+      })
+      return
+    }
+
+    savedTitleRef.current = result.title
+    router.refresh()
+  }
+
   const form = useImageGenerationForm(handleGenerated, handleError, {
     defaultValues: initialValues,
     readOnly,
     sessionId,
   })
+
+  useEffect(() => {
+    savedTitleRef.current = initialValues.title
+  }, [initialValues.title])
 
   useEffect(() => {
     if (
@@ -212,6 +245,7 @@ export function ImageStudio({
         <ImageForm
           form={form}
           generatedImages={generatedImages}
+          onTitleBlur={handleTitleBlur}
           readOnly={readOnly}
         />
       </aside>
