@@ -20,9 +20,10 @@ import {
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
+  InputGroupText,
+  InputGroupTextarea,
 } from "@/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import {
   STORYBOARD_DEFAULT_VALUES,
   type StoryboardAnalysis,
@@ -108,6 +109,11 @@ export function StoryboardForm({
       setIsFetchingReading(false)
     }
   }
+
+  const promptLineCount = Math.max(
+    1,
+    form.state.values.prompt.split("\n").length
+  )
 
   return (
     <Tabs className="flex h-full min-h-0 flex-col gap-0" defaultValue="compose">
@@ -208,21 +214,30 @@ export function StoryboardForm({
                       Describe the shot flow, structure, and key beats you want
                       to outline.
                     </FieldDescription>
-                    <Textarea
-                      aria-invalid={
-                        field.state.meta.errors.length > 0 || undefined
-                      }
-                      disabled={readOnly}
-                      id={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value)
-                      }}
-                      placeholder="e.g. Opening wide shot, then a close-up on the product, followed by a split-screen transition…"
-                      rows={12}
-                      spellCheck={false}
-                      value={field.state.value}
-                    />
+                    <InputGroup>
+                      <InputGroupTextarea
+                        aria-invalid={
+                          field.state.meta.errors.length > 0 || undefined
+                        }
+                        className="min-h-[240px]"
+                        disabled={readOnly}
+                        id={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value)
+                        }}
+                        placeholder="e.g. Opening wide shot, then a close-up on the product, followed by a split-screen transition…"
+                        rows={12}
+                        spellCheck={false}
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon align="block-end" className="border-t">
+                        <InputGroupText>
+                          {promptLineCount} line
+                          {promptLineCount === 1 ? "" : "s"}
+                        </InputGroupText>
+                      </InputGroupAddon>
+                    </InputGroup>
                     <FieldError
                       errors={field.state.meta.errors.map((error) => ({
                         message: String(error),

@@ -1,13 +1,18 @@
 "use client"
 
+import { Copy01Icon, Image01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { CardHeader } from "@/components/ui/card"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupText,
+  InputGroupTextarea,
+} from "@/components/ui/input-group"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { StoryboardAnalysis } from "@/lib/storyboard"
 
@@ -16,6 +21,21 @@ export function StoryboardPreview({
 }: {
   analysis: StoryboardAnalysis | null
 }) {
+  const router = useRouter()
+
+  const handleCopyPrompt = async (prompt: string) => {
+    try {
+      await navigator.clipboard.writeText(prompt)
+      toast.success("Prompt copied")
+    } catch {
+      toast.error("Failed to copy prompt")
+    }
+  }
+
+  const handleGenerateImage = (prompt: string) => {
+    router.push(`/images/new?prompt=${encodeURIComponent(prompt)}`)
+  }
+
   const previewHeader = (
     <CardHeader
       className="sticky top-0 z-10 border-border/70 border-b bg-background px-6"
@@ -61,151 +81,130 @@ export function StoryboardPreview({
       {previewHeader}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-6">
-          <Card className="bg-background/90">
-            <CardHeader>
-              <CardTitle>Overview</CardTitle>
-              <CardDescription>{analysis.storySummary}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <section className="space-y-2">
-                <h2 className="font-medium text-sm">Visual direction</h2>
-                <p className="text-muted-foreground text-sm">
-                  {analysis.visualDirection}
-                </p>
-              </section>
+          <section className="space-y-4">
+            <section className="space-y-2">
+              <h2 className="font-medium text-sm">Visual direction</h2>
+              <p className="text-muted-foreground text-sm">
+                {analysis.visualDirection}
+              </p>
+            </section>
 
+            <section className="space-y-2">
+              <h2 className="font-medium text-sm">Style notes</h2>
+              <div className="flex flex-wrap gap-2">
+                {analysis.styleNotes.map((note) => (
+                  <Badge key={note} variant="secondary">
+                    {note}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+
+            {analysis.characters.length > 0 ? (
               <section className="space-y-2">
-                <h2 className="font-medium text-sm">Style notes</h2>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.styleNotes.map((note) => (
-                    <Badge key={note} variant="secondary">
-                      {note}
-                    </Badge>
+                <h2 className="font-medium text-sm">Characters</h2>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {analysis.characters.map((character) => (
+                    <div
+                      className="rounded-lg border border-border/70 bg-muted/20 p-3"
+                      key={character.name}
+                    >
+                      <div className="font-medium text-sm">
+                        {character.name}
+                      </div>
+                      <div className="text-muted-foreground text-sm">
+                        {character.role}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </section>
+            ) : null}
+          </section>
 
-              {analysis.characters.length > 0 ? (
-                <section className="space-y-2">
-                  <h2 className="font-medium text-sm">Characters</h2>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {analysis.characters.map((character) => (
-                      <div
-                        className="rounded-lg border border-border/70 bg-muted/20 p-3"
-                        key={character.name}
-                      >
-                        <div className="font-medium text-sm">
-                          {character.name}
-                        </div>
-                        <div className="text-muted-foreground text-sm">
-                          {character.role}
-                        </div>
-                        <p className="mt-2 text-sm">{character.description}</p>
-                      </div>
-                    ))}
+          <div className="space-y-4">
+            {analysis.pages.map((page, index) => (
+              <section
+                className={
+                  index === 0
+                    ? "space-y-4 rounded-lg border border-border/70 bg-background/90 p-4"
+                    : "space-y-4 rounded-lg border border-border/70 bg-background/90 p-4"
+                }
+                key={page.pageNumber}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="font-medium text-sm">
+                    Page {page.pageNumber}
+                  </h2>
+                  <Badge variant="outline">{page.panelCount} panels</Badge>
+                  <Badge variant="secondary">{page.mood}</Badge>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  {page.pageSummary}
+                </p>
+
+                <section className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">Setting: </span>
+                    <span className="text-muted-foreground">
+                      {page.setting}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Camera: </span>
+                    <span className="text-muted-foreground">
+                      {page.cameraLanguage}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Characters: </span>
+                    <span className="text-muted-foreground">
+                      {page.characters.join(", ")}
+                    </span>
                   </div>
                 </section>
-              ) : null}
-            </CardContent>
-          </Card>
 
-          <div className="grid gap-4">
-            {analysis.pages.map((page) => (
-              <Card className="bg-background/90" key={page.pageNumber}>
-                <CardHeader>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle>Page {page.pageNumber}</CardTitle>
-                    <Badge variant="outline">{page.panelCount} panels</Badge>
-                    <Badge variant="secondary">{page.mood}</Badge>
-                  </div>
-                  <CardDescription>{page.pageSummary}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 lg:grid-cols-[1.1fr_1.4fr]">
-                    <div className="space-y-4">
-                      <section className="space-y-2">
-                        <h3 className="font-medium text-sm">Scene breakdown</h3>
-                        <ul className="space-y-1 text-muted-foreground text-sm">
-                          {page.keyEvents.map((event) => (
-                            <li key={event}>• {event}</li>
-                          ))}
-                        </ul>
-                      </section>
-
-                      <section className="space-y-2 text-sm">
-                        <div>
-                          <span className="font-medium">Setting: </span>
-                          <span className="text-muted-foreground">
-                            {page.setting}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-medium">Camera: </span>
-                          <span className="text-muted-foreground">
-                            {page.cameraLanguage}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-medium">Characters: </span>
-                          <span className="text-muted-foreground">
-                            {page.characters.join(", ")}
-                          </span>
-                        </div>
-                      </section>
-
-                      <section className="space-y-2">
-                        <h3 className="font-medium text-sm">Panels</h3>
-                        <div className="space-y-2">
-                          {page.panels.map((panel) => (
-                            <div
-                              className="rounded-lg border border-border/70 bg-muted/20 p-3"
-                              key={`${page.pageNumber}-${panel.panelNumber}`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline">
-                                  Panel {panel.panelNumber}
-                                </Badge>
-                                <span className="text-muted-foreground text-xs">
-                                  {panel.shotType}
-                                </span>
-                              </div>
-                              <p className="mt-2 text-sm">{panel.summary}</p>
-                              <p className="mt-1 text-muted-foreground text-sm">
-                                {panel.action}
-                              </p>
-                              {panel.dialogue ? (
-                                <p className="mt-2 text-sm">
-                                  <span className="font-medium">
-                                    Dialogue:{" "}
-                                  </span>
-                                  {panel.dialogue}
-                                </p>
-                              ) : null}
-                              {panel.narration ? (
-                                <p className="mt-1 text-sm">
-                                  <span className="font-medium">
-                                    Narration:{" "}
-                                  </span>
-                                  {panel.narration}
-                                </p>
-                              ) : null}
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-                    </div>
-
-                    <section className="space-y-2">
-                      <h3 className="font-medium text-sm">
-                        Vietnamese prompt for GPT Image 2
-                      </h3>
-                      <div className="whitespace-pre-wrap rounded-lg border border-border/70 bg-muted/20 p-3 text-sm">
-                        {page.imagePrompt}
-                      </div>
-                    </section>
-                  </div>
-                </CardContent>
-              </Card>
+                <section className="space-y-2">
+                  <h3 className="font-medium text-sm">Prompt</h3>
+                  <InputGroup>
+                    <InputGroupTextarea
+                      className="min-h-[180px]"
+                      readOnly
+                      rows={8}
+                      value={page.imagePrompt}
+                    />
+                    <InputGroupAddon align="block-end" className="border-t">
+                      <InputGroupText>
+                        Ready for image generation
+                      </InputGroupText>
+                      <InputGroupButton
+                        className="ml-auto"
+                        onClick={() => handleCopyPrompt(page.imagePrompt)}
+                        size="sm"
+                      >
+                        Copy
+                        <HugeiconsIcon
+                          icon={Copy01Icon}
+                          size={14}
+                          strokeWidth={2}
+                        />
+                      </InputGroupButton>
+                      <InputGroupButton
+                        onClick={() => handleGenerateImage(page.imagePrompt)}
+                        size="sm"
+                        variant="default"
+                      >
+                        Generate
+                        <HugeiconsIcon
+                          icon={Image01Icon}
+                          size={14}
+                          strokeWidth={2}
+                        />
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </section>
+              </section>
             ))}
           </div>
         </div>
