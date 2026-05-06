@@ -158,12 +158,47 @@ export function StoryboardPreview({
                   <Badge variant="outline">{page.panelCount} panels</Badge>
                 </div>
 
-                <section className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">Characters: </span>
-                    <span className="text-muted-foreground">
-                      {page.characters.join(", ")}
-                    </span>
+                <section className="space-y-2">
+                  <h3 className="font-medium text-sm">Characters</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {page.characters.map((characterName) => {
+                      const selectedImage =
+                        selectedImagesByCharacter[characterName] ?? null
+                      return (
+                        <button
+                          aria-label={`Select image for ${characterName}`}
+                          className="flex items-center gap-3 overflow-hidden rounded-lg border border-border/70 bg-muted/30 pr-3 text-left transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={selectableImages.length === 0}
+                          key={characterName}
+                          onClick={() => setActiveCharacterName(characterName)}
+                          type="button"
+                        >
+                          <div className="relative size-12 shrink-0 bg-muted">
+                            {selectedImage ? (
+                              <Image
+                                alt={`${characterName} reference`}
+                                className="object-cover"
+                                fill
+                                sizes="48px"
+                                src={selectedImage.url}
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center">
+                                <HugeiconsIcon
+                                  className="text-muted-foreground"
+                                  icon={Image01Icon}
+                                  size={18}
+                                  strokeWidth={2}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-medium text-sm">
+                            {characterName}
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </section>
 
