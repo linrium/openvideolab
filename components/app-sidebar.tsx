@@ -2,6 +2,7 @@
 
 import {
   AiChemistry02Icon,
+  ClipboardIcon,
   Image01Icon,
   Logout01Icon,
   Moon02Icon,
@@ -34,12 +35,13 @@ import { authClient } from "@/lib/auth-client"
 const mainNavigation = [
   { href: "/videos/new", icon: VideoIcon, label: "New Video" },
   { href: "/images/new", icon: Image01Icon, label: "New Image" },
+  { href: "/storyboard/new", icon: ClipboardIcon, label: "New Storyboard" },
 ] as const
 
 const RECENT_ICON = {
   image: Image01Icon,
   music: MusicNote03FreeIcons,
-  storyboard: Image01Icon,
+  storyboard: ClipboardIcon,
   video: VideoIcon,
 } as const
 
@@ -75,6 +77,10 @@ function getRecentHref(item: RecentItem): string {
 
   if (item.type === "music") {
     return "/music/new"
+  }
+
+  if (item.type === "storyboard") {
+    return "/storyboard/new"
   }
 
   return "/images/new"
