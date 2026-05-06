@@ -7,6 +7,7 @@ import { db } from "@/db"
 import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
+import { MODELS, type ModelValue } from "@/lib/constants"
 import { getPresignedUrl } from "@/lib/r2"
 import { getAtlasCloudOptions } from "@/lib/video-provider"
 
@@ -38,6 +39,12 @@ function normalizeDuration(value: number | null): VideoFormValues["duration"] {
     DURATIONS.includes(value as NonNullable<VideoFormValues["duration"]>)
     ? (value as NonNullable<VideoFormValues["duration"]>)
     : undefined
+}
+
+function normalizeModel(value: string): ModelValue {
+  return MODELS.some((model) => model.value === value)
+    ? (value as ModelValue)
+    : "bytedance/seedance-2.0"
 }
 
 interface VideoPageProps {
@@ -124,7 +131,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       <aside className="h-svh min-h-0 w-full max-w-sm shrink-0 overflow-y-auto border-border/80 border-t bg-background md:max-w-md lg:border-t-0 lg:border-l xl:max-w-lg">
         <VideoForm
           initialValues={{
-            model: video.model,
+            model: normalizeModel(video.model),
             title: video.title,
             prompt: video.prompt,
             negativePrompt: atlasCloudOptions?.negative_prompt ?? "",
