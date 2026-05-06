@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core"
 import { v7 as uuidv7 } from "uuid"
 import type { PersistedVideoProvider } from "@/lib/video-provider"
+import { users } from "./auth"
 import { generations } from "./generations"
 
 export interface PersistedVideoUsage {
@@ -25,6 +26,9 @@ export const videos = pgTable(
     id: uuid("id")
       .primaryKey()
       .$defaultFn(() => uuidv7()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     generationId: uuid("generation_id")
       .notNull()
       .references(() => generations.id, { onDelete: "cascade" }),
@@ -56,10 +60,17 @@ export const videos = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("videos_generation_id_idx").on(t.generationId)]
+  (t) => [
+    index("videos_user_id_idx").on(t.userId),
+    index("videos_generation_id_idx").on(t.generationId),
+  ]
 )
 
 export const videosRelations = relations(videos, ({ one }) => ({
+  user: one(users, {
+    fields: [videos.userId],
+    references: [users.id],
+  }),
   generation: one(generations, {
     fields: [videos.generationId],
     references: [generations.id],

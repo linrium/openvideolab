@@ -112,6 +112,7 @@ export async function submitVideoAction(
         inputReferences: imageKeys.inputReferenceKeys ?? [],
         jobId: job.id,
         model: request.model as Model,
+        userId: session.user.id,
         provider:
           metadata.provider == null
             ? null

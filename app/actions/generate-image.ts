@@ -385,6 +385,7 @@ export async function submitImageAction(
         status: "completed",
         totalCost,
         usage,
+        userId: session.user.id,
         height: dimensions?.height ?? null,
         mimeType: DEFAULT_IMAGE_MIME_TYPE,
         path: image.key,
@@ -448,6 +449,7 @@ export async function submitImageAction(
         position: index,
         prompt,
         status: "failed",
+        userId: session.user.id,
       }))
     )
 

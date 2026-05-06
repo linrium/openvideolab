@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core"
 import { v7 as uuidv7 } from "uuid"
 import type { ImageQuality, ImageSize } from "@/lib/image-generation"
+import { users } from "./auth"
 import { generations } from "./generations"
 
 export interface PersistedImageUsage {
@@ -35,6 +36,9 @@ export const images = pgTable(
     id: uuid("id")
       .primaryKey()
       .$defaultFn(() => uuidv7()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     generationId: uuid("generation_id")
       .notNull()
       .references(() => generations.id, { onDelete: "cascade" }),
@@ -67,12 +71,17 @@ export const images = pgTable(
       .defaultNow(),
   },
   (t) => [
+    index("images_user_id_idx").on(t.userId),
     index("images_generation_id_idx").on(t.generationId),
     index("images_batch_id_idx").on(t.batchId),
   ]
 )
 
 export const imagesRelations = relations(images, ({ one }) => ({
+  user: one(users, {
+    fields: [images.userId],
+    references: [users.id],
+  }),
   generation: one(generations, {
     fields: [images.generationId],
     references: [generations.id],

@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
+import { updateCharacterImageAction } from "@/app/actions/update-character-image"
 import { Badge } from "@/components/ui/badge"
 import { CardHeader } from "@/components/ui/card"
 import {
@@ -31,10 +32,14 @@ import type {
 
 export function StoryboardPreview({
   analysis,
+  initialCharacterImages = {},
   selectableImages,
+  storyId,
 }: {
   analysis: StoryboardAnalysis | null
+  initialCharacterImages?: Record<string, StoryboardSelectableImage>
   selectableImages: StoryboardSelectableImage[]
+  storyId?: string
 }) {
   const router = useRouter()
   const [activeCharacterName, setActiveCharacterName] = useState<string | null>(
@@ -42,7 +47,7 @@ export function StoryboardPreview({
   )
   const [selectedImagesByCharacter, setSelectedImagesByCharacter] = useState<
     Record<string, StoryboardSelectableImage | undefined>
-  >({})
+  >(initialCharacterImages)
 
   const handleCopyPrompt = async (prompt: string) => {
     try {
@@ -57,7 +62,7 @@ export function StoryboardPreview({
     router.push(`/images/new?prompt=${encodeURIComponent(prompt)}`)
   }
 
-  const handleSelectCharacterImage = (
+  const handleSelectCharacterImage = async (
     characterName: string,
     image: StoryboardSelectableImage
   ) => {
@@ -66,6 +71,19 @@ export function StoryboardPreview({
       [characterName]: image,
     }))
     setActiveCharacterName(null)
+
+    if (storyId) {
+      const result = await updateCharacterImageAction(
+        storyId,
+        characterName,
+        image.id
+      )
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+    }
+
     toast.success(`Selected image for ${characterName}`)
   }
 

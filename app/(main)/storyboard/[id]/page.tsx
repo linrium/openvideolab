@@ -11,6 +11,7 @@ import {
   type StoryboardAnalysis,
   type StoryboardValues,
 } from "@/lib/storyboard"
+import { getStoryCharacterImages } from "@/lib/storyboard-characters"
 import { getStoryboardSelectableImages } from "@/lib/storyboard-images"
 
 interface StoryboardPageProps {
@@ -56,7 +57,10 @@ export default async function StoryboardPage({ params }: StoryboardPageProps) {
     .where(eq(storyPages.storyId, story.storyId))
     .orderBy(asc(storyPages.pageNumber))
 
-  const selectableImages = await getStoryboardSelectableImages(session.user.id)
+  const [selectableImages, characterImages] = await Promise.all([
+    getStoryboardSelectableImages(session.user.id),
+    getStoryCharacterImages(story.storyId),
+  ])
 
   const initialAnalysis: StoryboardAnalysis = {
     characters: story.characters,
@@ -80,9 +84,11 @@ export default async function StoryboardPage({ params }: StoryboardPageProps) {
   return (
     <StoryboardStudio
       initialAnalysis={initialAnalysis}
+      initialCharacterImages={characterImages}
       initialValues={initialValues}
       readOnly
       selectableImages={selectableImages}
+      storyId={story.storyId}
     />
   )
 }

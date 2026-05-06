@@ -120,6 +120,7 @@ export async function analyzeStoryboardAction(
       pageNumber: page.pageNumber,
       panelCount: page.panelCount,
       storyId,
+      userId: session.user.id,
     }))
 
     await db.batch([
@@ -140,6 +141,7 @@ export async function analyzeStoryboardAction(
         sourceUrl,
         styleNotes: normalizedAnalysis.styleNotes,
         title: derivedTitle,
+        userId: session.user.id,
       }),
       db.insert(storyPages).values(pageRows),
     ])

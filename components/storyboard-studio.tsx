@@ -12,16 +12,20 @@ import {
 
 interface StoryboardStudioProps {
   initialAnalysis?: StoryboardAnalysis | null
+  initialCharacterImages?: Record<string, StoryboardSelectableImage>
   initialValues?: StoryboardValues
   readOnly?: boolean
   selectableImages?: StoryboardSelectableImage[]
+  storyId?: string
 }
 
 export function StoryboardStudio({
   initialAnalysis = null,
+  initialCharacterImages = {},
   initialValues = STORYBOARD_DEFAULT_VALUES,
   readOnly = false,
   selectableImages = [],
+  storyId,
 }: StoryboardStudioProps) {
   const [analysis, setAnalysis] = useState<StoryboardAnalysis | null>(
     initialAnalysis
@@ -32,7 +36,9 @@ export function StoryboardStudio({
       <section className="flex min-h-0 flex-1 justify-center overflow-hidden">
         <StoryboardPreview
           analysis={analysis}
+          initialCharacterImages={initialCharacterImages}
           selectableImages={selectableImages}
+          storyId={storyId}
         />
       </section>
 
