@@ -7,15 +7,14 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { CardHeader } from "@/components/ui/card"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import {
   InputGroup,
   InputGroupAddon,
@@ -230,61 +229,55 @@ export function StoryboardPreview({
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-6">
           {analysis.characters.length > 0 ? (
             <section className="space-y-3">
-              <div className="grid gap-3">
+              <div className="grid gap-2">
                 {analysis.characters.map((character) => {
                   const selectedImage =
                     selectedImagesByCharacter[character.name] ?? null
 
                   return (
                     <div
-                      className="rounded-lg border border-border/70 bg-background/90 p-4"
+                      className="flex items-stretch overflow-hidden rounded-lg border border-border/70 bg-background/90"
                       key={character.name}
                     >
-                      <div className="flex flex-col gap-4">
-                        <div className="space-y-1">
-                          <div className="font-medium text-sm">
-                            {character.name}
-                          </div>
-                          <div className="text-muted-foreground text-sm">
-                            {character.role}
-                          </div>
-                        </div>
-
+                      <button
+                        aria-label={`Select image for ${character.name}`}
+                        className="relative w-20 shrink-0 bg-muted/50 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={selectableImages.length === 0}
+                        onClick={() => setActiveCharacterName(character.name)}
+                        type="button"
+                      >
                         {selectedImage ? (
-                          <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/20 p-3">
-                            <div className="relative aspect-square w-20 overflow-hidden rounded-md border border-border/70 bg-muted">
-                              <Image
-                                alt={`${character.name} reference`}
-                                className="object-cover"
-                                fill
-                                sizes="80px"
-                                src={selectedImage.url}
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="font-medium text-sm">
-                                Selected reference
-                              </div>
-                              <p className="line-clamp-3 text-muted-foreground text-xs">
-                                {selectedImage.title || selectedImage.prompt}
-                              </p>
-                            </div>
+                          <Image
+                            alt={`${character.name} reference`}
+                            className="object-cover"
+                            fill
+                            sizes="80px"
+                            src={selectedImage.url}
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <HugeiconsIcon
+                              className="text-muted-foreground"
+                              icon={Image01Icon}
+                              size={18}
+                              strokeWidth={2}
+                            />
                           </div>
-                        ) : null}
+                        )}
+                      </button>
 
-                        <div className="flex justify-end">
-                          <Button
-                            disabled={selectableImages.length === 0}
-                            onClick={() =>
-                              setActiveCharacterName(character.name)
-                            }
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            {selectedImage ? "Change image" : "Select image"}
-                          </Button>
+                      <div className="min-w-0 flex-1 p-3">
+                        <div className="font-medium text-sm">
+                          {character.name}
                         </div>
+                        <div className="text-muted-foreground text-xs">
+                          {character.role}
+                        </div>
+                        {selectedImage ? (
+                          <p className="mt-0.5 line-clamp-1 text-muted-foreground text-xs">
+                            {selectedImage.title || selectedImage.prompt}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   )
@@ -298,7 +291,8 @@ export function StoryboardPreview({
           )}
         </div>
       </TabsContent>
-      <Dialog
+      <Drawer
+        direction="right"
         onOpenChange={(open) => {
           if (!open) {
             setActiveCharacterName(null)
@@ -306,19 +300,19 @@ export function StoryboardPreview({
         }}
         open={activeCharacterName !== null}
       >
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>
               Select image
               {activeCharacterName ? ` for ${activeCharacterName}` : ""}
-            </DialogTitle>
-            <DialogDescription>
+            </DrawerTitle>
+            <DrawerDescription>
               Choose from your previously generated images.
-            </DialogDescription>
-          </DialogHeader>
+            </DrawerDescription>
+          </DrawerHeader>
 
           {selectableImages.length > 0 ? (
-            <div className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="no-scrollbar grid gap-3 overflow-y-auto px-4 pb-4 sm:grid-cols-2">
               {selectableImages.map((image) => {
                 const isSelected =
                   activeCharacterName !== null &&
@@ -327,7 +321,7 @@ export function StoryboardPreview({
 
                 return (
                   <button
-                    className="flex flex-col overflow-hidden rounded-lg border border-border/70 bg-background text-left transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-64 flex-col overflow-hidden rounded-lg border border-border/70 bg-background text-left transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     key={image.id}
                     onClick={() => {
                       if (activeCharacterName) {
@@ -336,12 +330,12 @@ export function StoryboardPreview({
                     }}
                     type="button"
                   >
-                    <div className="relative aspect-square w-full bg-muted">
+                    <div className="relative h-40 w-full bg-muted">
                       <Image
                         alt={image.title || "Generated image"}
                         className="object-cover"
                         fill
-                        sizes="(min-width: 1024px) 240px, (min-width: 640px) 50vw, 100vw"
+                        sizes="(min-width: 640px) 50vw, 100vw"
                         src={image.url}
                       />
                     </div>
@@ -363,12 +357,12 @@ export function StoryboardPreview({
               })}
             </div>
           ) : (
-            <div className="rounded-lg border border-border/70 border-dashed bg-muted/20 p-6 text-center text-muted-foreground text-sm">
+            <div className="m-4 rounded-lg border border-border/70 border-dashed bg-muted/20 p-6 text-center text-muted-foreground text-sm">
               No generated images are available yet.
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </Tabs>
   )
 }

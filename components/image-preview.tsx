@@ -11,11 +11,14 @@ import type {
 import { Spokes } from "@/components/loading-ui/spokes"
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { FieldError } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
@@ -349,7 +352,8 @@ export function ImagePreview({
         </div>
       )}
 
-      <Dialog
+      <Drawer
+        direction="right"
         onOpenChange={(open) => {
           if (!open) {
             setSelectedImage(null)
@@ -357,35 +361,44 @@ export function ImagePreview({
         }}
         open={selectedImage !== null}
       >
-        <DialogContent
-          className="max-h-[92vh] max-w-[92vw] border-none bg-transparent p-0 shadow-none sm:max-w-[92vw]"
-          showCloseButton
-        >
-          <DialogTitle className="sr-only">Image viewer</DialogTitle>
-          <DialogDescription className="sr-only">
-            Preview the generated image at full size.
-          </DialogDescription>
+        <DrawerContent className="sm:max-w-lg">
+          <DrawerHeader>
+            <DrawerTitle>Image viewer</DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Preview the generated image at full size.
+            </DrawerDescription>
+          </DrawerHeader>
           {selectedImage ? (
-            <div className="flex items-center justify-center bg-black/90">
-              <button
-                aria-label="Close image viewer"
-                className="cursor-zoom-out"
-                onClick={() => setSelectedImage(null)}
-                type="button"
-              >
-                <Image
-                  alt="Generated image preview"
-                  className="max-h-[92vh] w-auto object-contain"
-                  height={selectedDimensions?.height ?? 1024}
-                  src={selectedImage.url}
-                  unoptimized
-                  width={selectedDimensions?.width ?? 1024}
-                />
-              </button>
+            <div className="flex flex-1 items-center justify-center overflow-auto p-4">
+              <Image
+                alt="Generated image preview"
+                className="h-auto w-full object-contain"
+                height={selectedDimensions?.height ?? 1024}
+                src={selectedImage.url}
+                unoptimized
+                width={selectedDimensions?.width ?? 1024}
+              />
             </div>
           ) : null}
-        </DialogContent>
-      </Dialog>
+          <DrawerFooter>
+            <Button asChild size="sm" variant="outline">
+              <a download href={selectedImage?.url} rel="noopener">
+                <HugeiconsIcon
+                  icon={Download01Icon}
+                  size={14}
+                  strokeWidth={2}
+                />
+                Download
+              </a>
+            </Button>
+            <DrawerClose asChild>
+              <Button size="sm" variant="outline">
+                Close
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }
