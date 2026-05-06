@@ -50,6 +50,20 @@
       "when": 1777899920821,
       "tag": "0006_add_storyboard_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777899920822,
+      "tag": "0007_trim_storyboard_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777899920823,
+      "tag": "0008_storyboard_original_content",
+      "breakpoints": true
     }
   ]
 }

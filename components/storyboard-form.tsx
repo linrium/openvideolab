@@ -15,6 +15,7 @@ import {
   FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import {
   InputGroup,
   InputGroupAddon,
@@ -24,6 +25,7 @@ import {
   InputGroupTextarea,
 } from "@/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   STORYBOARD_DEFAULT_VALUES,
   type StoryboardAnalysis,
@@ -136,6 +138,58 @@ export function StoryboardForm({
         >
           <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
             <FieldGroup>
+              <form.Field name="title">
+                {(field) => (
+                  <Field>
+                    <FieldLabel htmlFor={field.name}>Title</FieldLabel>
+                    <FieldDescription>
+                      Optional. Leave blank to derive a title automatically.
+                    </FieldDescription>
+                    <Input
+                      disabled={readOnly}
+                      id={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => {
+                        field.handleChange(event.target.value)
+                      }}
+                      placeholder="Name this storyboard"
+                      value={field.state.value}
+                    />
+                  </Field>
+                )}
+              </form.Field>
+
+              <form.Field name="panelCount">
+                {(field) => (
+                  <Field>
+                    <FieldLabel>Panels per page</FieldLabel>
+                    <FieldDescription>
+                      Each generated page prompt will use this exact number of
+                      panels.
+                    </FieldDescription>
+                    <ToggleGroup
+                      disabled={readOnly}
+                      onValueChange={(value) => {
+                        if (value) {
+                          field.handleChange(Number(value))
+                        }
+                      }}
+                      type="single"
+                      value={String(field.state.value)}
+                      variant="outline"
+                    >
+                      {["4", "5", "6"].map((option) => (
+                        <ToggleGroupItem key={option} value={option}>
+                          {option}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
               <form.Field
                 name="sourceUrl"
                 validators={{

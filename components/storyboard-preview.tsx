@@ -137,30 +137,21 @@ export function StoryboardPreview({
                     Page {page.pageNumber}
                   </h2>
                   <Badge variant="outline">{page.panelCount} panels</Badge>
-                  <Badge variant="secondary">{page.mood}</Badge>
                 </div>
-                <p className="text-muted-foreground text-sm">
-                  {page.pageSummary}
-                </p>
 
                 <section className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">Setting: </span>
-                    <span className="text-muted-foreground">
-                      {page.setting}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Camera: </span>
-                    <span className="text-muted-foreground">
-                      {page.cameraLanguage}
-                    </span>
-                  </div>
                   <div>
                     <span className="font-medium">Characters: </span>
                     <span className="text-muted-foreground">
                       {page.characters.join(", ")}
                     </span>
+                  </div>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-medium text-sm">Original content</h3>
+                  <div className="rounded-lg bg-muted/20 p-3 text-sm">
+                    {page.originalContent}
                   </div>
                 </section>
 
