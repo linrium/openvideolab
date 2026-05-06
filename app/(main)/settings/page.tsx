@@ -33,21 +33,19 @@ export default async function SettingsPage() {
     .limit(1)
 
   return (
-    <div className="flex w-full flex-col px-4 py-4 sm:px-6 sm:py-6">
-      <SettingsForm
-        initialValues={
-          settings
-            ? {
-                cloudflareR2AccessKeyId: settings.cloudflareAccessKeyId ?? "",
-                cloudflareR2EndpointUrl: settings.cloudflareR2EndpointUrl ?? "",
-                cloudflareR2SecretAccessKey:
-                  settings.cloudflareSecretAccessKey ?? "",
-                openAiApiKey: settings.openaiApiKey ?? "",
-                openRouterApiKey: settings.openrouterApiKey ?? "",
-              }
-            : EMPTY_SETTINGS_VALUES
-        }
-      />
-    </div>
+    <SettingsForm
+      initialValues={
+        settings
+          ? {
+              cloudflareR2AccessKeyId: settings.cloudflareAccessKeyId ?? "",
+              cloudflareR2EndpointUrl: settings.cloudflareR2EndpointUrl ?? "",
+              cloudflareR2SecretAccessKey:
+                settings.cloudflareSecretAccessKey ?? "",
+              openAiApiKey: settings.openaiApiKey ?? "",
+              openRouterApiKey: settings.openrouterApiKey ?? "",
+            }
+          : EMPTY_SETTINGS_VALUES
+      }
+    />
   )
 }

@@ -9,13 +9,7 @@ import {
   type ApiKeyGuideSection,
 } from "@/components/api-key-guide-card"
 import { Button } from "@/components/ui/button"
-import {
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   Field,
   FieldDescription,
@@ -30,6 +24,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const apiKeySchema = z
   .string()
@@ -121,23 +116,27 @@ export function SettingsForm({
   })
 
   return (
-    <div className="grid w-full max-w-7xl gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)] lg:items-start">
-      <div className="flex min-h-0 flex-col rounded-lg border border-border/70 bg-background">
-        <CardHeader className="border-border/70 border-b px-4 py-4 sm:px-5">
-          <CardTitle>API Credentials</CardTitle>
-          <CardDescription>
-            Save provider keys to your account settings for use across sessions.
-          </CardDescription>
-        </CardHeader>
+    <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
+      <CardHeader
+        className="sticky top-0 z-10 border-border/70 border-b bg-background"
+        style={{ paddingBottom: 0 }}
+      >
+        <Tabs className="flex flex-col gap-0" value="api">
+          <TabsList variant="line">
+            <TabsTrigger value="api">API</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </CardHeader>
 
-        <form
-          className="flex min-h-0 flex-1 flex-col"
-          onSubmit={(event) => {
-            event.preventDefault()
-            form.handleSubmit()
-          }}
-        >
-          <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+      <form
+        className="flex min-h-0 flex-1 flex-col"
+        onSubmit={(event) => {
+          event.preventDefault()
+          form.handleSubmit()
+        }}
+      >
+        <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+          <div className="mx-auto w-full max-w-3xl">
             <FieldGroup>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
@@ -160,6 +159,9 @@ export function SettingsForm({
                     : "Show instructions"}
                 </Button>
               </div>
+              {activeGuideSection === "cloudflare-r2" ? (
+                <ApiKeyGuideCard section="cloudflare-r2" />
+              ) : null}
 
               <form.Field
                 name="cloudflareR2EndpointUrl"
@@ -346,6 +348,9 @@ export function SettingsForm({
                     : "Show instructions"}
                 </Button>
               </div>
+              {activeGuideSection === "openrouter" ? (
+                <ApiKeyGuideCard section="openrouter" />
+              ) : null}
 
               <form.Field
                 name="openRouterApiKey"
@@ -427,6 +432,9 @@ export function SettingsForm({
                     : "Show instructions"}
                 </Button>
               </div>
+              {activeGuideSection === "openai" ? (
+                <ApiKeyGuideCard section="openai" />
+              ) : null}
 
               <form.Field
                 name="openAiApiKey"
@@ -483,45 +491,39 @@ export function SettingsForm({
                 )}
               </form.Field>
             </FieldGroup>
-          </CardContent>
+          </div>
+        </CardContent>
 
-          <CardFooter className="sticky bottom-0 mt-0 flex items-center justify-between gap-3 border-border/70 border-t bg-background px-4 pt-4 pb-4 sm:px-5">
-            <p className="text-muted-foreground text-xs">
-              {statusMessage ??
-                "Leave a field blank if you do not want to store a key."}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => {
-                  form.setFieldValue("cloudflareR2AccessKeyId", "")
-                  form.setFieldValue("cloudflareR2EndpointUrl", "")
-                  form.setFieldValue("cloudflareR2SecretAccessKey", "")
-                  form.setFieldValue("openRouterApiKey", "")
-                  form.setFieldValue("openAiApiKey", "")
-                  setStatusMessage(
-                    "All fields cleared. Save to persist changes."
-                  )
-                }}
-                type="button"
-                variant="outline"
-              >
-                Clear
-              </Button>
-              <form.Subscribe selector={(state) => state.isSubmitting}>
-                {(isSubmitting) => (
-                  <Button disabled={isSubmitting} type="submit">
-                    {isSubmitting ? "Saving..." : "Save Keys"}
-                  </Button>
-                )}
-              </form.Subscribe>
-            </div>
-          </CardFooter>
-        </form>
-      </div>
-
-      {activeGuideSection ? (
-        <ApiKeyGuideCard section={activeGuideSection} />
-      ) : null}
+        <CardFooter className="sticky bottom-0 mt-0 flex items-center justify-between gap-3 border-border/70 border-t bg-background px-4 pt-4 pb-4 sm:px-5">
+          <p className="text-muted-foreground text-xs">
+            {statusMessage ??
+              "Leave a field blank if you do not want to store a key."}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => {
+                form.setFieldValue("cloudflareR2AccessKeyId", "")
+                form.setFieldValue("cloudflareR2EndpointUrl", "")
+                form.setFieldValue("cloudflareR2SecretAccessKey", "")
+                form.setFieldValue("openRouterApiKey", "")
+                form.setFieldValue("openAiApiKey", "")
+                setStatusMessage("All fields cleared. Save to persist changes.")
+              }}
+              type="button"
+              variant="outline"
+            >
+              Clear
+            </Button>
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(isSubmitting) => (
+                <Button disabled={isSubmitting} type="submit">
+                  {isSubmitting ? "Saving..." : "Save Keys"}
+                </Button>
+              )}
+            </form.Subscribe>
+          </div>
+        </CardFooter>
+      </form>
     </div>
   )
 }
