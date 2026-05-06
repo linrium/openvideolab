@@ -46,6 +46,7 @@ const settingsSchema = z.object({
   cloudflareR2AccessKeyId: apiKeySchema,
   cloudflareR2EndpointUrl: optionalUrlSchema,
   cloudflareR2SecretAccessKey: apiKeySchema,
+  deepSeekApiKey: apiKeySchema,
   openRouterApiKey: apiKeySchema,
   openAiApiKey: apiKeySchema,
 })
@@ -57,6 +58,7 @@ const EMPTY_SETTINGS_VALUES: SettingsValues = {
   cloudflareR2AccessKeyId: "",
   cloudflareR2EndpointUrl: "",
   cloudflareR2SecretAccessKey: "",
+  deepSeekApiKey: "",
   openAiApiKey: "",
   openRouterApiKey: "",
 }
@@ -65,6 +67,7 @@ const fieldLabels: Record<KeyFieldName, string> = {
   cloudflareR2AccessKeyId: "Cloudflare R2 Access Key ID",
   cloudflareR2EndpointUrl: "Cloudflare R2 Endpoint URL",
   cloudflareR2SecretAccessKey: "Cloudflare R2 Secret Access Key",
+  deepSeekApiKey: "DeepSeek API Key",
   openAiApiKey: "OpenAI API Key",
   openRouterApiKey: "OpenRouter API Key",
 }
@@ -82,6 +85,7 @@ interface SettingsFormProps {
 export function SettingsForm({
   initialValues = EMPTY_SETTINGS_VALUES,
 }: SettingsFormProps) {
+  const [isDeepSeekVisible, setIsDeepSeekVisible] = useState(false)
   const [isOpenRouterVisible, setIsOpenRouterVisible] = useState(false)
   const [isOpenAiVisible, setIsOpenAiVisible] = useState(false)
   const [isR2AccessKeyVisible, setIsR2AccessKeyVisible] = useState(false)
@@ -136,7 +140,7 @@ export function SettingsForm({
         }}
       >
         <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-          <div className="mx-auto w-full max-w-3xl">
+          <div className="w-full max-w-3xl">
             <FieldGroup>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
@@ -329,6 +333,89 @@ export function SettingsForm({
 
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
+                  <h2 className="font-medium text-sm">DeepSeek</h2>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    Configure the API key used for direct DeepSeek model access.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    toggleGuideSection("deepseek")
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {activeGuideSection === "deepseek"
+                    ? "Hide instructions"
+                    : "Show instructions"}
+                </Button>
+              </div>
+              {activeGuideSection === "deepseek" ? (
+                <ApiKeyGuideCard section="deepseek" />
+              ) : null}
+
+              <form.Field
+                name="deepSeekApiKey"
+                validators={{
+                  onBlur: ({ value }) => getFieldError("deepSeekApiKey", value),
+                }}
+              >
+                {(field) => (
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>
+                      {fieldLabels.deepSeekApiKey}
+                    </FieldLabel>
+                    <FieldDescription>
+                      Used for DeepSeek-powered features when you enable them
+                      later.
+                    </FieldDescription>
+                    <InputGroup>
+                      <InputGroupInput
+                        aria-invalid={
+                          field.state.meta.errors.length > 0 || undefined
+                        }
+                        autoComplete="off"
+                        id={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value)
+                          setStatusMessage(null)
+                        }}
+                        placeholder="sk-..."
+                        spellCheck={false}
+                        type={isDeepSeekVisible ? "text" : "password"}
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupButton
+                          onClick={() => {
+                            setIsDeepSeekVisible(
+                              (currentValue) => !currentValue
+                            )
+                          }}
+                        >
+                          {isDeepSeekVisible ? "Hide" : "Show"}
+                        </InputGroupButton>
+                      </InputGroupAddon>
+                    </InputGroup>
+                    <FieldError
+                      errors={field.state.meta.errors.map((error) => ({
+                        message: String(error),
+                      }))}
+                    />
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
                   <h2 className="font-medium text-sm">OpenRouter</h2>
                   <p className="text-muted-foreground text-xs/relaxed">
                     Configure the API key used for OpenRouter generation
@@ -505,6 +592,7 @@ export function SettingsForm({
                 form.setFieldValue("cloudflareR2AccessKeyId", "")
                 form.setFieldValue("cloudflareR2EndpointUrl", "")
                 form.setFieldValue("cloudflareR2SecretAccessKey", "")
+                form.setFieldValue("deepSeekApiKey", "")
                 form.setFieldValue("openRouterApiKey", "")
                 form.setFieldValue("openAiApiKey", "")
                 setStatusMessage("All fields cleared. Save to persist changes.")

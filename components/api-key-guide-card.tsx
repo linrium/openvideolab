@@ -50,15 +50,33 @@ const providerGuides = [
     ],
     title: "OpenAI API Key",
   },
+  {
+    description: "Create an API key for direct DeepSeek model access.",
+    docsHref: "https://api-docs.deepseek.com/",
+    keyPageHref: "https://platform.deepseek.com/api_keys",
+    name: "DeepSeek",
+    steps: [
+      "Open the DeepSeek platform and sign in.",
+      "Go to the API Keys page in your account dashboard.",
+      "Create a new API key and copy it when it is shown.",
+      "Paste that key into the DeepSeek field in the settings form.",
+    ],
+    title: "DeepSeek API Key",
+  },
 ] as const
 
-export type ApiKeyGuideSection = "cloudflare-r2" | "openai" | "openrouter"
+export type ApiKeyGuideSection =
+  | "cloudflare-r2"
+  | "deepseek"
+  | "openai"
+  | "openrouter"
 
 const guideBySection: Record<
   ApiKeyGuideSection,
   (typeof providerGuides)[number]
 > = {
   "cloudflare-r2": providerGuides[0],
+  deepseek: providerGuides[3],
   openai: providerGuides[2],
   openrouter: providerGuides[1],
 }

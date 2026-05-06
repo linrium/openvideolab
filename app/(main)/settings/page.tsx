@@ -16,6 +16,7 @@ const EMPTY_SETTINGS_VALUES: SettingsValues = {
   cloudflareR2AccessKeyId: "",
   cloudflareR2EndpointUrl: "",
   cloudflareR2SecretAccessKey: "",
+  deepSeekApiKey: "",
   openAiApiKey: "",
   openRouterApiKey: "",
 }
@@ -41,6 +42,7 @@ export default async function SettingsPage() {
               cloudflareR2EndpointUrl: settings.cloudflareR2EndpointUrl ?? "",
               cloudflareR2SecretAccessKey:
                 settings.cloudflareSecretAccessKey ?? "",
+              deepSeekApiKey: settings.deepseekApiKey ?? "",
               openAiApiKey: settings.openaiApiKey ?? "",
               openRouterApiKey: settings.openrouterApiKey ?? "",
             }

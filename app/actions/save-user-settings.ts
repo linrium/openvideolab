@@ -9,6 +9,7 @@ export interface SaveUserSettingsInput {
   cloudflareR2AccessKeyId: string
   cloudflareR2EndpointUrl: string
   cloudflareR2SecretAccessKey: string
+  deepSeekApiKey: string
   openAiApiKey: string
   openRouterApiKey: string
 }
@@ -45,6 +46,7 @@ export async function saveUserSettingsAction(
         cloudflareSecretAccessKey: normalizeValue(
           input.cloudflareR2SecretAccessKey
         ),
+        deepseekApiKey: normalizeValue(input.deepSeekApiKey),
         openaiApiKey: normalizeValue(input.openAiApiKey),
         openrouterApiKey: normalizeValue(input.openRouterApiKey),
       })
@@ -58,6 +60,7 @@ export async function saveUserSettingsAction(
           cloudflareSecretAccessKey: normalizeValue(
             input.cloudflareR2SecretAccessKey
           ),
+          deepseekApiKey: normalizeValue(input.deepSeekApiKey),
           openaiApiKey: normalizeValue(input.openAiApiKey),
           openrouterApiKey: normalizeValue(input.openRouterApiKey),
           updatedAt: new Date(),
