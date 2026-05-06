@@ -36,21 +36,21 @@ const mainNavigation = [
   { href: "/images/new", icon: Image01Icon, label: "New Image" },
 ] as const
 
-const STATUS_ICON: Record<string, string> = {
-  cancelled: "text-zinc-400",
-  completed: "text-emerald-500",
-  expired: "text-zinc-400",
-  failed: "text-rose-500",
-  in_progress: "text-sky-500",
-  pending: "text-amber-500",
-}
-
 const RECENT_ICON = {
   image: Image01Icon,
   music: MusicNote03FreeIcons,
   storyboard: Image01Icon,
   video: VideoIcon,
 } as const
+
+const STATUS_BAR_CLASS: Record<string, string> = {
+  cancelled: "bg-zinc-400",
+  completed: "bg-emerald-400",
+  expired: "bg-zinc-400",
+  failed: "bg-red-400",
+  in_progress: "bg-sky-400",
+  pending: "bg-amber-400",
+}
 
 interface RecentItem {
   id: string
@@ -157,8 +157,12 @@ export function AppSidebar({ recents }: AppSidebarProps) {
                         tooltip={title}
                       >
                         <Link href={href}>
+                          <span
+                            aria-hidden="true"
+                            className={`size-1.5 shrink-0 rounded-full ${STATUS_BAR_CLASS[item.status] ?? "bg-zinc-400"} group-data-[collapsible=icon]:hidden`}
+                          />
                           <HugeiconsIcon
-                            className={`shrink-0 group-data-[collapsible=icon]:hidden ${STATUS_ICON[item.status] ?? "text-zinc-400"}`}
+                            className="shrink-0 group-data-[collapsible=icon]:hidden"
                             icon={icon}
                             size={14}
                             strokeWidth={2}
