@@ -2,10 +2,20 @@
 
 import { Copy01Icon, Image01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { CardHeader } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   InputGroup,
   InputGroupAddon,
@@ -15,14 +25,25 @@ import {
 } from "@/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import type { StoryboardAnalysis } from "@/lib/storyboard"
+import type {
+  StoryboardAnalysis,
+  StoryboardSelectableImage,
+} from "@/lib/storyboard"
 
 export function StoryboardPreview({
   analysis,
+  selectableImages,
 }: {
   analysis: StoryboardAnalysis | null
+  selectableImages: StoryboardSelectableImage[]
 }) {
   const router = useRouter()
+  const [activeCharacterName, setActiveCharacterName] = useState<string | null>(
+    null
+  )
+  const [selectedImagesByCharacter, setSelectedImagesByCharacter] = useState<
+    Record<string, StoryboardSelectableImage | undefined>
+  >({})
 
   const handleCopyPrompt = async (prompt: string) => {
     try {
@@ -35,6 +56,18 @@ export function StoryboardPreview({
 
   const handleGenerateImage = (prompt: string) => {
     router.push(`/images/new?prompt=${encodeURIComponent(prompt)}`)
+  }
+
+  const handleSelectCharacterImage = (
+    characterName: string,
+    image: StoryboardSelectableImage
+  ) => {
+    setSelectedImagesByCharacter((current) => ({
+      ...current,
+      [characterName]: image,
+    }))
+    setActiveCharacterName(null)
+    toast.success(`Selected image for ${characterName}`)
   }
 
   const previewHeader = (
@@ -198,17 +231,64 @@ export function StoryboardPreview({
           {analysis.characters.length > 0 ? (
             <section className="space-y-3">
               <div className="grid gap-3">
-                {analysis.characters.map((character) => (
-                  <div
-                    className="rounded-lg border border-border/70 bg-background/90 p-4"
-                    key={character.name}
-                  >
-                    <div className="font-medium text-sm">{character.name}</div>
-                    <div className="text-muted-foreground text-sm">
-                      {character.role}
+                {analysis.characters.map((character) => {
+                  const selectedImage =
+                    selectedImagesByCharacter[character.name] ?? null
+
+                  return (
+                    <div
+                      className="rounded-lg border border-border/70 bg-background/90 p-4"
+                      key={character.name}
+                    >
+                      <div className="flex flex-col gap-4">
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">
+                            {character.name}
+                          </div>
+                          <div className="text-muted-foreground text-sm">
+                            {character.role}
+                          </div>
+                        </div>
+
+                        {selectedImage ? (
+                          <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/20 p-3">
+                            <div className="relative aspect-square w-20 overflow-hidden rounded-md border border-border/70 bg-muted">
+                              <Image
+                                alt={`${character.name} reference`}
+                                className="object-cover"
+                                fill
+                                sizes="80px"
+                                src={selectedImage.url}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="font-medium text-sm">
+                                Selected reference
+                              </div>
+                              <p className="line-clamp-3 text-muted-foreground text-xs">
+                                {selectedImage.title || selectedImage.prompt}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="flex justify-end">
+                          <Button
+                            disabled={selectableImages.length === 0}
+                            onClick={() =>
+                              setActiveCharacterName(character.name)
+                            }
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            {selectedImage ? "Change image" : "Select image"}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </section>
           ) : (
@@ -218,6 +298,77 @@ export function StoryboardPreview({
           )}
         </div>
       </TabsContent>
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveCharacterName(null)
+          }
+        }}
+        open={activeCharacterName !== null}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              Select image
+              {activeCharacterName ? ` for ${activeCharacterName}` : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Choose from your previously generated images.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectableImages.length > 0 ? (
+            <div className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+              {selectableImages.map((image) => {
+                const isSelected =
+                  activeCharacterName !== null &&
+                  selectedImagesByCharacter[activeCharacterName]?.id ===
+                    image.id
+
+                return (
+                  <button
+                    className="flex flex-col overflow-hidden rounded-lg border border-border/70 bg-background text-left transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    key={image.id}
+                    onClick={() => {
+                      if (activeCharacterName) {
+                        handleSelectCharacterImage(activeCharacterName, image)
+                      }
+                    }}
+                    type="button"
+                  >
+                    <div className="relative aspect-square w-full bg-muted">
+                      <Image
+                        alt={image.title || "Generated image"}
+                        className="object-cover"
+                        fill
+                        sizes="(min-width: 1024px) 240px, (min-width: 640px) 50vw, 100vw"
+                        src={image.url}
+                      />
+                    </div>
+                    <div className="space-y-2 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="line-clamp-1 font-medium text-sm">
+                          {image.title || "Untitled image"}
+                        </span>
+                        {isSelected ? (
+                          <Badge variant="secondary">Selected</Badge>
+                        ) : null}
+                      </div>
+                      <p className="line-clamp-3 text-muted-foreground text-xs">
+                        {image.prompt}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border/70 border-dashed bg-muted/20 p-6 text-center text-muted-foreground text-sm">
+              No generated images are available yet.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Tabs>
   )
 }

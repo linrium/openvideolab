@@ -17,6 +17,13 @@ export const storyboardSchema = z.object({
 
 export type StoryboardValues = z.infer<typeof storyboardSchema>
 
+export interface StoryboardSelectableImage {
+  id: string
+  prompt: string
+  title: string
+  url: string
+}
+
 export const STORYBOARD_DEFAULT_VALUES: StoryboardValues = {
   panelCount: 4,
   prompt: `Ta là một lão thái bà dạo chơi ngoài Tam giới, chẳng ai biết ta đã sống bao nhiêu vạn năm.
