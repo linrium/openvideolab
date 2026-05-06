@@ -13,7 +13,7 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import type { StoryboardAnalysis } from "@/lib/storyboard"
 
@@ -45,6 +45,7 @@ export function StoryboardPreview({
       <div className="flex items-center justify-between gap-3">
         <TabsList variant="line">
           <TabsTrigger value="preview">Preview</TabsTrigger>
+          <TabsTrigger value="characters">Characters</TabsTrigger>
         </TabsList>
         {analysis ? (
           <Badge variant="outline">{analysis.pages.length} pages</Badge>
@@ -57,19 +58,32 @@ export function StoryboardPreview({
     return (
       <Tabs
         className="flex min-h-0 flex-1 flex-col gap-0 bg-muted/10"
-        value="preview"
+        defaultValue="preview"
       >
         {previewHeader}
-        <div className="flex min-h-0 flex-1 justify-center overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-center p-6">
-            <div className="flex w-full max-w-2xl flex-col items-center gap-3 rounded-2xl border border-border/70 border-dashed bg-background/80 p-10 text-center">
-              <p className="max-w-md text-muted-foreground text-sm">
-                Create a storyboard to review the extracted comic structure and
-                the Vietnamese GPT Image 2 prompt for each page.
-              </p>
+        <TabsContent className="min-h-0 flex-1" value="preview">
+          <div className="flex min-h-0 flex-1 justify-center overflow-y-auto">
+            <div className="mx-auto flex w-full max-w-5xl items-center justify-center p-6">
+              <div className="flex w-full max-w-2xl flex-col items-center gap-3 rounded-2xl border border-border/70 border-dashed bg-background/80 p-10 text-center">
+                <p className="max-w-md text-muted-foreground text-sm">
+                  Create a storyboard to review the extracted comic structure
+                  and the Vietnamese GPT Image 2 prompt for each page.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </TabsContent>
+        <TabsContent className="min-h-0 flex-1" value="characters">
+          <div className="flex min-h-0 flex-1 justify-center overflow-y-auto">
+            <div className="mx-auto flex w-full max-w-5xl items-center justify-center p-6">
+              <div className="flex w-full max-w-2xl flex-col items-center gap-3 rounded-2xl border border-border/70 border-dashed bg-background/80 p-10 text-center">
+                <p className="max-w-md text-muted-foreground text-sm">
+                  Create a storyboard to inspect the extracted character list.
+                </p>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
     )
   }
@@ -77,10 +91,10 @@ export function StoryboardPreview({
   return (
     <Tabs
       className="flex min-h-0 flex-1 flex-col gap-0 bg-muted/10"
-      value="preview"
+      defaultValue="preview"
     >
       {previewHeader}
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <TabsContent className="min-h-0 flex-1 overflow-y-auto" value="preview">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-6">
           <section className="space-y-4">
             <section className="space-y-2">
@@ -93,27 +107,6 @@ export function StoryboardPreview({
                 ))}
               </div>
             </section>
-
-            {analysis.characters.length > 0 ? (
-              <section className="space-y-2">
-                <h2 className="font-medium text-sm">Characters</h2>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {analysis.characters.map((character) => (
-                    <div
-                      className="rounded-lg border border-border/70 bg-muted/20 p-3"
-                      key={character.name}
-                    >
-                      <div className="font-medium text-sm">
-                        {character.name}
-                      </div>
-                      <div className="text-muted-foreground text-sm">
-                        {character.role}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
           </section>
 
           <div className="space-y-4">
@@ -196,7 +189,35 @@ export function StoryboardPreview({
             ))}
           </div>
         </div>
-      </div>
+      </TabsContent>
+      <TabsContent
+        className="min-h-0 flex-1 overflow-y-auto"
+        value="characters"
+      >
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-6">
+          {analysis.characters.length > 0 ? (
+            <section className="space-y-3">
+              <div className="grid gap-3">
+                {analysis.characters.map((character) => (
+                  <div
+                    className="rounded-lg border border-border/70 bg-background/90 p-4"
+                    key={character.name}
+                  >
+                    <div className="font-medium text-sm">{character.name}</div>
+                    <div className="text-muted-foreground text-sm">
+                      {character.role}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <div className="rounded-2xl border border-border/70 border-dashed bg-background/80 p-10 text-center text-muted-foreground text-sm">
+              No characters were extracted for this storyboard.
+            </div>
+          )}
+        </div>
+      </TabsContent>
     </Tabs>
   )
 }
