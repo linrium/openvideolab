@@ -11,14 +11,11 @@ import type {
 import { Spokes } from "@/components/loading-ui/spokes"
 import { Button } from "@/components/ui/button"
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { FieldError } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
@@ -145,7 +142,7 @@ export function ImagePreview({
     <div className="flex h-full min-h-0 w-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="w-full">
-          <div className="mx-auto w-full max-w-4xl">
+          <div className="mx-auto w-full max-w-6xl">
             <div className="space-y-4 px-4 pt-4 pb-4">
               <form.Subscribe selector={(state) => state.isSubmitting}>
                 {(isSubmitting) => {
@@ -210,7 +207,7 @@ export function ImagePreview({
                   return (
                     <div key={batchKey}>
                       {batchIndex > 0 && <Separator className="mb-4" />}
-                      <div className="grid gap-3 2xl:grid-cols-2">
+                      <div className="grid gap-3 xl:grid-cols-2">
                         {batch.images.map((image) => (
                           <div className="space-y-2" key={image}>
                             <div className="flex items-center justify-between text-muted-foreground text-xs">
@@ -295,7 +292,7 @@ export function ImagePreview({
 
       {!readOnly && (
         <div className="sticky bottom-0 border-border/70 border-t bg-background px-4 pt-4 pb-4">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-3">
             <form.Field name="prompt">
               {(field) => (
                 <>
@@ -352,8 +349,7 @@ export function ImagePreview({
         </div>
       )}
 
-      <Drawer
-        direction="right"
+      <Dialog
         onOpenChange={(open) => {
           if (!open) {
             setSelectedImage(null)
@@ -361,44 +357,35 @@ export function ImagePreview({
         }}
         open={selectedImage !== null}
       >
-        <DrawerContent className="sm:max-w-lg">
-          <DrawerHeader>
-            <DrawerTitle>Image viewer</DrawerTitle>
-            <DrawerDescription className="sr-only">
-              Preview the generated image at full size.
-            </DrawerDescription>
-          </DrawerHeader>
+        <DialogContent
+          className="max-h-[92vh] max-w-[92vw] border-none bg-transparent p-0 shadow-none sm:max-w-[92vw]"
+          showCloseButton
+        >
+          <DialogTitle className="sr-only">Image viewer</DialogTitle>
+          <DialogDescription className="sr-only">
+            Preview the generated image at full size.
+          </DialogDescription>
           {selectedImage ? (
-            <div className="flex flex-1 items-center justify-center overflow-auto p-4">
-              <Image
-                alt="Generated image preview"
-                className="h-auto w-full object-contain"
-                height={selectedDimensions?.height ?? 1024}
-                src={selectedImage.url}
-                unoptimized
-                width={selectedDimensions?.width ?? 1024}
-              />
+            <div className="flex items-center justify-center bg-black/90">
+              <button
+                aria-label="Close image viewer"
+                className="cursor-zoom-out"
+                onClick={() => setSelectedImage(null)}
+                type="button"
+              >
+                <Image
+                  alt="Generated image preview"
+                  className="max-h-[92vh] w-auto object-contain"
+                  height={selectedDimensions?.height ?? 1024}
+                  src={selectedImage.url}
+                  unoptimized
+                  width={selectedDimensions?.width ?? 1024}
+                />
+              </button>
             </div>
           ) : null}
-          <DrawerFooter>
-            <Button asChild size="sm" variant="outline">
-              <a download href={selectedImage?.url} rel="noopener">
-                <HugeiconsIcon
-                  icon={Download01Icon}
-                  size={14}
-                  strokeWidth={2}
-                />
-                Download
-              </a>
-            </Button>
-            <DrawerClose asChild>
-              <Button size="sm" variant="outline">
-                Close
-              </Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
