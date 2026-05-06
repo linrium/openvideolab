@@ -29,13 +29,8 @@ export interface AnalyzeStoryboardError {
 
 const STORYBOARD_TITLE_MAX_LENGTH = 80
 
-function getStoryboardTitle(
-  analysis: StoryboardAnalysis,
-  inputTitle: string,
-  prompt: string
-): string {
-  const candidate =
-    inputTitle.trim() || analysis.visualDirection.trim() || prompt.trim()
+function getStoryboardTitle(inputTitle: string, prompt: string): string {
+  const candidate = inputTitle.trim() || prompt.trim()
 
   return candidate.length > STORYBOARD_TITLE_MAX_LENGTH
     ? `${candidate.slice(0, STORYBOARD_TITLE_MAX_LENGTH).trimEnd()}…`
@@ -108,11 +103,7 @@ export async function analyzeStoryboardAction(
     const storyId = uuidv7()
     const prompt = parsedInput.data.prompt.trim()
     const sourceUrl = parsedInput.data.sourceUrl.trim() || null
-    const derivedTitle = getStoryboardTitle(
-      result.output,
-      parsedInput.data.title,
-      prompt
-    )
+    const derivedTitle = getStoryboardTitle(parsedInput.data.title, prompt)
     const normalizedAnalysis: StoryboardAnalysis = {
       ...result.output,
       pages: result.output.pages.map((page) => ({
@@ -149,7 +140,6 @@ export async function analyzeStoryboardAction(
         sourceUrl,
         styleNotes: normalizedAnalysis.styleNotes,
         title: derivedTitle,
-        visualDirection: normalizedAnalysis.visualDirection,
       }),
       db.insert(storyPages).values(pageRows),
     ])

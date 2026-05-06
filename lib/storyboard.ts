@@ -51,7 +51,6 @@ export const storyboardPageSchema = z.object({
 })
 
 export const storyboardAnalysisSchema = z.object({
-  visualDirection: z.string().trim().min(1),
   styleNotes: z.array(z.string().trim().min(1)).min(2).max(8),
   characters: z.array(storyboardCharacterSchema).max(8),
   pages: z.array(storyboardPageSchema).min(1).max(12),

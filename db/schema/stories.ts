@@ -29,7 +29,6 @@ export const stories = pgTable(
     sourcePrompt: text("source_prompt").notNull().default(""),
     sourceUrl: text("source_url"),
     title: text("title").notNull().default(""),
-    visualDirection: text("visual_direction").notNull().default(""),
     styleNotes: text("style_notes").array().notNull().default([]),
     characters: jsonb("characters")
       .$type<PersistedStoryCharacter[]>()

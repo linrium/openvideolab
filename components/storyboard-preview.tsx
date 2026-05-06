@@ -14,6 +14,7 @@ import {
   InputGroupTextarea,
 } from "@/components/ui/input-group"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import type { StoryboardAnalysis } from "@/lib/storyboard"
 
 export function StoryboardPreview({
@@ -83,13 +84,6 @@ export function StoryboardPreview({
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-6">
           <section className="space-y-4">
             <section className="space-y-2">
-              <h2 className="font-medium text-sm">Visual direction</h2>
-              <p className="text-muted-foreground text-sm">
-                {analysis.visualDirection}
-              </p>
-            </section>
-
-            <section className="space-y-2">
               <h2 className="font-medium text-sm">Style notes</h2>
               <div className="flex flex-wrap gap-2">
                 {analysis.styleNotes.map((note) => (
@@ -150,9 +144,12 @@ export function StoryboardPreview({
 
                 <section className="space-y-2">
                   <h3 className="font-medium text-sm">Original content</h3>
-                  <div className="rounded-lg bg-muted/20 p-3 text-sm">
-                    {page.originalContent}
-                  </div>
+                  <Textarea
+                    className="min-h-[140px] resize-none bg-muted/20 text-sm"
+                    readOnly
+                    rows={6}
+                    value={page.originalContent}
+                  />
                 </section>
 
                 <section className="space-y-2">

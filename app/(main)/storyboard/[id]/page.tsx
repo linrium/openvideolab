@@ -33,7 +33,6 @@ export default async function StoryboardPage({ params }: StoryboardPageProps) {
       styleNotes: stories.styleNotes,
       title: stories.title,
       userId: generations.userId,
-      visualDirection: stories.visualDirection,
     })
     .from(stories)
     .innerJoin(generations, eq(stories.generationId, generations.id))
@@ -66,7 +65,6 @@ export default async function StoryboardPage({ params }: StoryboardPageProps) {
       panelCount: page.panelCount,
     })),
     styleNotes: story.styleNotes,
-    visualDirection: story.visualDirection,
   }
 
   const initialValues: StoryboardValues = {

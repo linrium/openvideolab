@@ -64,6 +64,13 @@
       "when": 1777899920823,
       "tag": "0008_storyboard_original_content",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777899920824,
+      "tag": "0009_remove_storyboard_visual_direction",
+      "breakpoints": true
     }
   ]
 }
