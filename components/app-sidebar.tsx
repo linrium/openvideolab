@@ -3,6 +3,7 @@
 import {
   AiChemistry02Icon,
   ClipboardIcon,
+  Delete01Icon,
   Image01Icon,
   Logout01Icon,
   Moon02Icon,
@@ -15,6 +16,17 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
+import { useState } from "react"
+import { toast } from "sonner"
+import { deleteGenerationAction } from "@/app/actions/delete-generation"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +36,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -52,6 +65,13 @@ const STATUS_BAR_CLASS: Record<string, string> = {
   failed: "bg-red-400",
   in_progress: "bg-sky-400",
   pending: "bg-amber-400",
+}
+
+const NEW_PAGE_BY_TYPE: Record<string, string> = {
+  image: "/images/new",
+  music: "/music/new",
+  storyboard: "/storyboard/new",
+  video: "/videos/new",
 }
 
 interface RecentItem {
@@ -91,10 +111,36 @@ export function AppSidebar({ recents }: AppSidebarProps) {
   const router = useRouter()
   const { setTheme } = useTheme()
   const { state, toggleSidebar } = useSidebar()
+  const [pendingDelete, setPendingDelete] = useState<RecentItem | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleLogout = async () => {
     await authClient.signOut()
     router.push("/sign-in")
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const result = await deleteGenerationAction(pendingDelete.id)
+      if (!result.ok) {
+        toast.error("Failed to delete", { description: result.message })
+        return
+      }
+
+      const deletedHref = getRecentHref(pendingDelete)
+      if (pathname === deletedHref) {
+        router.push(NEW_PAGE_BY_TYPE[pendingDelete.type] ?? "/images/new")
+      }
+      router.refresh()
+    } finally {
+      setIsDeleting(false)
+      setPendingDelete(null)
+    }
   }
 
   return (
@@ -180,6 +226,19 @@ export function AppSidebar({ recents }: AppSidebarProps) {
                           </span>
                         </Link>
                       </SidebarMenuButton>
+                      <SidebarMenuAction
+                        aria-label={`Delete ${title}`}
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setPendingDelete(item)}
+                        showOnHover
+                        title="Delete"
+                      >
+                        <HugeiconsIcon
+                          icon={Delete01Icon}
+                          size={14}
+                          strokeWidth={2}
+                        />
+                      </SidebarMenuAction>
                     </SidebarMenuItem>
                   )
                 })}
@@ -245,6 +304,41 @@ export function AppSidebar({ recents }: AppSidebarProps) {
       </SidebarFooter>
 
       <SidebarRail />
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!(isDeleting || open)) {
+            setPendingDelete(null)
+          }
+        }}
+        open={pendingDelete !== null}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogTitle>Delete generation?</DialogTitle>
+          <DialogDescription>
+            This will permanently delete all files in this session and cannot be
+            undone.
+          </DialogDescription>
+          <DialogFooter>
+            <Button
+              disabled={isDeleting}
+              onClick={() => setPendingDelete(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={isDeleting}
+              onClick={handleDeleteConfirm}
+              type="button"
+              variant="destructive"
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sidebar>
   )
 }

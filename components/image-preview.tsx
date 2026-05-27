@@ -250,7 +250,7 @@ export function ImagePreview({
                         {batch.images.map((image, imageIndex) => (
                           <div className="space-y-2" key={image}>
                             <div className="flex items-center justify-between text-muted-foreground text-xs">
-                              <span>{createdAtLabel ?? " "}</span>
+                              <span>{createdAtLabel ?? " "}</span>
                             </div>
                             <div className="group relative overflow-hidden border border-border/70 bg-muted/20">
                               <button
@@ -319,7 +319,7 @@ export function ImagePreview({
                                   key={item.label}
                                 >
                                   {index > 0 ? (
-                                    <span className="mx-2 text-border">|</span>
+                                    <span className="mx-2 text-border">/</span>
                                   ) : null}
                                   <span>
                                     {item.label}: {item.value}

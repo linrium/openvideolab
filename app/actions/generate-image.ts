@@ -1,6 +1,6 @@
 "use server"
 
-import { and, desc, eq } from "drizzle-orm"
+import { desc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { toFile } from "openai"
@@ -26,7 +26,7 @@ import {
   SUPPORTED_IMAGE_GENERATION_MODEL,
 } from "@/lib/image-generation"
 import { getOpenAiClientByUserId } from "@/lib/openai-client"
-import { deleteMultipleFromR2, getPresignedUrl, uploadToR2 } from "@/lib/r2"
+import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
 
 const DEFAULT_IMAGE_MIME_TYPE = "image/webp"
 const TITLE_MAX_LENGTH = 80
@@ -272,50 +272,6 @@ export interface UpdateImageTitleSuccess {
 export interface UpdateImageTitleError {
   message: string
   ok: false
-}
-
-export interface DeleteImageGenerationSuccess {
-  ok: true
-}
-
-export interface DeleteImageGenerationError {
-  message: string
-  ok: false
-}
-
-export async function deleteImageGenerationAction(
-  sessionId: string
-): Promise<DeleteImageGenerationSuccess | DeleteImageGenerationError> {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) {
-    return { ok: false, message: "Unauthorized" }
-  }
-
-  const [generation] = await db
-    .select({ id: generations.id, userId: generations.userId })
-    .from(generations)
-    .where(and(eq(generations.id, sessionId), eq(generations.type, "image")))
-    .limit(1)
-
-  if (!generation || generation.userId !== session.user.id) {
-    return { ok: false, message: "Not found" }
-  }
-
-  const imageRows = await db
-    .select({ path: imagesTable.path })
-    .from(imagesTable)
-    .where(eq(imagesTable.generationId, sessionId))
-
-  const paths = imageRows
-    .map((r) => r.path)
-    .filter((p): p is string => p !== null)
-
-  await deleteMultipleFromR2(paths)
-  await db.delete(generations).where(eq(generations.id, sessionId))
-
-  revalidatePath("/", "layout")
-
-  return { ok: true }
 }
 
 export async function createImageGenerationAction(
