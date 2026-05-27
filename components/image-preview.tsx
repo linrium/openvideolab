@@ -23,6 +23,7 @@ import { IMAGE_SIZE_DIMENSIONS, type ImageSize } from "@/lib/image-generation"
 import { cn } from "@/lib/utils"
 
 const LABEL_SPLIT_PATTERN = /[-x]/
+const IMAGE_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
 
 function formatTimestamp(value: string | null): string | null {
   if (!value) {
@@ -49,6 +50,14 @@ function labelFromValue(value: string): string {
     .split(LABEL_SPLIT_PATTERN)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ")
+}
+
+function downloadImage(url: string): void {
+  const link = document.createElement("a")
+  link.href = `/api/images/download?url=${encodeURIComponent(url)}`
+  document.body.append(link)
+  link.click()
+  link.remove()
 }
 
 function ImageError({
@@ -145,7 +154,7 @@ export function ImagePreview({
     <div className="flex h-full min-h-0 w-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="w-full">
-          <div className="mx-auto w-full max-w-6xl">
+          <div className={IMAGE_PREVIEW_CONTENT_CLASS}>
             <div className="space-y-4 px-4 pt-4 pb-4">
               <form.Subscribe selector={(state) => state.isSubmitting}>
                 {(isSubmitting) => {
@@ -245,19 +254,19 @@ export function ImagePreview({
                               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/15 to-transparent opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" />
                               <div className="absolute right-3 bottom-3 flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                                 <Button
-                                  asChild
+                                  onClick={() => {
+                                    downloadImage(image)
+                                  }}
                                   size="sm"
                                   type="button"
                                   variant="secondary"
                                 >
-                                  <a download href={image} rel="noopener">
-                                    <HugeiconsIcon
-                                      icon={Download01Icon}
-                                      size={14}
-                                      strokeWidth={2}
-                                    />
-                                    Download
-                                  </a>
+                                  <HugeiconsIcon
+                                    icon={Download01Icon}
+                                    size={14}
+                                    strokeWidth={2}
+                                  />
+                                  Download
                                 </Button>
                               </div>
                             </div>
@@ -299,62 +308,66 @@ export function ImagePreview({
       </div>
 
       {!readOnly && (
-        <div className="sticky bottom-0 border-border/70 border-t bg-background px-4 pt-4 pb-4">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-3">
-            <form.Field name="prompt">
-              {(field) => (
-                <>
-                  <Textarea
-                    aria-invalid={
-                      field.state.meta.errors.length > 0 || undefined
-                    }
-                    className="max-h-[min(40svh,24rem)] overflow-y-auto"
-                    onBlur={field.handleBlur}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    placeholder="Describe the image you want to generate…"
-                    rows={10}
-                    spellCheck={false}
-                    value={field.state.value}
-                  />
-                  <FieldError
-                    errors={field.state.meta.errors.map((error) => ({
-                      message: String(error),
-                    }))}
-                  />
-                </>
-              )}
-            </form.Field>
+        <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
+          <div className={IMAGE_PREVIEW_CONTENT_CLASS}>
+            <div className="flex flex-col gap-3 px-2">
+              <form.Field name="prompt">
+                {(field) => (
+                  <>
+                    <Textarea
+                      aria-invalid={
+                        field.state.meta.errors.length > 0 || undefined
+                      }
+                      className="max-h-[min(40svh,24rem)] overflow-y-auto"
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder="Describe the image you want to generate…"
+                      rows={10}
+                      spellCheck={false}
+                      value={field.state.value}
+                    />
+                    <FieldError
+                      errors={field.state.meta.errors.map((error) => ({
+                        message: String(error),
+                      }))}
+                    />
+                  </>
+                )}
+              </form.Field>
 
-            <form.Subscribe
-              selector={(state) => ({
-                canSubmit: state.canSubmit,
-                isEdit: state.values.inputImages.length > 0,
-                isSubmitting: state.isSubmitting,
-                prompt: state.values.prompt,
-              })}
-            >
-              {({ canSubmit, isEdit, isSubmitting, prompt }) => {
-                let submitLabel = isEdit ? "Edit Image" : "Generate Image"
-                if (isSubmitting) {
-                  submitLabel = isEdit ? "Editing…" : "Generating…"
-                } else if (confirming) {
-                  submitLabel = "Click again to confirm"
-                }
+              <form.Subscribe
+                selector={(state) => ({
+                  canSubmit: state.canSubmit,
+                  isEdit: state.values.inputImages.length > 0,
+                  isSubmitting: state.isSubmitting,
+                  prompt: state.values.prompt,
+                })}
+              >
+                {({ canSubmit, isEdit, isSubmitting, prompt }) => {
+                  let submitLabel = isEdit ? "Edit Image" : "Generate Image"
+                  if (isSubmitting) {
+                    submitLabel = isEdit ? "Editing…" : "Generating…"
+                  } else if (confirming) {
+                    submitLabel = "Click again to confirm"
+                  }
 
-                const hasPrompt = prompt.trim().length > 0
+                  const hasPrompt = prompt.trim().length > 0
 
-                return (
-                  <Button
-                    disabled={!(canSubmit && hasPrompt) || isSubmitting}
-                    onClick={handleGenerateClick}
-                    type="button"
-                    variant={confirming ? "destructive" : "default"}
-                  >
-                    {submitLabel}
-                  </Button>
-                )
-              }}
-            </form.Subscribe>
+                  return (
+                    <Button
+                      disabled={!(canSubmit && hasPrompt) || isSubmitting}
+                      onClick={handleGenerateClick}
+                      type="button"
+                      variant={confirming ? "destructive" : "default"}
+                    >
+                      {submitLabel}
+                    </Button>
+                  )
+                }}
+              </form.Subscribe>
+            </div>
           </div>
         </div>
       )}

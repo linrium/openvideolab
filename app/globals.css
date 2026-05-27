@@ -129,6 +129,111 @@
     cursor: pointer;
   }
   html {
+    scrollbar-color: transparent transparent;
+    scrollbar-width: thin;
+    transition: scrollbar-color 150ms ease;
     @apply font-sans;
+  }
+  html:hover,
+  html:focus-within,
+  html:active {
+    scrollbar-color: color-mix(
+        in oklch,
+        var(--muted-foreground) 35%,
+        transparent
+      )
+      transparent;
+  }
+}
+
+@layer utilities {
+  * {
+    scrollbar-color: transparent transparent;
+    scrollbar-width: thin;
+  }
+
+  *:hover,
+  *:focus,
+  *:focus-visible,
+  *:focus-within,
+  *:active {
+    scrollbar-color: color-mix(
+        in oklch,
+        var(--muted-foreground) 35%,
+        transparent
+      )
+      transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 999px;
+  }
+
+  *:hover::-webkit-scrollbar-thumb,
+  *:focus::-webkit-scrollbar-thumb,
+  *:focus-visible::-webkit-scrollbar-thumb,
+  *:focus-within::-webkit-scrollbar-thumb,
+  *:active::-webkit-scrollbar-thumb {
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 35%,
+      transparent
+    );
+  }
+
+  .scrollbar-subtle {
+    scrollbar-color: transparent transparent;
+    scrollbar-width: thin;
+    transition: scrollbar-color 150ms ease;
+  }
+
+  .scrollbar-subtle:hover,
+  .scrollbar-subtle:focus,
+  .scrollbar-subtle:focus-visible,
+  .scrollbar-subtle:active {
+    scrollbar-color: color-mix(
+        in oklch,
+        var(--muted-foreground) 35%,
+        transparent
+      )
+      transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 999px;
+  }
+
+  .scrollbar-subtle:hover::-webkit-scrollbar-thumb,
+  .scrollbar-subtle:focus::-webkit-scrollbar-thumb,
+  .scrollbar-subtle:focus-visible::-webkit-scrollbar-thumb,
+  .scrollbar-subtle:active::-webkit-scrollbar-thumb {
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 35%,
+      transparent
+    );
   }
 }
