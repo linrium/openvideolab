@@ -3,6 +3,7 @@
 import { desc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
+import { toFile } from "openai"
 import type { ImagesResponse } from "openai/resources/images"
 import { v7 as uuidv7 } from "uuid"
 import z from "zod/v4"
@@ -17,9 +18,12 @@ import { auth } from "@/lib/auth"
 import {
   getEstimatedImageCost,
   IMAGE_SIZE_DIMENSIONS,
+  type ImageGenerationValues,
+  type ImageInput,
   type ImageSize,
   imageGenerationSchema,
-  SUPPORTED_IMAGE_MODEL,
+  SUPPORTED_IMAGE_EDIT_MODEL,
+  SUPPORTED_IMAGE_GENERATION_MODEL,
 } from "@/lib/image-generation"
 import { getOpenAiClientByUserId } from "@/lib/openai-client"
 import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
@@ -27,6 +31,12 @@ import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
 const DEFAULT_IMAGE_MIME_TYPE = "image/webp"
 const TITLE_MAX_LENGTH = 80
 const DEFAULT_IMAGE_EXTENSION = "webp"
+const MASK_MAX_SIZE_BYTES = 4 * 1024 * 1024
+const EDITABLE_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+])
 
 interface GeneratedImageAsset {
   key: string
@@ -107,6 +117,96 @@ async function getImageBufferFromUrl(url: string): Promise<Buffer> {
   }
 
   return Buffer.from(await response.arrayBuffer())
+}
+
+async function getEditableImageFile(input: ImageInput) {
+  const response = await fetch(input.url)
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch source image: ${response.status} ${response.statusText}`
+    )
+  }
+
+  const contentType = response.headers.get("content-type") ?? ""
+  const mimeType = contentType.split(";")[0]?.trim().toLowerCase() ?? ""
+  if (!EDITABLE_IMAGE_MIME_TYPES.has(mimeType)) {
+    throw new Error("Source images must be JPEG, PNG, or WebP")
+  }
+
+  const fileName = input.key.split("/").pop() ?? `source-${uuidv7()}.jpg`
+  return toFile(Buffer.from(await response.arrayBuffer()), fileName, {
+    type: mimeType,
+  })
+}
+
+async function getMaskImageFile(input: ImageInput) {
+  const response = await fetch(input.url)
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch mask image: ${response.status} ${response.statusText}`
+    )
+  }
+
+  const contentType = response.headers.get("content-type") ?? ""
+  const mimeType = contentType.split(";")[0]?.trim().toLowerCase() ?? ""
+  if (mimeType !== "image/png") {
+    throw new Error("Mask must be a PNG image")
+  }
+
+  const body = Buffer.from(await response.arrayBuffer())
+  if (body.byteLength > MASK_MAX_SIZE_BYTES) {
+    throw new Error("Mask must be smaller than 4 MB")
+  }
+
+  const fileName = input.key.split("/").pop() ?? `mask-${uuidv7()}.png`
+  return toFile(body, fileName, { type: mimeType })
+}
+
+async function createOpenAiImageResponse(
+  openAiClient: Awaited<ReturnType<typeof getOpenAiClientByUserId>>,
+  data: ImageGenerationValues
+): Promise<{ model: string; response: ImagesResponse }> {
+  const isEdit = data.inputImages.length > 0
+  const model = isEdit
+    ? SUPPORTED_IMAGE_EDIT_MODEL
+    : SUPPORTED_IMAGE_GENERATION_MODEL
+
+  if (isEdit) {
+    return {
+      model,
+      response: await openAiClient.images.edit({
+        background: data.background,
+        image: await Promise.all(data.inputImages.map(getEditableImageFile)),
+        input_fidelity: data.inputFidelity,
+        mask: data.mask ? await getMaskImageFile(data.mask) : undefined,
+        model,
+        n: data.n,
+        output_format: "webp",
+        prompt: data.prompt,
+        quality: data.quality,
+        size: data.size,
+        ...({ moderation: data.moderation } as {
+          moderation: typeof data.moderation
+        }),
+      }),
+    }
+  }
+
+  return {
+    model,
+    response: await openAiClient.images.generate({
+      background: data.background,
+      model,
+      moderation: data.moderation,
+      n: data.n,
+      output_format: "webp",
+      prompt: data.prompt,
+      quality: data.quality,
+      size: data.size,
+    }),
+  }
 }
 
 async function uploadGeneratedImageToR2(options: {
@@ -289,16 +389,10 @@ export async function submitImageAction(
   try {
     const { data } = parsedInput
     const openAiClient = await getOpenAiClientByUserId(session.user.id)
-    const response = await openAiClient.images.generate({
-      background: data.background,
-      model: SUPPORTED_IMAGE_MODEL,
-      moderation: data.moderation,
-      n: data.n,
-      output_format: "webp",
-      prompt: data.prompt,
-      quality: data.quality,
-      size: data.size,
-    })
+    const { model, response } = await createOpenAiImageResponse(
+      openAiClient,
+      data
+    )
 
     const uploadedImages = await Promise.all(
       (response.data ?? [])
@@ -377,7 +471,7 @@ export async function submitImageAction(
         batchId,
         estimatedCost,
         generationId: sessionId,
-        model: SUPPORTED_IMAGE_MODEL,
+        model,
         prompt,
         quality: resolvedQuality,
         referenceId: String(response.created ?? ""),
@@ -406,7 +500,7 @@ export async function submitImageAction(
       metadata: {
         cost: estimatedCost,
         createdAt: generation.createdAt.toISOString(),
-        model: SUPPORTED_IMAGE_MODEL,
+        model,
         prompt,
         quality: resolvedQuality,
         size: resolvedSize,
@@ -421,6 +515,10 @@ export async function submitImageAction(
 
     const { data } = parsedInput
     const prompt = data.prompt.trim()
+    const model =
+      data.inputImages.length > 0
+        ? SUPPORTED_IMAGE_EDIT_MODEL
+        : SUPPORTED_IMAGE_GENERATION_MODEL
     const sessionId = options.sessionId ?? uuidv7()
     const batchId = uuidv7()
 
@@ -445,7 +543,7 @@ export async function submitImageAction(
         batchId,
         error: errorMessage,
         generationId: sessionId,
-        model: SUPPORTED_IMAGE_MODEL,
+        model,
         position: index,
         prompt,
         status: "failed",

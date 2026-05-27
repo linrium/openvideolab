@@ -11,6 +11,7 @@ import { images } from "@/db/schema/images"
 import { auth } from "@/lib/auth"
 import {
   IMAGE_DEFAULT_VALUES,
+  IMAGE_MODEL_OPTIONS,
   type ImageGenerationValues,
   type ImageSize,
   SUPPORTED_IMAGE_MODEL,
@@ -42,8 +43,10 @@ function inferImageSize(
 }
 
 function normalizeImageModel(value: string): ImageGenerationValues["model"] {
-  return value === SUPPORTED_IMAGE_MODEL
-    ? SUPPORTED_IMAGE_MODEL
+  return IMAGE_MODEL_OPTIONS.includes(
+    value as (typeof IMAGE_MODEL_OPTIONS)[number]
+  )
+    ? (value as ImageGenerationValues["model"])
     : IMAGE_DEFAULT_VALUES.model
 }
 
@@ -172,6 +175,10 @@ export default async function ImagePage({
     model: normalizeImageModel(
       latestBatch?.model || IMAGE_DEFAULT_VALUES.model
     ),
+    mode:
+      latestBatch?.model && latestBatch.model !== SUPPORTED_IMAGE_MODEL
+        ? "edit"
+        : IMAGE_DEFAULT_VALUES.mode,
     n: generation.count,
     prompt: latestBatch?.prompt || "",
     quality: latestBatch?.quality ?? IMAGE_DEFAULT_VALUES.quality,

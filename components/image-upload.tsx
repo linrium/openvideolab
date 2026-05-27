@@ -27,6 +27,7 @@ async function uploadImage(file: File): Promise<ImageValue> {
 }
 
 interface ImageUploadProps {
+  accept?: string
   className?: string
   disabled?: boolean
   onChange: (value: ImageValue | undefined) => void
@@ -34,6 +35,7 @@ interface ImageUploadProps {
 }
 
 export function ImageUpload({
+  accept = "image/jpeg,image/png,image/webp,image/gif",
   value,
   onChange,
   className,
@@ -95,7 +97,7 @@ export function ImageUpload({
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       <input
-        accept="image/jpeg,image/png,image/webp,image/gif"
+        accept={accept}
         className="hidden h-0"
         disabled={disabled}
         onChange={onFileChange}

@@ -4,6 +4,7 @@ import type {
   GeneratedImagesState,
   ImageGenerationFormApi,
 } from "@/components/image-studio"
+import { ImageUpload, MultiImageUpload } from "@/components/image-upload"
 import { CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   Field,
@@ -27,15 +28,22 @@ import {
   getEstimatedImageCostRange,
   IMAGE_BACKGROUND_OPTIONS,
   IMAGE_EXPLICIT_QUALITY_OPTIONS,
+  IMAGE_INPUT_FIDELITY_OPTIONS,
+  IMAGE_MODEL_OPTIONS,
   IMAGE_MODERATION_OPTIONS,
   IMAGE_PRICING,
   IMAGE_QUALITY_OPTIONS,
   IMAGE_SIZE_OPTIONS,
+  SUPPORTED_IMAGE_EDIT_MODEL,
+  SUPPORTED_IMAGE_GENERATION_MODEL,
   SUPPORTED_IMAGE_MODEL,
 } from "@/lib/image-generation"
 import { Input } from "./ui/input"
 
-const MODEL_LABEL = "gpt-image-2-2026-04-21"
+const MODEL_LABELS = {
+  [SUPPORTED_IMAGE_GENERATION_MODEL]: "gpt-image-2-2026-04-21",
+  [SUPPORTED_IMAGE_EDIT_MODEL]: "chatgpt-image-latest",
+} as const
 const LABEL_SPLIT_PATTERN = /[-x]/
 
 const labelFromValue = (value: string) =>
@@ -106,21 +114,135 @@ export function ImageForm({
                   <Field>
                     <FieldLabel>Model</FieldLabel>
                     <FieldDescription>
-                      This image flow currently supports one OpenAI snapshot.
+                      Generate uses GPT Image 2. Edit uses ChatGPT Image.
                     </FieldDescription>
                     <Select disabled value={field.state.value}>
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={SUPPORTED_IMAGE_MODEL}>
-                          {MODEL_LABEL}
-                        </SelectItem>
+                        {IMAGE_MODEL_OPTIONS.map((model) => (
+                          <SelectItem key={model} value={model}>
+                            {MODEL_LABELS[model]}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </Field>
                 )}
               </form.Field>
+
+              <FieldSeparator />
+
+              <form.Subscribe
+                selector={(state) => state.values.inputImages.length > 0}
+              >
+                {(hasSourceImages) => (
+                  <>
+                    <form.Field name="inputImages">
+                      {(field) => (
+                        <Field
+                          data-invalid={
+                            field.state.meta.errors.length > 0 || undefined
+                          }
+                        >
+                          <FieldLabel>Source Images</FieldLabel>
+                          <FieldDescription className="w-full max-w-none">
+                            Upload up to 16 images to edit, combine, or restyle.
+                            Leave empty to generate from text only.
+                          </FieldDescription>
+                          <MultiImageUpload
+                            disabled={readOnly}
+                            max={16}
+                            onChange={(values) => {
+                              field.handleChange(values)
+                              const isEdit = values.length > 0
+                              form.setFieldValue(
+                                "mode",
+                                isEdit ? "edit" : "generate"
+                              )
+                              form.setFieldValue(
+                                "model",
+                                isEdit
+                                  ? SUPPORTED_IMAGE_EDIT_MODEL
+                                  : SUPPORTED_IMAGE_GENERATION_MODEL
+                              )
+
+                              if (!isEdit) {
+                                form.setFieldValue("mask", undefined)
+                              }
+                            }}
+                            values={field.state.value}
+                          />
+                          <FieldError
+                            errors={field.state.meta.errors.map((error) => ({
+                              message: String(error),
+                            }))}
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+
+                    <form.Field name="inputFidelity">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Input Fidelity</FieldLabel>
+                          <FieldDescription className="w-full max-w-none">
+                            Controls how strongly the edit preserves style,
+                            features, and facial details from source images.
+                          </FieldDescription>
+                          <ToggleGroup
+                            disabled={readOnly || !hasSourceImages}
+                            onValueChange={(value) => {
+                              if (value) {
+                                field.handleChange(
+                                  value as (typeof IMAGE_INPUT_FIDELITY_OPTIONS)[number]
+                                )
+                              }
+                            }}
+                            type="single"
+                            value={field.state.value}
+                            variant="outline"
+                          >
+                            {IMAGE_INPUT_FIDELITY_OPTIONS.map((option) => (
+                              <ToggleGroupItem key={option} value={option}>
+                                {labelFromValue(option)}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        </Field>
+                      )}
+                    </form.Field>
+
+                    <form.Field name="mask">
+                      {(field) => (
+                        <Field
+                          data-invalid={
+                            field.state.meta.errors.length > 0 || undefined
+                          }
+                        >
+                          <FieldLabel>Mask</FieldLabel>
+                          <FieldDescription className="w-full max-w-none">
+                            Optional PNG mask. Transparent areas mark where the
+                            first source image should be edited.
+                          </FieldDescription>
+                          <ImageUpload
+                            accept="image/png"
+                            disabled={readOnly || !hasSourceImages}
+                            onChange={(value) => field.handleChange(value)}
+                            value={field.state.value}
+                          />
+                          <FieldError
+                            errors={field.state.meta.errors.map((error) => ({
+                              message: String(error),
+                            }))}
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                  </>
+                )}
+              </form.Subscribe>
 
               <FieldSeparator />
 
@@ -368,7 +490,9 @@ export function ImageForm({
       <TabsContent value="pricing">
         <div className="flex flex-col gap-4 px-4 pt-4 pb-4 sm:px-5">
           <div className="space-y-1">
-            <p className="font-medium text-xs">{MODEL_LABEL}</p>
+            <p className="font-medium text-xs">
+              {MODEL_LABELS[SUPPORTED_IMAGE_MODEL]}
+            </p>
             <p className="text-muted-foreground text-xs/relaxed">
               Pricing per generated image.
             </p>

@@ -20,6 +20,7 @@ import { FieldError } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { IMAGE_SIZE_DIMENSIONS, type ImageSize } from "@/lib/image-generation"
+import { cn } from "@/lib/utils"
 
 const LABEL_SPLIT_PATTERN = /[-x]/
 
@@ -64,7 +65,9 @@ function ImageError({
       </div>
       <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-8 text-center text-destructive text-sm">
         <span className="font-medium">Generation failed</span>
-        <span className="text-xs opacity-70">{message}</span>
+        <span className="line-clamp-3 max-w-full break-all text-xs opacity-70">
+          {message}
+        </span>
       </div>
     </div>
   )
@@ -207,7 +210,12 @@ export function ImagePreview({
                   return (
                     <div key={batchKey}>
                       {batchIndex > 0 && <Separator className="mb-4" />}
-                      <div className="grid gap-3 xl:grid-cols-2">
+                      <div
+                        className={cn(
+                          "grid gap-3",
+                          batch.images.length > 1 && "xl:grid-cols-2"
+                        )}
+                      >
                         {batch.images.map((image) => (
                           <div className="space-y-2" key={image}>
                             <div className="flex items-center justify-between text-muted-foreground text-xs">
@@ -300,6 +308,7 @@ export function ImagePreview({
                     aria-invalid={
                       field.state.meta.errors.length > 0 || undefined
                     }
+                    className="max-h-[min(40svh,24rem)] overflow-y-auto"
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
                     placeholder="Describe the image you want to generate…"
@@ -319,14 +328,15 @@ export function ImagePreview({
             <form.Subscribe
               selector={(state) => ({
                 canSubmit: state.canSubmit,
+                isEdit: state.values.inputImages.length > 0,
                 isSubmitting: state.isSubmitting,
                 prompt: state.values.prompt,
               })}
             >
-              {({ canSubmit, isSubmitting, prompt }) => {
-                let submitLabel = "Generate Image"
+              {({ canSubmit, isEdit, isSubmitting, prompt }) => {
+                let submitLabel = isEdit ? "Edit Image" : "Generate Image"
                 if (isSubmitting) {
-                  submitLabel = "Generating…"
+                  submitLabel = isEdit ? "Editing…" : "Generating…"
                 } else if (confirming) {
                   submitLabel = "Click again to confirm"
                 }

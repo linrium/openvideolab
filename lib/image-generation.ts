@@ -1,6 +1,16 @@
 import z from "zod/v4"
 
-export const SUPPORTED_IMAGE_MODEL = "gpt-image-2-2026-04-21" as const
+export const IMAGE_MODE_OPTIONS = ["generate", "edit"] as const
+export const IMAGE_INPUT_FIDELITY_OPTIONS = ["low", "high"] as const
+
+export const SUPPORTED_IMAGE_GENERATION_MODEL =
+  "gpt-image-2-2026-04-21" as const
+export const SUPPORTED_IMAGE_EDIT_MODEL = "chatgpt-image-latest" as const
+export const IMAGE_MODEL_OPTIONS = [
+  SUPPORTED_IMAGE_GENERATION_MODEL,
+  SUPPORTED_IMAGE_EDIT_MODEL,
+] as const
+export const SUPPORTED_IMAGE_MODEL = SUPPORTED_IMAGE_GENERATION_MODEL
 
 export const IMAGE_BACKGROUND_OPTIONS = [
   "auto",
@@ -28,9 +38,18 @@ export const IMAGE_SIZE_OPTIONS = [
   ...IMAGE_EXPLICIT_SIZE_OPTIONS,
 ] as const
 
+export const imageInputSchema = z.object({
+  key: z.string().min(1),
+  url: z.string().url(),
+})
+
 export const imageGenerationSchema = z.object({
   background: z.enum(IMAGE_BACKGROUND_OPTIONS),
-  model: z.literal(SUPPORTED_IMAGE_MODEL),
+  inputFidelity: z.enum(IMAGE_INPUT_FIDELITY_OPTIONS),
+  inputImages: z.array(imageInputSchema).max(16),
+  mask: imageInputSchema.optional(),
+  mode: z.enum(IMAGE_MODE_OPTIONS),
+  model: z.enum(IMAGE_MODEL_OPTIONS),
   moderation: z.enum(IMAGE_MODERATION_OPTIONS),
   n: z.number().int().min(1).max(4),
   prompt: z.string().trim().min(1, "Prompt is required"),
@@ -41,13 +60,21 @@ export const imageGenerationSchema = z.object({
 
 export type ImageGenerationValues = z.infer<typeof imageGenerationSchema>
 export type ImageBackground = ImageGenerationValues["background"]
+export type ImageInputFidelity = ImageGenerationValues["inputFidelity"]
+export type ImageInput = ImageGenerationValues["inputImages"][number]
+export type ImageMode = ImageGenerationValues["mode"]
+export type ImageModel = ImageGenerationValues["model"]
 export type ImageModeration = ImageGenerationValues["moderation"]
 export type ImageQuality = ImageGenerationValues["quality"]
 export type ImageSize = ImageGenerationValues["size"]
 
 export const IMAGE_DEFAULT_VALUES: ImageGenerationValues = {
   background: "auto",
-  model: SUPPORTED_IMAGE_MODEL,
+  inputFidelity: "low",
+  inputImages: [],
+  mask: undefined,
+  mode: "generate",
+  model: SUPPORTED_IMAGE_GENERATION_MODEL,
   moderation: "auto",
   n: 1,
   prompt: "",
