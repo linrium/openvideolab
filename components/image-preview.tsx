@@ -1,9 +1,14 @@
 "use client"
 
-import { Download01Icon, Image01Icon } from "@hugeicons/core-free-icons"
+import {
+  Download01Icon,
+  Image01Icon,
+  LayersIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
+import { v4 as uuidv4 } from "uuid"
 import type {
   GeneratedImagesState,
   ImageGenerationFormApi,
@@ -17,9 +22,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { FieldError } from "@/components/ui/field"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group"
 import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
-import { IMAGE_SIZE_DIMENSIONS, type ImageSize } from "@/lib/image-generation"
+import {
+  IMAGE_SIZE_DIMENSIONS,
+  type ImageSize,
+  SUPPORTED_IMAGE_EDIT_MODEL,
+} from "@/lib/image-generation"
 import { cn } from "@/lib/utils"
 
 const LABEL_SPLIT_PATTERN = /[-x]/
@@ -146,6 +160,14 @@ export function ImagePreview({
     confirmTimeoutRef.current = setTimeout(() => setConfirming(false), 3000)
   }
 
+  const handleReferenceClick = (url: string) => {
+    const current = form.store.state.values.inputImages
+    const next = [...current, { key: uuidv4(), url }]
+    form.setFieldValue("inputImages", next)
+    form.setFieldValue("mode", "edit")
+    form.setFieldValue("model", SUPPORTED_IMAGE_EDIT_MODEL)
+  }
+
   const selectedDimensions = selectedImage
     ? IMAGE_SIZE_DIMENSIONS[selectedImage.size]
     : null
@@ -225,7 +247,7 @@ export function ImagePreview({
                           batch.images.length > 1 && "xl:grid-cols-2"
                         )}
                       >
-                        {batch.images.map((image) => (
+                        {batch.images.map((image, imageIndex) => (
                           <div className="space-y-2" key={image}>
                             <div className="flex items-center justify-between text-muted-foreground text-xs">
                               <span>{createdAtLabel ?? " "}</span>
@@ -246,6 +268,11 @@ export function ImagePreview({
                                   alt="Generated image"
                                   className="h-auto w-full rounded-md"
                                   height={dimensions.height}
+                                  loading={
+                                    batchIndex === 0 && imageIndex === 0
+                                      ? "eager"
+                                      : "lazy"
+                                  }
                                   src={image}
                                   unoptimized
                                   width={dimensions.width}
@@ -253,6 +280,21 @@ export function ImagePreview({
                               </button>
                               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/15 to-transparent opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" />
                               <div className="absolute right-3 bottom-3 flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                                {!readOnly && (
+                                  <Button
+                                    onClick={() => handleReferenceClick(image)}
+                                    size="sm"
+                                    type="button"
+                                    variant="secondary"
+                                  >
+                                    <HugeiconsIcon
+                                      icon={LayersIcon}
+                                      size={14}
+                                      strokeWidth={2}
+                                    />
+                                    Reference
+                                  </Button>
+                                )}
                                 <Button
                                   onClick={() => {
                                     downloadImage(image)
@@ -277,7 +319,7 @@ export function ImagePreview({
                                   key={item.label}
                                 >
                                   {index > 0 ? (
-                                    <span className="mx-2 text-border">/</span>
+                                    <span className="mx-2 text-border">|</span>
                                   ) : null}
                                   <span>
                                     {item.label}: {item.value}
@@ -310,24 +352,66 @@ export function ImagePreview({
       {!readOnly && (
         <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
           <div className={IMAGE_PREVIEW_CONTENT_CLASS}>
-            <div className="flex flex-col gap-3 px-2">
+            <div className="px-2">
               <form.Field name="prompt">
                 {(field) => (
                   <>
-                    <Textarea
-                      aria-invalid={
-                        field.state.meta.errors.length > 0 || undefined
-                      }
-                      className="max-h-[min(40svh,24rem)] overflow-y-auto"
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                      placeholder="Describe the image you want to generate…"
-                      rows={10}
-                      spellCheck={false}
-                      value={field.state.value}
-                    />
+                    <InputGroup>
+                      <InputGroupTextarea
+                        aria-invalid={
+                          field.state.meta.errors.length > 0 || undefined
+                        }
+                        className="max-h-[min(40svh,24rem)] overflow-y-auto"
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                        placeholder="Describe the image you want to generate…"
+                        rows={4}
+                        spellCheck={false}
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon
+                        align="block-end"
+                        className="justify-end"
+                      >
+                        <form.Subscribe
+                          selector={(state) => ({
+                            canSubmit: state.canSubmit,
+                            isEdit: state.values.inputImages.length > 0,
+                            isSubmitting: state.isSubmitting,
+                            prompt: state.values.prompt,
+                          })}
+                        >
+                          {({ canSubmit, isEdit, isSubmitting, prompt }) => {
+                            let submitLabel = isEdit
+                              ? "Edit Image"
+                              : "Generate Image"
+                            if (isSubmitting) {
+                              submitLabel = isEdit ? "Editing…" : "Generating…"
+                            } else if (confirming) {
+                              submitLabel = "Click again to confirm"
+                            }
+
+                            const hasPrompt = prompt.trim().length > 0
+
+                            return (
+                              <InputGroupButton
+                                disabled={
+                                  !(canSubmit && hasPrompt) || isSubmitting
+                                }
+                                onClick={handleGenerateClick}
+                                size="sm"
+                                type="button"
+                                variant={confirming ? "destructive" : "default"}
+                              >
+                                {submitLabel}
+                              </InputGroupButton>
+                            )
+                          }}
+                        </form.Subscribe>
+                      </InputGroupAddon>
+                    </InputGroup>
                     <FieldError
                       errors={field.state.meta.errors.map((error) => ({
                         message: String(error),
@@ -336,37 +420,6 @@ export function ImagePreview({
                   </>
                 )}
               </form.Field>
-
-              <form.Subscribe
-                selector={(state) => ({
-                  canSubmit: state.canSubmit,
-                  isEdit: state.values.inputImages.length > 0,
-                  isSubmitting: state.isSubmitting,
-                  prompt: state.values.prompt,
-                })}
-              >
-                {({ canSubmit, isEdit, isSubmitting, prompt }) => {
-                  let submitLabel = isEdit ? "Edit Image" : "Generate Image"
-                  if (isSubmitting) {
-                    submitLabel = isEdit ? "Editing…" : "Generating…"
-                  } else if (confirming) {
-                    submitLabel = "Click again to confirm"
-                  }
-
-                  const hasPrompt = prompt.trim().length > 0
-
-                  return (
-                    <Button
-                      disabled={!(canSubmit && hasPrompt) || isSubmitting}
-                      onClick={handleGenerateClick}
-                      type="button"
-                      variant={confirming ? "destructive" : "default"}
-                    >
-                      {submitLabel}
-                    </Button>
-                  )
-                }}
-              </form.Subscribe>
             </div>
           </div>
         </div>

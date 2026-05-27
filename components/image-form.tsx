@@ -1,5 +1,12 @@
 "use client"
 
+import {
+  MagicWand01Icon,
+  SmartPhone01Icon,
+  SmartPhoneLandscapeIcon,
+  Square01Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import type {
   GeneratedImagesState,
   ImageGenerationFormApi,
@@ -39,6 +46,16 @@ import {
   SUPPORTED_IMAGE_MODEL,
 } from "@/lib/image-generation"
 import { Input } from "./ui/input"
+
+const SIZE_CONFIG: Record<
+  (typeof IMAGE_SIZE_OPTIONS)[number],
+  { icon: IconSvgElement; label: string }
+> = {
+  auto: { icon: MagicWand01Icon, label: "Auto" },
+  "1024x1024": { icon: Square01Icon, label: "Square" },
+  "1024x1536": { icon: SmartPhone01Icon, label: "Portrait" },
+  "1536x1024": { icon: SmartPhoneLandscapeIcon, label: "Landscape" },
+}
 
 const MODEL_LABELS = {
   [SUPPORTED_IMAGE_GENERATION_MODEL]: "gpt-image-2-2026-04-21",
@@ -296,15 +313,19 @@ export function ImageForm({
                       value={field.state.value}
                       variant="outline"
                     >
-                      {IMAGE_SIZE_OPTIONS.map((option) => (
-                        <ToggleGroupItem
-                          className="capitalize"
-                          key={option}
-                          value={option}
-                        >
-                          {option.replace("x", " × ")}
-                        </ToggleGroupItem>
-                      ))}
+                      {IMAGE_SIZE_OPTIONS.map((option) => {
+                        const { icon, label } = SIZE_CONFIG[option]
+                        return (
+                          <ToggleGroupItem key={option} value={option}>
+                            <HugeiconsIcon
+                              data-icon="inline-start"
+                              icon={icon}
+                              strokeWidth={2}
+                            />
+                            {label}
+                          </ToggleGroupItem>
+                        )
+                      })}
                     </ToggleGroup>
                   </Field>
                 )}

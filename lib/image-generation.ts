@@ -70,7 +70,7 @@ export type ImageSize = ImageGenerationValues["size"]
 
 export const IMAGE_DEFAULT_VALUES: ImageGenerationValues = {
   background: "auto",
-  inputFidelity: "low",
+  inputFidelity: "high",
   inputImages: [],
   mask: undefined,
   mode: "generate",

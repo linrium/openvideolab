@@ -1,5 +1,6 @@
-import { relations } from "drizzle-orm"
+import { relations, sql } from "drizzle-orm"
 import {
+  check,
   index,
   integer,
   jsonb,
@@ -10,7 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import { v7 as uuidv7 } from "uuid"
-import type { ImageQuality, ImageSize } from "@/lib/image-generation"
+import type { ImageMode, ImageQuality, ImageSize } from "@/lib/image-generation"
 import { users } from "./auth"
 import { generations } from "./generations"
 
@@ -57,6 +58,10 @@ export const images = pgTable(
     latency: numeric("latency", { precision: 12, scale: 3 }),
     quality: text("quality").$type<ImageQuality | null>(),
     size: text("size").$type<ImageSize | null>(),
+    mode: text("mode").$type<ImageMode | null>(),
+    inputFidelity: text("input_fidelity"),
+    sourceImages: text("source_images").array(),
+    mask: text("mask"),
     path: text("path"),
     sourceUrl: text("source_url"),
     mimeType: text("mime_type"),
@@ -74,6 +79,10 @@ export const images = pgTable(
     index("images_user_id_idx").on(t.userId),
     index("images_generation_id_idx").on(t.generationId),
     index("images_batch_id_idx").on(t.batchId),
+    check(
+      "images_input_fidelity_check",
+      sql`${t.inputFidelity} IS NULL OR ${t.inputFidelity} IN ('low', 'high')`
+    ),
   ]
 )
 

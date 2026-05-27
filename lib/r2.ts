@@ -1,4 +1,5 @@
 import {
+  DeleteObjectsCommand,
   GetObjectCommand,
   PutObjectCommand,
   type PutObjectCommandInput,
@@ -53,6 +54,19 @@ export async function getPresignedUrl(
       : new GetObjectCommand({ Bucket: bucket, Key: key })
 
   return await getSignedUrl(client, command, { expiresIn })
+}
+
+export async function deleteMultipleFromR2(keys: string[]): Promise<void> {
+  if (keys.length === 0) {
+    return
+  }
+
+  await client.send(
+    new DeleteObjectsCommand({
+      Bucket: bucket,
+      Delete: { Objects: keys.map((Key) => ({ Key })) },
+    })
+  )
 }
 
 // Streams a remote URL directly into R2 without buffering the full file in memory.
