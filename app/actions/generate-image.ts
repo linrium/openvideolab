@@ -1,5 +1,6 @@
 "use server"
 
+import type { ChatResult } from "@openrouter/sdk/models"
 import { desc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
@@ -16,32 +17,54 @@ import {
 } from "@/db/schema/images"
 import { auth } from "@/lib/auth"
 import {
+  GPT_IMAGE_SIZE_OPTIONS,
   getEstimatedImageCost,
   IMAGE_SIZE_DIMENSIONS,
   type ImageGenerationValues,
   type ImageInput,
+  type ImageModel,
   type ImageSize,
   imageGenerationSchema,
+  isSeedreamImageModel,
+  isSupportedImageSizeForModel,
+  SEEDREAM_IMAGE_COST,
   SUPPORTED_IMAGE_EDIT_MODEL,
   SUPPORTED_IMAGE_GENERATION_MODEL,
+  SUPPORTED_SEEDREAM_IMAGE_MODEL,
 } from "@/lib/image-generation"
 import { getOpenAiClientByUserId } from "@/lib/openai-client"
+import { getOpenrouterClientByUserId } from "@/lib/openrouter-client"
 import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
 
 const DEFAULT_IMAGE_MIME_TYPE = "image/webp"
 const TITLE_MAX_LENGTH = 80
 const DEFAULT_IMAGE_EXTENSION = "webp"
 const MASK_MAX_SIZE_BYTES = 4 * 1024 * 1024
+const DATA_URL_IMAGE_PATTERN = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i
 const EDITABLE_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
 ])
 
+type GptImageSize = (typeof GPT_IMAGE_SIZE_OPTIONS)[number]
+
 interface GeneratedImageAsset {
   key: string
+  mimeType: string
   previewUrl: string
   sourceUrl: string | null
+}
+
+interface PreparedImageGeneration {
+  estimatedCost: string
+  model: ImageModel
+  referenceId: string
+  resolvedQuality: NonNullable<GeneratedImageMetadata["quality"]> | null
+  resolvedSize: ImageSize
+  totalCost: string
+  uploadedImages: GeneratedImageAsset[]
+  usage: PersistedImageUsage | undefined
 }
 
 function resolveImageQuality(
@@ -56,6 +79,22 @@ function resolveImageSize(
   response: ImagesResponse
 ): ImageSize {
   return response.size ?? requestedSize
+}
+
+function resolveRequestModel(data: ImageGenerationValues): ImageModel {
+  if (isSeedreamImageModel(data.model)) {
+    return data.model
+  }
+
+  return data.inputImages.length > 0
+    ? SUPPORTED_IMAGE_EDIT_MODEL
+    : SUPPORTED_IMAGE_GENERATION_MODEL
+}
+
+function resolveOpenAiImageSize(size: ImageSize): GptImageSize {
+  return GPT_IMAGE_SIZE_OPTIONS.includes(size as GptImageSize)
+    ? (size as GptImageSize)
+    : "auto"
 }
 
 function buildImageUsage(
@@ -140,6 +179,31 @@ async function getEditableImageFile(input: ImageInput) {
   })
 }
 
+async function getOpenRouterImageDataUrlContent(input: ImageInput) {
+  const response = await fetch(input.url)
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch source image: ${response.status} ${response.statusText}`
+    )
+  }
+
+  const contentType = response.headers.get("content-type") ?? ""
+  const mimeType = contentType.split(";")[0]?.trim().toLowerCase() ?? ""
+  if (!EDITABLE_IMAGE_MIME_TYPES.has(mimeType)) {
+    throw new Error("Source images must be JPEG, PNG, or WebP")
+  }
+
+  const base64 = Buffer.from(await response.arrayBuffer()).toString("base64")
+
+  return {
+    imageUrl: {
+      url: `data:${mimeType};base64,${base64}`,
+    },
+    type: "image_url" as const,
+  }
+}
+
 async function getMaskImageFile(input: ImageInput) {
   const response = await fetch(input.url)
 
@@ -169,11 +233,11 @@ async function createOpenAiImageResponse(
   data: ImageGenerationValues
 ): Promise<{ model: string; response: ImagesResponse }> {
   const isEdit = data.inputImages.length > 0
-  const model = isEdit
-    ? SUPPORTED_IMAGE_EDIT_MODEL
-    : SUPPORTED_IMAGE_GENERATION_MODEL
+  const model = resolveRequestModel(data)
 
   if (isEdit) {
+    const size = resolveOpenAiImageSize(data.size)
+
     return {
       model,
       response: await openAiClient.images.edit({
@@ -186,7 +250,7 @@ async function createOpenAiImageResponse(
         output_format: "webp",
         prompt: data.prompt,
         quality: data.quality,
-        size: data.size,
+        size,
         ...({ moderation: data.moderation } as {
           moderation: typeof data.moderation
         }),
@@ -204,8 +268,57 @@ async function createOpenAiImageResponse(
       output_format: "webp",
       prompt: data.prompt,
       quality: data.quality,
-      size: data.size,
+      size: resolveOpenAiImageSize(data.size),
     }),
+  }
+}
+
+async function createSeedreamImageResponses(
+  userId: string,
+  data: ImageGenerationValues
+): Promise<{
+  images: Array<{ b64_json?: string | null; url?: string | null }>
+  model: typeof SUPPORTED_SEEDREAM_IMAGE_MODEL
+  referenceId: string
+}> {
+  const openrouterClient = await getOpenrouterClientByUserId(userId)
+  const content =
+    data.inputImages.length === 0
+      ? data.prompt
+      : [
+          { text: data.prompt, type: "text" as const },
+          ...(await Promise.all(
+            data.inputImages.map(getOpenRouterImageDataUrlContent)
+          )),
+        ]
+  const imageConfig: Record<string, string> = { image_size: data.imageSize }
+  if (data.size !== "auto") {
+    imageConfig.aspect_ratio = data.size
+  }
+
+  const responses: ChatResult[] = await Promise.all(
+    Array.from({ length: data.n }, () =>
+      openrouterClient.chat.send({
+        chatRequest: {
+          imageConfig,
+          messages: [{ content, role: "user" }],
+          modalities: ["image"],
+          model: SUPPORTED_SEEDREAM_IMAGE_MODEL,
+          stream: false,
+        },
+      })
+    )
+  )
+  const images = responses.flatMap((response) =>
+    (response.choices[0]?.message.images ?? []).map((image) => ({
+      url: image.imageUrl.url,
+    }))
+  )
+
+  return {
+    images: images.slice(0, data.n),
+    model: SUPPORTED_SEEDREAM_IMAGE_MODEL,
+    referenceId: responses.map((response) => response.id).join(","),
   }
 }
 
@@ -213,27 +326,126 @@ async function uploadGeneratedImageToR2(options: {
   image: { b64_json?: string | null; url?: string | null }
   userId: string
 }): Promise<GeneratedImageAsset> {
-  const key = `${options.userId}/images/${uuidv7()}.${DEFAULT_IMAGE_EXTENSION}`
   const sourceUrl = options.image.url ?? null
 
   let body: Buffer | null = null
+  let mimeType = DEFAULT_IMAGE_MIME_TYPE
+  let extension = DEFAULT_IMAGE_EXTENSION
 
   if (options.image.b64_json) {
     body = getImageBufferFromBase64(options.image.b64_json)
   } else if (options.image.url) {
-    body = await getImageBufferFromUrl(options.image.url)
+    const dataUrlMatch = options.image.url.match(DATA_URL_IMAGE_PATTERN)
+
+    if (dataUrlMatch) {
+      mimeType = dataUrlMatch[1].toLowerCase()
+      extension = mimeType.split("/")[1] ?? DEFAULT_IMAGE_EXTENSION
+      body = getImageBufferFromBase64(dataUrlMatch[2])
+    } else {
+      body = await getImageBufferFromUrl(options.image.url)
+    }
   }
 
   if (!body) {
     throw new Error("Generated image payload is missing")
   }
 
-  await uploadToR2(key, body, DEFAULT_IMAGE_MIME_TYPE)
+  const key = `${options.userId}/images/${uuidv7()}.${extension}`
+  await uploadToR2(key, body, mimeType)
 
   return {
     key,
+    mimeType,
     previewUrl: await getPresignedUrl({ key }),
     sourceUrl,
+  }
+}
+
+async function prepareImageGeneration(
+  userId: string,
+  data: ImageGenerationValues
+): Promise<PreparedImageGeneration> {
+  const model = resolveRequestModel(data)
+  const isSeedreamRequest = isSeedreamImageModel(model)
+
+  if (!isSupportedImageSizeForModel(model, data.size)) {
+    throw new Error("Selected size is not supported by this image model")
+  }
+
+  const openAiResponse = isSeedreamRequest
+    ? null
+    : await createOpenAiImageResponse(
+        await getOpenAiClientByUserId(userId),
+        data
+      )
+  const seedreamResponse = isSeedreamRequest
+    ? await createSeedreamImageResponses(userId, data)
+    : null
+  const generatedImages =
+    openAiResponse?.response.data ?? seedreamResponse?.images ?? []
+  const uploadedImages = await Promise.all(
+    generatedImages
+      .filter((image) => image.url || image.b64_json)
+      .map((image) => uploadGeneratedImageToR2({ image, userId }))
+  )
+
+  if (uploadedImages.length === 0) {
+    throw new Error(
+      isSeedreamRequest
+        ? "OpenRouter returned no images for this request"
+        : "OpenAI returned no images for this request"
+    )
+  }
+
+  const resolvedSize =
+    openAiResponse === null
+      ? data.size
+      : resolveImageSize(data.size, openAiResponse.response)
+  const resolvedQuality =
+    openAiResponse === null
+      ? null
+      : resolveImageQuality(data.quality, openAiResponse.response)
+  const estimatedCost = isSeedreamRequest
+    ? String(SEEDREAM_IMAGE_COST * uploadedImages.length)
+    : String(
+        getEstimatedImageCost({
+          model,
+          n: uploadedImages.length,
+          quality: data.quality,
+          size: data.size,
+        })
+      )
+  const totalCost =
+    resolvedQuality === null
+      ? estimatedCost
+      : String(
+          getEstimatedImageCost({
+            model,
+            n: uploadedImages.length,
+            quality: resolvedQuality,
+            size: resolvedSize,
+          })
+        )
+  const usage =
+    openAiResponse === null || resolvedQuality === null
+      ? undefined
+      : buildImageUsage(openAiResponse.response, {
+          quality: resolvedQuality,
+          size: resolvedSize,
+        })
+
+  return {
+    estimatedCost,
+    model,
+    referenceId:
+      openAiResponse === null
+        ? (seedreamResponse?.referenceId ?? "")
+        : String(openAiResponse.response.created ?? ""),
+    resolvedQuality,
+    resolvedSize,
+    totalCost,
+    uploadedImages,
+    usage,
   }
 }
 
@@ -388,55 +600,25 @@ export async function submitImageAction(
 
   try {
     const { data } = parsedInput
-    const openAiClient = await getOpenAiClientByUserId(session.user.id)
-    const { model, response } = await createOpenAiImageResponse(
-      openAiClient,
+    const prompt = data.prompt.trim()
+    const preparedGeneration = await prepareImageGeneration(
+      session.user.id,
       data
     )
-
-    const uploadedImages = await Promise.all(
-      (response.data ?? [])
-        .filter((image) => image.url || image.b64_json)
-        .map((image) =>
-          uploadGeneratedImageToR2({
-            image,
-            userId: session.user.id,
-          })
-        )
-    )
-
-    if (uploadedImages.length === 0) {
-      return {
-        ok: false,
-        message: "OpenAI returned no images for this request",
-      }
-    }
-
-    const prompt = data.prompt.trim()
-    const resolvedSize = resolveImageSize(data.size, response)
-    const resolvedQuality = resolveImageQuality(data.quality, response)
+    const {
+      estimatedCost,
+      model,
+      referenceId,
+      resolvedQuality,
+      resolvedSize,
+      totalCost,
+      uploadedImages,
+      usage,
+    } = preparedGeneration
     const dimensions =
       resolvedSize === "auto" ? null : IMAGE_SIZE_DIMENSIONS[resolvedSize]
     const title = getImageTitle(data.title, prompt)
     const batchId = uuidv7()
-    const estimatedCost = String(
-      getEstimatedImageCost({
-        n: uploadedImages.length,
-        quality: data.quality,
-        size: data.size,
-      })
-    )
-    const totalCost = String(
-      getEstimatedImageCost({
-        n: uploadedImages.length,
-        quality: resolvedQuality,
-        size: resolvedSize,
-      })
-    )
-    const usage = buildImageUsage(response, {
-      quality: resolvedQuality,
-      size: resolvedSize,
-    })
     const sessionId = options.sessionId ?? uuidv7()
 
     if (options.sessionId) {
@@ -477,7 +659,7 @@ export async function submitImageAction(
         model,
         prompt,
         quality: resolvedQuality,
-        referenceId: String(response.created ?? ""),
+        referenceId,
         size: resolvedSize,
         sourceImages: data.inputImages.map((img) => img.url),
         status: "completed",
@@ -485,7 +667,7 @@ export async function submitImageAction(
         usage,
         userId: session.user.id,
         height: dimensions?.height ?? null,
-        mimeType: DEFAULT_IMAGE_MIME_TYPE,
+        mimeType: image.mimeType,
         path: image.key,
         position: index,
         sourceUrl: image.sourceUrl,
@@ -519,10 +701,7 @@ export async function submitImageAction(
 
     const { data } = parsedInput
     const prompt = data.prompt.trim()
-    const model =
-      data.inputImages.length > 0
-        ? SUPPORTED_IMAGE_EDIT_MODEL
-        : SUPPORTED_IMAGE_GENERATION_MODEL
+    const model = resolveRequestModel(data)
     const sessionId = options.sessionId ?? uuidv7()
     const batchId = uuidv7()
 

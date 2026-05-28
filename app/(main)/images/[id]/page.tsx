@@ -11,10 +11,9 @@ import { images } from "@/db/schema/images"
 import { auth } from "@/lib/auth"
 import {
   IMAGE_DEFAULT_VALUES,
-  IMAGE_MODEL_OPTIONS,
+  IMAGE_MODEL_SELECT_OPTIONS,
   type ImageGenerationValues,
   type ImageSize,
-  SUPPORTED_IMAGE_MODEL,
 } from "@/lib/image-generation"
 import { getPresignedUrl } from "@/lib/r2"
 
@@ -43,8 +42,8 @@ function inferImageSize(
 }
 
 function normalizeImageModel(value: string): ImageGenerationValues["model"] {
-  return IMAGE_MODEL_OPTIONS.includes(
-    value as (typeof IMAGE_MODEL_OPTIONS)[number]
+  return IMAGE_MODEL_SELECT_OPTIONS.includes(
+    value as (typeof IMAGE_MODEL_SELECT_OPTIONS)[number]
   )
     ? (value as ImageGenerationValues["model"])
     : IMAGE_DEFAULT_VALUES.model
@@ -68,6 +67,7 @@ async function fetchImageRows(generationId: string) {
       referenceId: images.referenceId,
       size: images.size,
       sourceUrl: images.sourceUrl,
+      sourceImages: images.sourceImages,
       status: images.status,
       totalCost: images.totalCost,
       width: images.width,
@@ -175,10 +175,9 @@ export default async function ImagePage({
     model: normalizeImageModel(
       latestBatch?.model || IMAGE_DEFAULT_VALUES.model
     ),
-    mode:
-      latestBatch?.model && latestBatch.model !== SUPPORTED_IMAGE_MODEL
-        ? "edit"
-        : IMAGE_DEFAULT_VALUES.mode,
+    mode: latestBatch?.sourceImages?.length
+      ? "edit"
+      : IMAGE_DEFAULT_VALUES.mode,
     n: generation.count,
     prompt: latestBatch?.prompt || "",
     quality: latestBatch?.quality ?? IMAGE_DEFAULT_VALUES.quality,
