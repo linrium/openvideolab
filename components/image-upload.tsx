@@ -1,9 +1,30 @@
 "use client"
 
-import { Cancel01Icon, Upload01Icon } from "@hugeicons/core-free-icons"
+import {
+  Cancel01Icon,
+  Image01Icon,
+  Upload01Icon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Image from "next/image"
 import { useRef, useState } from "react"
+import {
+  fetchGeneratedImagesAction,
+  type GeneratedImageItem,
+} from "@/app/actions/fetch-generated-images"
+import { Badge } from "@/components/ui/badge"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 export interface ImageValue {
@@ -26,6 +47,89 @@ async function uploadImage(file: File): Promise<ImageValue> {
   return { url: json.url, key: json.key }
 }
 
+function formatSize(img: GeneratedImageItem): string {
+  if (img.size) {
+    return img.size.replace("x", "×")
+  }
+  if (img.width && img.height) {
+    return `${img.width}×${img.height}`
+  }
+  return ""
+}
+
+function GalleryBody({
+  images,
+  loading,
+  onSelect,
+}: {
+  images: GeneratedImageItem[]
+  loading: boolean
+  onSelect: (img: GeneratedImageItem) => void
+}) {
+  if (loading) {
+    const skeletonHeights = [
+      "140px",
+      "100px",
+      "120px",
+      "110px",
+      "130px",
+      "95px",
+    ]
+    return (
+      <div className="columns-2 gap-3 p-4">
+        {skeletonHeights.map((h) => (
+          <div className="mb-3 break-inside-avoid" key={h}>
+            <Skeleton className="w-full rounded-md" style={{ height: h }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (images.length === 0) {
+    return (
+      <p className="px-4 py-12 text-center text-muted-foreground text-sm">
+        No generated images yet.
+      </p>
+    )
+  }
+  return (
+    <div className="columns-2 gap-3 p-4">
+      {images.map((img) => {
+        const sizeLabel = formatSize(img)
+        const w = img.width ?? 400
+        const h = img.height ?? 400
+        return (
+          <div className="mb-3 break-inside-avoid" key={img.key}>
+            <button
+              className="group w-full overflow-hidden rounded-md border transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => onSelect(img)}
+              type="button"
+            >
+              <Image
+                alt="Generated image"
+                className="block w-full transition-[filter] group-hover:brightness-75"
+                height={h}
+                sizes="(max-width: 640px) 50vw, 180px"
+                src={img.url}
+                style={{ height: "auto" }}
+                width={w}
+              />
+              <div className="flex flex-wrap items-center gap-1 border-t bg-muted/40 px-2 py-1.5">
+                {img.model && (
+                  <Badge className="max-w-full truncate" variant="secondary">
+                    {img.model}
+                  </Badge>
+                )}
+                {sizeLabel && <Badge variant="outline">{sizeLabel}</Badge>}
+              </div>
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 interface ImageUploadProps {
   accept?: string
   className?: string
@@ -45,6 +149,28 @@ export function ImageUpload({
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [galleryOpen, setGalleryOpen] = useState(false)
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImageItem[]>(
+    []
+  )
+  const [loadingGallery, setLoadingGallery] = useState(false)
+
+  async function openGallery() {
+    setPickerOpen(false)
+    setGalleryOpen(true)
+    setLoadingGallery(true)
+    try {
+      setGeneratedImages(await fetchGeneratedImagesAction())
+    } finally {
+      setLoadingGallery(false)
+    }
+  }
+
+  function selectGeneratedImage(img: GeneratedImageItem) {
+    onChange(img)
+    setGalleryOpen(false)
+  }
 
   async function upload(file: File) {
     if (disabled) {
@@ -128,41 +254,82 @@ export function ImageUpload({
           )}
         </div>
       ) : (
-        <button
-          className={cn(
-            "flex size-36 flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground transition-colors",
-            "hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            dragging && "border-primary bg-primary/5 text-primary",
-            (uploading || disabled) && "pointer-events-none opacity-50"
-          )}
-          disabled={disabled || uploading}
-          onClick={() => {
-            if (!disabled) {
-              inputRef.current?.click()
-            }
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDragOver={(e) => {
-            e.preventDefault()
-            if (!disabled) {
-              setDragging(true)
-            }
-          }}
-          onDrop={onDrop}
-          onKeyDown={(e) => {
-            if (!disabled && e.key === "Enter") {
-              inputRef.current?.click()
-            }
-          }}
-          type="button"
-        >
-          {uploading ? (
-            <span className="size-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : (
-            <HugeiconsIcon icon={Upload01Icon} size={20} strokeWidth={2} />
-          )}
-          <span className="text-xs">{uploading ? "Uploading…" : "Upload"}</span>
-        </button>
+        <>
+          <Popover onOpenChange={setPickerOpen} open={pickerOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "flex size-36 flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground transition-colors",
+                  "hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  dragging && "border-primary bg-primary/5 text-primary",
+                  (uploading || disabled) && "pointer-events-none opacity-50"
+                )}
+                disabled={disabled || uploading}
+                onDragLeave={() => setDragging(false)}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  if (!disabled) {
+                    setDragging(true)
+                  }
+                }}
+                onDrop={onDrop}
+                type="button"
+              >
+                {uploading ? (
+                  <span className="size-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <HugeiconsIcon
+                    icon={Upload01Icon}
+                    size={20}
+                    strokeWidth={2}
+                  />
+                )}
+                <span className="text-xs">
+                  {uploading ? "Uploading…" : "Upload"}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-52 gap-0.5 p-1">
+              <button
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  setPickerOpen(false)
+                  inputRef.current?.click()
+                }}
+                type="button"
+              >
+                <HugeiconsIcon icon={Upload01Icon} size={16} strokeWidth={2} />
+                Upload from file
+              </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={openGallery}
+                type="button"
+              >
+                <HugeiconsIcon icon={Image01Icon} size={16} strokeWidth={2} />
+                From generated images
+              </button>
+            </PopoverContent>
+          </Popover>
+
+          <Sheet onOpenChange={setGalleryOpen} open={galleryOpen}>
+            <SheetContent
+              className="flex flex-col gap-0 p-0"
+              style={{ maxWidth: "520px" }}
+            >
+              <SheetHeader className="border-b px-4 py-3">
+                <SheetTitle>Select a generated image</SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto">
+                <GalleryBody
+                  images={generatedImages}
+                  loading={loadingGallery}
+                  onSelect={selectGeneratedImage}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
       )}
 
       {error && <p className="text-destructive text-xs">{error}</p>}
