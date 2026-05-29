@@ -44,12 +44,12 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   },
 }
 
-// const TERMINAL_STATUSES = new Set([
-//   "completed",
-//   "failed",
-//   "cancelled",
-//   "expired",
-// ])
+const TERMINAL_STATUSES = new Set([
+  "completed",
+  "failed",
+  "cancelled",
+  "expired",
+])
 const AUTO_SYNC_STATUSES = new Set(["pending", "in_progress"])
 const AUTO_SYNC_INTERVAL_MS = 5000
 
@@ -117,7 +117,7 @@ function SyncButton({
   onUrlChange,
 }: SyncButtonProps) {
   const [isPending, startTransition] = useTransition()
-  // const isTerminal = TERMINAL_STATUSES.has(currentStatus)
+  const isTerminal = TERMINAL_STATUSES.has(currentStatus)
 
   const syncStatus = useEffectEvent(() => {
     startTransition(async () => {
@@ -151,7 +151,7 @@ function SyncButton({
 
   return (
     <Button
-      // disabled={isTerminal || isPending}
+      disabled={isTerminal || isPending}
       onClick={handleClick}
       size="sm"
       variant="outline"
