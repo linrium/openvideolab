@@ -2,8 +2,10 @@
 
 import {
   Download01Icon,
+  EyeIcon,
   Image01Icon,
   LayersIcon,
+  UndoIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Image from "next/image"
@@ -38,6 +40,7 @@ import { cn } from "@/lib/utils"
 
 const LABEL_SPLIT_PATTERN = /[-x]/
 const IMAGE_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
+const PROMPT_UNDO_STORAGE_PREFIX = "image-prompt-composer-undo:"
 
 function formatTimestamp(value: string | null): string | null {
   if (!value) {
@@ -66,12 +69,70 @@ function labelFromValue(value: string): string {
     .join(" ")
 }
 
+function getSubmitLabel({
+  confirming,
+  isEdit,
+  isSubmitting,
+}: {
+  confirming: boolean
+  isEdit: boolean
+  isSubmitting: boolean
+}): string {
+  if (isSubmitting) {
+    return isEdit ? "Editing…" : "Generating…"
+  }
+
+  if (confirming) {
+    return "Click again to confirm"
+  }
+
+  return isEdit ? "Edit Image" : "Generate Image"
+}
+
 function downloadImage(url: string): void {
   const link = document.createElement("a")
   link.href = `/api/images/download?url=${encodeURIComponent(url)}`
   document.body.append(link)
   link.click()
   link.remove()
+}
+
+function getPromptUndoStorageKey(): string {
+  return `${PROMPT_UNDO_STORAGE_PREFIX}${window.location.pathname}`
+}
+
+function savePromptForUndo(prompt: string): void {
+  window.localStorage.setItem(
+    getPromptUndoStorageKey(),
+    JSON.stringify({ prompt })
+  )
+}
+
+function readPromptForUndo(): string | null {
+  const savedValue = window.localStorage.getItem(getPromptUndoStorageKey())
+  if (!savedValue) {
+    return null
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(savedValue)
+    if (
+      typeof parsedValue === "object" &&
+      parsedValue !== null &&
+      "prompt" in parsedValue &&
+      typeof parsedValue.prompt === "string"
+    ) {
+      return parsedValue.prompt
+    }
+  } catch {
+    window.localStorage.removeItem(getPromptUndoStorageKey())
+  }
+
+  return null
+}
+
+function clearPromptUndo(): void {
+  window.localStorage.removeItem(getPromptUndoStorageKey())
 }
 
 function ImageError({
@@ -131,6 +192,7 @@ export function ImagePreview({
   readOnly?: boolean
 }) {
   const [confirming, setConfirming] = useState(false)
+  const [canUndoPrompt, setCanUndoPrompt] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{
     url: string
     size: ImageSize
@@ -145,6 +207,10 @@ export function ImagePreview({
     },
     []
   )
+
+  useEffect(() => {
+    setCanUndoPrompt(readPromptForUndo() !== null)
+  }, [])
 
   const handleGenerateClick = () => {
     if (confirming) {
@@ -166,6 +232,24 @@ export function ImagePreview({
     form.setFieldValue("inputImages", next)
     form.setFieldValue("mode", "edit")
     form.setFieldValue("model", SUPPORTED_IMAGE_EDIT_MODEL)
+  }
+
+  const handleViewPromptClick = (prompt: string) => {
+    savePromptForUndo(form.store.state.values.prompt)
+    setCanUndoPrompt(true)
+    form.setFieldValue("prompt", prompt)
+  }
+
+  const handleUndoPromptClick = () => {
+    const savedPrompt = readPromptForUndo()
+    if (savedPrompt === null) {
+      setCanUndoPrompt(false)
+      return
+    }
+
+    form.setFieldValue("prompt", savedPrompt)
+    clearPromptUndo()
+    setCanUndoPrompt(false)
   }
 
   const selectedDimensions = selectedImage
@@ -295,6 +379,25 @@ export function ImagePreview({
                                     Reference
                                   </Button>
                                 )}
+                                {!readOnly && batch.metadata.prompt ? (
+                                  <Button
+                                    onClick={() =>
+                                      handleViewPromptClick(
+                                        batch.metadata.prompt ?? ""
+                                      )
+                                    }
+                                    size="sm"
+                                    type="button"
+                                    variant="secondary"
+                                  >
+                                    <HugeiconsIcon
+                                      icon={EyeIcon}
+                                      size={14}
+                                      strokeWidth={2}
+                                    />
+                                    View Prompt
+                                  </Button>
+                                ) : null}
                                 <Button
                                   onClick={() => {
                                     downloadImage(image)
@@ -319,7 +422,7 @@ export function ImagePreview({
                                   key={item.label}
                                 >
                                   {index > 0 ? (
-                                    <span className="mx-2 text-border">/</span>
+                                    <span className="mx-2 text-border">|</span>
                                   ) : null}
                                   <span>
                                     {item.label}: {item.value}
@@ -352,7 +455,7 @@ export function ImagePreview({
       {!readOnly && (
         <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
           <div className={IMAGE_PREVIEW_CONTENT_CLASS}>
-            <div className="px-2">
+            <div className="px-4">
               <form.Field name="prompt">
                 {(field) => (
                   <>
@@ -384,29 +487,45 @@ export function ImagePreview({
                           })}
                         >
                           {({ canSubmit, isEdit, isSubmitting, prompt }) => {
-                            let submitLabel = isEdit
-                              ? "Edit Image"
-                              : "Generate Image"
-                            if (isSubmitting) {
-                              submitLabel = isEdit ? "Editing…" : "Generating…"
-                            } else if (confirming) {
-                              submitLabel = "Click again to confirm"
-                            }
-
                             const hasPrompt = prompt.trim().length > 0
+                            const submitLabel = getSubmitLabel({
+                              confirming,
+                              isEdit,
+                              isSubmitting,
+                            })
 
                             return (
-                              <InputGroupButton
-                                disabled={
-                                  !(canSubmit && hasPrompt) || isSubmitting
-                                }
-                                onClick={handleGenerateClick}
-                                size="sm"
-                                type="button"
-                                variant={confirming ? "destructive" : "default"}
-                              >
-                                {submitLabel}
-                              </InputGroupButton>
+                              <div className="flex items-center gap-2">
+                                {canUndoPrompt ? (
+                                  <InputGroupButton
+                                    disabled={isSubmitting}
+                                    onClick={handleUndoPromptClick}
+                                    size="sm"
+                                    type="button"
+                                    variant="outline"
+                                  >
+                                    <HugeiconsIcon
+                                      icon={UndoIcon}
+                                      size={14}
+                                      strokeWidth={2}
+                                    />
+                                    Undo
+                                  </InputGroupButton>
+                                ) : null}
+                                <InputGroupButton
+                                  disabled={
+                                    !(canSubmit && hasPrompt) || isSubmitting
+                                  }
+                                  onClick={handleGenerateClick}
+                                  size="sm"
+                                  type="button"
+                                  variant={
+                                    confirming ? "destructive" : "default"
+                                  }
+                                >
+                                  {submitLabel}
+                                </InputGroupButton>
+                              </div>
                             )
                           }}
                         </form.Subscribe>

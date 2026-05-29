@@ -228,7 +228,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
                       </SidebarMenuButton>
                       <SidebarMenuAction
                         aria-label={`Delete ${title}`}
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className="top-1/2! -translate-y-1/2! text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => setPendingDelete(item)}
                         showOnHover
                         title="Delete"

@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/generate-image"
 import { ImageForm } from "@/components/image-form"
 import { ImagePreview } from "@/components/image-preview"
+import { ResizableRightSidebar } from "@/components/resizable-right-sidebar"
 import {
   IMAGE_DEFAULT_VALUES,
   type ImageGenerationValues,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/image-generation"
 
 const PENDING_IMAGE_GENERATION_KEY_PREFIX = "pending-image-generation:"
+const IMAGE_SETTINGS_SIDEBAR_WIDTH_KEY = "image-settings-sidebar-width"
 
 export interface GeneratedImageMetadata {
   cost: string | null
@@ -241,14 +243,14 @@ export function ImageStudio({
           readOnly={readOnly}
         />
       </section>
-      <aside className="h-svh min-h-0 w-full max-w-sm shrink-0 overflow-y-auto border-border/80 border-t bg-background md:max-w-md lg:border-t-0 lg:border-l xl:max-w-lg">
+      <ResizableRightSidebar storageKey={IMAGE_SETTINGS_SIDEBAR_WIDTH_KEY}>
         <ImageForm
           form={form}
           generatedImages={generatedImages}
           onTitleBlur={handleTitleBlur}
           readOnly={readOnly}
         />
-      </aside>
+      </ResizableRightSidebar>
     </div>
   )
 }
