@@ -194,6 +194,7 @@ export function ImagePreview({
     size: ImageSize
   } | null>(null)
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(
     () => () => {
@@ -207,6 +208,17 @@ export function ImagePreview({
   useEffect(() => {
     setCanUndoPrompt(readPromptForUndo() !== null)
   }, [])
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current
+    if (!scrollContainer || generatedImages.length === 0) {
+      return
+    }
+
+    requestAnimationFrame(() => {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight
+    })
+  }, [generatedImages.length])
 
   const handleGenerateClick = () => {
     if (confirming) {
@@ -259,7 +271,7 @@ export function ImagePreview({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto" ref={scrollContainerRef}>
         <div className="w-full">
           <div className={IMAGE_PREVIEW_CONTENT_CLASS}>
             <div className="space-y-4 px-4 pt-4 pb-4">
