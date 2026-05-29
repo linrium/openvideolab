@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
+import { ResizableRightSidebar } from "@/components/resizable-right-sidebar"
 import { VideoForm, type VideoFormValues } from "@/components/video-form"
 import { VideoPreview } from "@/components/video-preview"
 import { db } from "@/db"
@@ -15,6 +16,7 @@ const ASPECT_RATIOS = ["9:16", "16:9", "1:1", "4:3", "3:4", "21:9", "9:21"]
 
 const RESOLUTIONS = ["480p", "720p", "1080p"]
 const DURATIONS = [5, 10, 15]
+const VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY = "video-settings-sidebar-width"
 
 function normalizeAspectRatio(
   value: string | null
@@ -128,7 +130,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       <section className="flex h-full min-h-0 flex-1 justify-center overflow-y-auto">
         <VideoPreview jobId={video.jobId} url={videoUrl} video={video} />
       </section>
-      <aside className="h-svh min-h-0 w-full max-w-sm shrink-0 overflow-y-auto border-border/80 border-t bg-background md:max-w-md lg:border-t-0 lg:border-l xl:max-w-lg">
+      <ResizableRightSidebar storageKey={VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY}>
         <VideoForm
           initialValues={{
             model: normalizeModel(video.model),
@@ -147,7 +149,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
           }}
           readOnly
         />
-      </aside>
+      </ResizableRightSidebar>
     </div>
   )
 }

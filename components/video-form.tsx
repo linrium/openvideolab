@@ -1,6 +1,13 @@
 "use client"
 
 import type { AspectRatio, Resolution } from "@openrouter/sdk/models"
+import {
+  type Icon,
+  IconArrowUp,
+  IconDeviceMobile,
+  IconDeviceTablet,
+  IconSquare,
+} from "@tabler/icons-react"
 import { useForm } from "@tanstack/react-form"
 import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
@@ -84,6 +91,16 @@ const DEFAULT_VALUES: VideoFormValues = {
   firstFrame: undefined,
   lastFrame: undefined,
   watermark: false,
+}
+
+const ASPECT_RATIO_CONFIG: Record<string, { icon: Icon; label: string }> = {
+  "1:1": { icon: IconSquare, label: "1:1" },
+  "16:9": { icon: IconDeviceTablet, label: "16:9" },
+  "21:9": { icon: IconDeviceTablet, label: "21:9" },
+  "3:4": { icon: IconDeviceMobile, label: "3:4" },
+  "4:3": { icon: IconDeviceTablet, label: "4:3" },
+  "9:16": { icon: IconDeviceMobile, label: "9:16" },
+  "9:21": { icon: IconDeviceMobile, label: "9:21" },
 }
 
 interface VideoFormProps {
@@ -392,21 +409,33 @@ export function VideoForm({
                             1:1 for square content.
                           </FieldDescription>
                           <ToggleGroup
+                            className="flex w-full flex-wrap items-start justify-start"
                             disabled={readOnly}
                             onValueChange={(val) => {
                               if (val) {
                                 field.handleChange(val)
                               }
                             }}
+                            spacing={1}
                             type="single"
                             value={field.state.value ?? ""}
                             variant="outline"
                           >
-                            {config.aspectRatios.map((ratio) => (
-                              <ToggleGroupItem key={ratio} value={ratio}>
-                                {ratio}
-                              </ToggleGroupItem>
-                            ))}
+                            {config.aspectRatios.map((ratio) => {
+                              const { icon: Icon, label } = ASPECT_RATIO_CONFIG[
+                                ratio
+                              ] ?? {
+                                icon: IconDeviceTablet,
+                                label: ratio,
+                              }
+
+                              return (
+                                <ToggleGroupItem key={ratio} value={ratio}>
+                                  <Icon data-icon="inline-start" size={14} />
+                                  {label}
+                                </ToggleGroupItem>
+                              )
+                            })}
                           </ToggleGroup>
                         </Field>
                       )}
@@ -746,6 +775,7 @@ export function VideoForm({
                       type="button"
                       variant={confirming ? "destructive" : "default"}
                     >
+                      <IconArrowUp data-icon="inline-start" size={14} />
                       {confirming
                         ? "Confirm — click again to generate"
                         : submitLabel}

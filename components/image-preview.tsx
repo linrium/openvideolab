@@ -2,10 +2,11 @@
 
 import {
   IconArrowBackUp,
+  IconArrowUp,
+  IconArrowUpRight,
   IconDownload,
   IconEye,
   IconPhoto,
-  IconStack2,
 } from "@tabler/icons-react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
@@ -33,7 +34,8 @@ import { Separator } from "@/components/ui/separator"
 import {
   IMAGE_SIZE_DIMENSIONS,
   type ImageSize,
-  SUPPORTED_IMAGE_EDIT_MODEL,
+  SUPPORTED_IMAGE_GENERATION_MODEL,
+  SUPPORTED_SEEDREAM_IMAGE_MODEL,
 } from "@/lib/image-generation"
 import { cn } from "@/lib/utils"
 
@@ -222,10 +224,15 @@ export function ImagePreview({
 
   const handleReferenceClick = (url: string) => {
     const current = form.store.state.values.inputImages
+    const currentModel = form.store.state.values.model
+    const nextModel =
+      currentModel === SUPPORTED_SEEDREAM_IMAGE_MODEL
+        ? SUPPORTED_SEEDREAM_IMAGE_MODEL
+        : SUPPORTED_IMAGE_GENERATION_MODEL
     const next = [...current, { key: uuidv4(), url }]
     form.setFieldValue("inputImages", next)
     form.setFieldValue("mode", "edit")
-    form.setFieldValue("model", SUPPORTED_IMAGE_EDIT_MODEL)
+    form.setFieldValue("model", nextModel)
   }
 
   const handleViewPromptClick = (prompt: string) => {
@@ -330,7 +337,7 @@ export function ImagePreview({
                             <div className="flex items-center justify-between text-muted-foreground text-xs">
                               <span>{createdAtLabel ?? " "}</span>
                             </div>
-                            <div className="group relative overflow-hidden border border-border/70 bg-muted/20">
+                            <div className="group relative overflow-hidden rounded-md border border-border/70 bg-muted/20">
                               <button
                                 aria-label="Open image viewer"
                                 className="block w-full cursor-zoom-in"
@@ -344,7 +351,7 @@ export function ImagePreview({
                               >
                                 <Image
                                   alt="Generated image"
-                                  className="h-auto w-full rounded-md"
+                                  className="h-auto w-full"
                                   height={dimensions.height}
                                   loading={
                                     batchIndex === 0 && imageIndex === 0
@@ -365,7 +372,7 @@ export function ImagePreview({
                                     type="button"
                                     variant="secondary"
                                   >
-                                    <IconStack2 size={14} />
+                                    <IconArrowUpRight size={14} />
                                     Reference
                                   </Button>
                                 )}
@@ -491,17 +498,23 @@ export function ImagePreview({
                                   </InputGroupButton>
                                 ) : null}
                                 <InputGroupButton
+                                  aria-label={submitLabel}
                                   disabled={
                                     !(canSubmit && hasPrompt) || isSubmitting
                                   }
                                   onClick={handleGenerateClick}
-                                  size="sm"
+                                  size="icon-sm"
+                                  title={submitLabel}
                                   type="button"
                                   variant={
                                     confirming ? "destructive" : "default"
                                   }
                                 >
-                                  {submitLabel}
+                                  {isSubmitting ? (
+                                    <Spokes className="size-3" />
+                                  ) : (
+                                    <IconArrowUp size={16} />
+                                  )}
                                 </InputGroupButton>
                               </div>
                             )
