@@ -10,7 +10,7 @@ import {
 } from "@tabler/icons-react"
 import { useForm } from "@tanstack/react-form"
 import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
+import { type ReactNode, useRef, useState } from "react"
 import { toast } from "sonner"
 import z from "zod/v4"
 import { submitVideoAction } from "@/app/actions/generate-video"
@@ -19,7 +19,8 @@ import {
   ImageUpload,
   MultiImageUpload,
 } from "@/components/image-upload"
-import { Button } from "@/components/ui/button"
+import { Spokes } from "@/components/loading-ui/spokes"
+import { ResizableRightSidebar } from "@/components/resizable-right-sidebar"
 import { CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   Field,
@@ -29,6 +30,12 @@ import {
   FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group"
 import {
   Select,
   SelectContent,
@@ -49,6 +56,9 @@ import {
 } from "@/lib/constants"
 import type { PersistedVideoProvider } from "@/lib/video-provider"
 import { Input } from "./ui/input"
+
+const VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY = "video-settings-sidebar-width"
+const VIDEO_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
 
 const schema = z.object({
   model: z.enum([
@@ -105,11 +115,13 @@ const ASPECT_RATIO_CONFIG: Record<string, { icon: Icon; label: string }> = {
 
 interface VideoFormProps {
   initialValues?: VideoFormValues
+  preview?: ReactNode
   readOnly?: boolean
 }
 
 export function VideoForm({
   initialValues = DEFAULT_VALUES,
+  preview,
   readOnly = false,
 }: VideoFormProps) {
   const router = useRouter()
@@ -222,7 +234,7 @@ export function VideoForm({
     },
   })
 
-  return (
+  const settings = (
     <Tabs className="flex h-full min-h-0 flex-col gap-0" defaultValue="compose">
       <CardHeader
         className="sticky top-0 z-10 border-border/70 border-b bg-background"
@@ -235,13 +247,7 @@ export function VideoForm({
       </CardHeader>
 
       <TabsContent className="flex min-h-0 flex-1 flex-col" value="compose">
-        <form
-          className="flex min-h-0 flex-1 flex-col"
-          onSubmit={(e) => {
-            e.preventDefault()
-            form.handleSubmit()
-          }}
-        >
+        <div className="flex min-h-0 flex-1 flex-col">
           <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
             <FieldGroup>
               <form.Field name="model">
@@ -304,43 +310,6 @@ export function VideoForm({
                       placeholder="e.g. Golden Hour Lake"
                       spellCheck={false}
                       type="text"
-                      value={field.state.value}
-                    />
-                    <FieldError
-                      errors={field.state.meta.errors.map((e) => ({
-                        message: String(e),
-                      }))}
-                    />
-                  </Field>
-                )}
-              </form.Field>
-
-              <FieldSeparator />
-
-              <form.Field name="prompt">
-                {(field) => (
-                  <Field
-                    data-invalid={
-                      field.state.meta.errors.length > 0 || undefined
-                    }
-                  >
-                    <FieldLabel htmlFor={field.name}>Prompt</FieldLabel>
-                    <FieldDescription>
-                      Describe the scene, mood, action, and visual style you
-                      want. Be specific — include camera movement, lighting, and
-                      subject details for best results.
-                    </FieldDescription>
-                    <Textarea
-                      aria-invalid={
-                        field.state.meta.errors.length > 0 || undefined
-                      }
-                      disabled={readOnly}
-                      id={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="e.g. A serene mountain lake at golden hour, slow cinematic pan from left to right, soft warm light reflecting on calm water…"
-                      rows={10}
-                      spellCheck={false}
                       value={field.state.value}
                     />
                     <FieldError
@@ -713,18 +682,9 @@ export function VideoForm({
                 resolution: s.values.resolution,
                 duration: s.values.duration,
                 generateAudio: s.values.generateAudio,
-                isSubmitting: s.isSubmitting,
-                canSubmit: s.canSubmit,
               })}
             >
-              {({
-                model,
-                resolution,
-                duration,
-                generateAudio,
-                isSubmitting,
-                canSubmit,
-              }) => {
+              {({ model, resolution, duration, generateAudio }) => {
                 const pricing =
                   PRICING[model as keyof typeof PRICING] ??
                   PRICING["bytedance/seedance-2.0"]
@@ -736,56 +696,37 @@ export function VideoForm({
                   : pricing.per_second.no_audio
                 const rate = key ? table[key] : null
                 const total = rate != null && duration ? rate * duration : null
-                let submitLabel = "Generate Video"
 
-                if (readOnly) {
-                  submitLabel = "Video Already Exists"
-                } else if (isSubmitting) {
-                  submitLabel = "Submitting…"
+                if (total === null) {
+                  return null
                 }
 
                 return (
-                  <>
-                    {total !== null && (
-                      <div className="w-full rounded-md border bg-muted/40 px-3 py-2 text-xs">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>Rate</span>
-                            <span className="tabular-nums">
-                              ${rate?.toFixed(5)} / sec
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>Duration</span>
-                            <span>{duration}s</span>
-                          </div>
-                          <div className="flex justify-between border-border/60 border-t pt-1 font-medium text-foreground">
-                            <span>Estimated cost</span>
-                            <span className="tabular-nums">
-                              ${total.toFixed(4)}
-                            </span>
-                          </div>
-                        </div>
+                  <div className="w-full rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Rate</span>
+                        <span className="tabular-nums">
+                          ${rate?.toFixed(5)} / sec
+                        </span>
                       </div>
-                    )}
-                    <Button
-                      className="w-full"
-                      disabled={readOnly || !canSubmit || isSubmitting}
-                      onClick={handleGenerateClick}
-                      type="button"
-                      variant={confirming ? "destructive" : "default"}
-                    >
-                      <IconArrowUp data-icon="inline-start" size={14} />
-                      {confirming
-                        ? "Confirm — click again to generate"
-                        : submitLabel}
-                    </Button>
-                  </>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Duration</span>
+                        <span>{duration}s</span>
+                      </div>
+                      <div className="flex justify-between border-border/60 border-t pt-1 font-medium text-foreground">
+                        <span>Estimated cost</span>
+                        <span className="tabular-nums">
+                          ${total.toFixed(4)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 )
               }}
             </form.Subscribe>
           </CardFooter>
-        </form>
+        </div>
       </TabsContent>
 
       <TabsContent value="pricing">
@@ -865,5 +806,98 @@ export function VideoForm({
         </div>
       </TabsContent>
     </Tabs>
+  )
+
+  if (!preview) {
+    return settings
+  }
+
+  return (
+    <div className="flex h-full min-h-0 w-full overflow-hidden">
+      <section className="flex h-full min-h-0 flex-1 flex-col justify-center overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto">{preview}</div>
+        <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
+          <div className={VIDEO_PREVIEW_CONTENT_CLASS}>
+            <div className="px-4">
+              <form.Field name="prompt">
+                {(field) => (
+                  <>
+                    <InputGroup>
+                      <InputGroupTextarea
+                        aria-invalid={
+                          field.state.meta.errors.length > 0 || undefined
+                        }
+                        className="max-h-[min(40svh,24rem)] overflow-y-auto"
+                        disabled={readOnly}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                        placeholder="Describe the video you want to generate…"
+                        rows={4}
+                        spellCheck={false}
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon
+                        align="block-end"
+                        className="justify-end"
+                      >
+                        <form.Subscribe
+                          selector={(state) => ({
+                            canSubmit: state.canSubmit,
+                            isSubmitting: state.isSubmitting,
+                            prompt: state.values.prompt,
+                          })}
+                        >
+                          {({ canSubmit, isSubmitting, prompt }) => {
+                            const hasPrompt = prompt.trim().length > 0
+                            let submitLabel = "Generate Video"
+                            if (readOnly) {
+                              submitLabel = "Video Already Exists"
+                            } else if (isSubmitting) {
+                              submitLabel = "Submitting…"
+                            }
+
+                            return (
+                              <InputGroupButton
+                                aria-label={submitLabel}
+                                disabled={
+                                  readOnly ||
+                                  !(canSubmit && hasPrompt) ||
+                                  isSubmitting
+                                }
+                                onClick={handleGenerateClick}
+                                size="icon-sm"
+                                title={submitLabel}
+                                type="button"
+                                variant={confirming ? "destructive" : "default"}
+                              >
+                                {isSubmitting ? (
+                                  <Spokes className="size-3" />
+                                ) : (
+                                  <IconArrowUp size={16} />
+                                )}
+                              </InputGroupButton>
+                            )
+                          }}
+                        </form.Subscribe>
+                      </InputGroupAddon>
+                    </InputGroup>
+                    <FieldError
+                      errors={field.state.meta.errors.map((error) => ({
+                        message: String(error),
+                      }))}
+                    />
+                  </>
+                )}
+              </form.Field>
+            </div>
+          </div>
+        </div>
+      </section>
+      <ResizableRightSidebar storageKey={VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY}>
+        {settings}
+      </ResizableRightSidebar>
+    </div>
   )
 }

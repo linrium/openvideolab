@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
-import { ResizableRightSidebar } from "@/components/resizable-right-sidebar"
 import { VideoForm, type VideoFormValues } from "@/components/video-form"
 import { VideoPreview } from "@/components/video-preview"
 import { db } from "@/db"
@@ -16,7 +15,6 @@ const ASPECT_RATIOS = ["9:16", "16:9", "1:1", "4:3", "3:4", "21:9", "9:21"]
 
 const RESOLUTIONS = ["480p", "720p", "1080p"]
 const DURATIONS = [5, 10, 15]
-const VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY = "video-settings-sidebar-width"
 
 function normalizeAspectRatio(
   value: string | null
@@ -126,30 +124,26 @@ export default async function VideoPage({ params }: VideoPageProps) {
     ])
 
   return (
-    <div className="flex h-full min-h-0 w-full overflow-hidden">
-      <section className="flex h-full min-h-0 flex-1 justify-center overflow-y-auto">
+    <VideoForm
+      initialValues={{
+        model: normalizeModel(video.model),
+        title: video.title,
+        prompt: video.prompt,
+        negativePrompt: atlasCloudOptions?.negative_prompt ?? "",
+        aspectRatio: normalizeAspectRatio(video.aspectRatio),
+        resolution: normalizeResolution(video.resolution),
+        duration: normalizeDuration(video.duration),
+        generateAudio: video.generateAudio,
+        promptExtend: atlasCloudOptions?.prompt_extend ?? false,
+        audioReference,
+        inputReferences,
+        firstFrame,
+        lastFrame,
+      }}
+      preview={
         <VideoPreview jobId={video.jobId} url={videoUrl} video={video} />
-      </section>
-      <ResizableRightSidebar storageKey={VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY}>
-        <VideoForm
-          initialValues={{
-            model: normalizeModel(video.model),
-            title: video.title,
-            prompt: video.prompt,
-            negativePrompt: atlasCloudOptions?.negative_prompt ?? "",
-            aspectRatio: normalizeAspectRatio(video.aspectRatio),
-            resolution: normalizeResolution(video.resolution),
-            duration: normalizeDuration(video.duration),
-            generateAudio: video.generateAudio,
-            promptExtend: atlasCloudOptions?.prompt_extend ?? false,
-            audioReference,
-            inputReferences,
-            firstFrame,
-            lastFrame,
-          }}
-          readOnly
-        />
-      </ResizableRightSidebar>
-    </div>
+      }
+      readOnly
+    />
   )
 }

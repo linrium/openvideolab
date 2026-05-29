@@ -285,7 +285,7 @@ export function ImagePreview({
               </form.Subscribe>
 
               {generatedImages.length > 0 ? (
-                generatedImages.map((batch, batchIndex) => {
+                generatedImages.toReversed().map((batch, batchIndex) => {
                   const batchKey =
                     batch.images[0] ?? batch.metadata.createdAt ?? batchIndex
                   const dimensions = IMAGE_SIZE_DIMENSIONS[batch.size]
@@ -323,24 +323,50 @@ export function ImagePreview({
                     )
                   }
 
+                  const isGallery = batch.images.length > 1
+
                   return (
                     <div key={batchKey}>
                       {batchIndex > 0 && <Separator className="mb-4" />}
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-muted-foreground text-xs">
+                        <span>{createdAtLabel ?? " "}</span>
+                        {isGallery ? (
+                          <span>{batch.images.length} images</span>
+                        ) : null}
+                      </div>
+                      <div className="mb-3 flex flex-wrap items-center gap-y-1 text-muted-foreground text-xs">
+                        {metadataItems.map((item, index) => (
+                          <div className="flex items-center" key={item.label}>
+                            {index > 0 ? (
+                              <span className="mx-2 text-border">|</span>
+                            ) : null}
+                            <span>
+                              {item.label}: {item.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                       <div
                         className={cn(
-                          "grid gap-3",
-                          batch.images.length > 1 && "xl:grid-cols-2"
+                          "gap-3",
+                          isGallery ? "columns-1 sm:columns-2" : "grid"
                         )}
                       >
                         {batch.images.map((image, imageIndex) => (
-                          <div className="space-y-2" key={image}>
-                            <div className="flex items-center justify-between text-muted-foreground text-xs">
-                              <span>{createdAtLabel ?? " "}</span>
-                            </div>
+                          <div
+                            className={cn(
+                              "space-y-2",
+                              isGallery && "mb-3 break-inside-avoid"
+                            )}
+                            key={image}
+                          >
                             <div className="group relative overflow-hidden rounded-md border border-border/70 bg-muted/20">
                               <button
                                 aria-label="Open image viewer"
-                                className="block w-full cursor-zoom-in"
+                                className={cn(
+                                  "block w-full cursor-zoom-in",
+                                  isGallery && "bg-muted/40"
+                                )}
                                 onClick={() =>
                                   setSelectedImage({
                                     url: image,
@@ -364,60 +390,48 @@ export function ImagePreview({
                                 />
                               </button>
                               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/15 to-transparent opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" />
-                              <div className="absolute right-3 bottom-3 flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                              <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                                 {!readOnly && (
                                   <Button
+                                    aria-label="Use as reference"
                                     onClick={() => handleReferenceClick(image)}
-                                    size="sm"
+                                    size="icon-sm"
+                                    title="Reference"
                                     type="button"
                                     variant="secondary"
                                   >
                                     <IconArrowUpRight size={14} />
-                                    Reference
                                   </Button>
                                 )}
                                 {!readOnly && batch.metadata.prompt ? (
                                   <Button
+                                    aria-label="View prompt"
                                     onClick={() =>
                                       handleViewPromptClick(
                                         batch.metadata.prompt ?? ""
                                       )
                                     }
-                                    size="sm"
+                                    size="icon-sm"
+                                    title="View Prompt"
                                     type="button"
                                     variant="secondary"
                                   >
                                     <IconEye size={14} />
-                                    View Prompt
                                   </Button>
                                 ) : null}
                                 <Button
+                                  aria-label="Download image"
                                   onClick={() => {
                                     downloadImage(image)
                                   }}
-                                  size="sm"
+                                  size="icon-sm"
+                                  title="Download"
                                   type="button"
                                   variant="secondary"
                                 >
                                   <IconDownload size={14} />
-                                  Download
                                 </Button>
                               </div>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-y-1 text-muted-foreground text-xs">
-                              {metadataItems.map((item, index) => (
-                                <div
-                                  className="flex items-center"
-                                  key={item.label}
-                                >
-                                  {index > 0 ? (
-                                    <span className="mx-2 text-border">|</span>
-                                  ) : null}
-                                  <span>
-                                    {item.label}: {item.value}
-                                  </span>
-                                </div>
-                              ))}
                             </div>
                           </div>
                         ))}
@@ -544,7 +558,7 @@ export function ImagePreview({
         open={selectedImage !== null}
       >
         <DialogContent
-          className="max-h-[92vh] max-w-[92vw] border-none bg-transparent p-0 shadow-none sm:max-w-[92vw]"
+          className="w-fit max-w-[92vw] border-none bg-transparent p-0 shadow-none sm:max-w-[92vw]"
           showCloseButton
         >
           <DialogTitle className="sr-only">Image viewer</DialogTitle>
@@ -552,16 +566,16 @@ export function ImagePreview({
             Preview the generated image at full size.
           </DialogDescription>
           {selectedImage ? (
-            <div className="flex items-center justify-center bg-black/90">
+            <div className="flex w-fit items-center justify-center bg-black/90">
               <button
                 aria-label="Close image viewer"
-                className="cursor-zoom-out"
+                className="block cursor-zoom-out"
                 onClick={() => setSelectedImage(null)}
                 type="button"
               >
                 <Image
                   alt="Generated image preview"
-                  className="max-h-[92vh] w-auto object-contain"
+                  className="max-h-[92vh] max-w-[92vw] object-contain"
                   height={selectedDimensions?.height ?? 1024}
                   src={selectedImage.url}
                   unoptimized

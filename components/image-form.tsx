@@ -92,27 +92,29 @@ const labelFromValue = (value: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ")
 
-function formatEstimatedCost(values: {
+function getEstimatedCostRangeText(values: {
   model: ImageModel
   n: number
   quality: (typeof IMAGE_QUALITY_OPTIONS)[number]
   size: (typeof IMAGE_SIZE_OPTIONS)[number]
-}): string {
+}): { label: string; max: number; min: number } {
   const range = getEstimatedImageCostRange(values)
 
+  return {
+    ...range,
+    label:
+      range.min === range.max
+        ? `$${getEstimatedImageCost(values).toFixed(3)}`
+        : `$${range.min.toFixed(3)}-$${range.max.toFixed(3)}`,
+  }
+}
+
+function formatCostRange(range: { max: number; min: number }): string {
   if (range.min === range.max) {
-    return `$${getEstimatedImageCost(values).toFixed(3)}`
+    return `$${range.min.toFixed(3)}`
   }
 
   return `$${range.min.toFixed(3)}-$${range.max.toFixed(3)}`
-}
-
-function formatCurrency(value: string | null): string | null {
-  if (!value) {
-    return null
-  }
-
-  return `$${Number(value).toFixed(3)}`
 }
 
 function getModelForSourceImageState(currentModel: ImageModel): ImageModel {
@@ -125,7 +127,6 @@ function getModelForSourceImageState(currentModel: ImageModel): ImageModel {
 
 export function ImageForm({
   form,
-  generatedImages = [],
   onTitleBlur,
   readOnly = false,
 }: {
@@ -134,14 +135,6 @@ export function ImageForm({
   onTitleBlur?: (title: string) => void | Promise<void>
   readOnly?: boolean
 }) {
-  const totalSessionCost =
-    generatedImages.length > 0
-      ? generatedImages.reduce(
-          (sum, batch) => sum + Number(batch.metadata.totalCost ?? 0),
-          0
-        )
-      : null
-
   return (
     <form.Subscribe selector={(state) => state.values.model}>
       {(model) => {
@@ -614,36 +607,43 @@ export function ImageForm({
                       size: state.values.size,
                     })}
                   >
-                    {({ model, n, quality, size }) => (
-                      <div className="w-full rounded-md border bg-muted/40 px-3 py-2 text-xs">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>Images</span>
-                            <span>{n}</span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>Estimated cost</span>
-                            <span className="tabular-nums">
-                              {formatEstimatedCost({ model, n, quality, size })}
-                            </span>
-                          </div>
-                          {model !== SUPPORTED_SEEDREAM_IMAGE_MODEL &&
-                            (quality === "auto" || size === "auto") && (
-                              <div className="text-muted-foreground/80">
-                                Auto mode shows an estimated price range.
-                              </div>
-                            )}
-                          {totalSessionCost === null ? null : (
+                    {({ model, n, quality, size }) => {
+                      const estimate = getEstimatedCostRangeText({
+                        model,
+                        n,
+                        quality,
+                        size,
+                      })
+
+                      return (
+                        <div className="w-full rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-muted-foreground">
+                              <span>Images</span>
+                              <span>{n}</span>
+                            </div>
+                            <div className="flex justify-between text-muted-foreground">
+                              <span>Estimated cost</span>
+                              <span className="tabular-nums">
+                                {estimate.label}
+                              </span>
+                            </div>
+                            {model !== SUPPORTED_SEEDREAM_IMAGE_MODEL &&
+                              (quality === "auto" || size === "auto") && (
+                                <div className="text-muted-foreground/80">
+                                  Auto mode shows an estimated price range.
+                                </div>
+                              )}
                             <div className="flex justify-between text-muted-foreground">
                               <span>Total cost</span>
                               <span className="tabular-nums">
-                                {formatCurrency(String(totalSessionCost))}
+                                {formatCostRange(estimate)}
                               </span>
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    }}
                   </form.Subscribe>
                 </CardFooter>
               </div>
