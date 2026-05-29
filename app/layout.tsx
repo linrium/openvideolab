@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Inter, Playwrite_US_Modern } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -8,14 +8,9 @@ import { cn } from "@/lib/utils"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-})
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const playwrite = Playwrite_US_Modern({
+  variable: "--font-display",
+  weight: "400",
 })
 
 export const metadata: Metadata = {
@@ -33,10 +28,9 @@ export default function RootLayout({
       className={cn(
         "h-screen",
         "antialiased",
-        geistSans.variable,
-        geistMono.variable,
         "font-sans",
-        inter.variable
+        inter.variable,
+        playwrite.variable
       )}
       lang="en"
       suppressHydrationWarning

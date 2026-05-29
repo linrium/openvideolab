@@ -40,6 +40,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
@@ -159,7 +160,9 @@ export function AppSidebar({ recents }: AppSidebarProps) {
             className="flex items-center gap-2 overflow-hidden rounded-md"
             href="/videos"
           >
-            <span className="truncate font-semibold text-sm">OpenVideoLab</span>
+            <span className="truncate font-display font-semibold text-sm">
+              OpenVideoLab
+            </span>
           </Link>
         )}
         <SidebarTrigger className="shrink-0 group-data-[collapsible=icon]:hidden" />
@@ -188,52 +191,55 @@ export function AppSidebar({ recents }: AppSidebarProps) {
         </SidebarGroup>
 
         {recents.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Recents</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {recents.map((item) => {
-                  const href = getRecentHref(item)
-                  const ItemIcon = RECENT_ICON[item.type] ?? IconPhoto
-                  const title = item.title
+          <>
+            <SidebarSeparator className="hidden group-data-[collapsible=icon]:block" />
+            <SidebarGroup>
+              <SidebarGroupLabel>Recents</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {recents.map((item) => {
+                    const href = getRecentHref(item)
+                    const ItemIcon = RECENT_ICON[item.type] ?? IconPhoto
+                    const title = item.title
 
-                  return (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        asChild
-                        className="h-auto py-1.5 text-sidebar-foreground/85 group-data-[collapsible=icon]:h-8! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-0!"
-                        isActive={pathname === href}
-                        size="sm"
-                        tooltip={title}
-                      >
-                        <Link href={href}>
-                          <span
-                            aria-hidden="true"
-                            className={`size-1.5 shrink-0 rounded-full ${STATUS_BAR_CLASS[item.status] ?? "bg-zinc-400"} group-data-[collapsible=icon]:hidden`}
-                          />
-                          <ItemIcon className="shrink-0" size={14} />
-                          <span className="truncate text-sm group-data-[collapsible=icon]:hidden">
-                            {title.length > 40
-                              ? `${title.slice(0, 40)}…`
-                              : title}
-                          </span>
-                        </Link>
-                      </SidebarMenuButton>
-                      <SidebarMenuAction
-                        aria-label={`Delete ${title}`}
-                        className="top-1/2! -translate-y-1/2! text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setPendingDelete(item)}
-                        showOnHover
-                        title="Delete"
-                      >
-                        <IconTrash size={14} />
-                      </SidebarMenuAction>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          asChild
+                          className="h-auto py-1.5 text-sidebar-foreground/85 group-data-[collapsible=icon]:h-8! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-0!"
+                          isActive={pathname === href}
+                          size="sm"
+                          tooltip={title}
+                        >
+                          <Link href={href}>
+                            <span
+                              aria-hidden="true"
+                              className={`size-1.5 shrink-0 rounded-full ${STATUS_BAR_CLASS[item.status] ?? "bg-zinc-400"} group-data-[collapsible=icon]:hidden`}
+                            />
+                            <ItemIcon className="shrink-0" size={14} />
+                            <span className="truncate text-sm group-data-[collapsible=icon]:hidden">
+                              {title.length > 40
+                                ? `${title.slice(0, 40)}…`
+                                : title}
+                            </span>
+                          </Link>
+                        </SidebarMenuButton>
+                        <SidebarMenuAction
+                          aria-label={`Delete ${title}`}
+                          className="top-1/2! -translate-y-1/2! text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setPendingDelete(item)}
+                          showOnHover
+                          title="Delete"
+                        >
+                          <IconTrash size={14} />
+                        </SidebarMenuAction>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
         )}
       </SidebarContent>
 
