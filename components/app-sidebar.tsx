@@ -2,8 +2,8 @@
 
 import {
   type Icon,
+  IconArrowBarToRight,
   IconClipboard,
-  IconFlask,
   IconLogout,
   IconMoon,
   IconMusic,
@@ -152,7 +152,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
             onClick={toggleSidebar}
             type="button"
           >
-            <IconFlask size={14} />
+            <IconArrowBarToRight size={14} />
           </button>
         ) : (
           <Link
@@ -211,10 +211,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
                             aria-hidden="true"
                             className={`size-1.5 shrink-0 rounded-full ${STATUS_BAR_CLASS[item.status] ?? "bg-zinc-400"} group-data-[collapsible=icon]:hidden`}
                           />
-                          <ItemIcon
-                            className="shrink-0 group-data-[collapsible=icon]:hidden"
-                            size={14}
-                          />
+                          <ItemIcon className="shrink-0" size={14} />
                           <span className="truncate text-sm group-data-[collapsible=icon]:hidden">
                             {title.length > 40
                               ? `${title.slice(0, 40)}…`
