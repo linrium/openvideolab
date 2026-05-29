@@ -1,18 +1,18 @@
 "use client"
 
 import {
-  AiChemistry02Icon,
-  ClipboardIcon,
-  Delete01Icon,
-  Image01Icon,
-  Logout01Icon,
-  Moon02Icon,
-  MusicNote03FreeIcons,
-  Settings01Icon,
-  Sun01Icon,
-  VideoIcon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+  type Icon,
+  IconClipboard,
+  IconFlask,
+  IconLogout,
+  IconMoon,
+  IconMusic,
+  IconPhoto,
+  IconSettings,
+  IconSun,
+  IconTrash,
+  IconVideo,
+} from "@tabler/icons-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
@@ -45,18 +45,18 @@ import {
 } from "@/components/ui/sidebar"
 import { authClient } from "@/lib/auth-client"
 
-const mainNavigation = [
-  { href: "/videos/new", icon: VideoIcon, label: "New Video" },
-  { href: "/images/new", icon: Image01Icon, label: "New Image" },
-  { href: "/storyboard/new", icon: ClipboardIcon, label: "New Storyboard" },
-] as const
+const mainNavigation: { href: string; icon: Icon; label: string }[] = [
+  { href: "/videos/new", icon: IconVideo, label: "New Video" },
+  { href: "/images/new", icon: IconPhoto, label: "New Image" },
+  // { href: "/storyboard/new", icon: IconClipboard, label: "New Storyboard" },
+]
 
-const RECENT_ICON = {
-  image: Image01Icon,
-  music: MusicNote03FreeIcons,
-  storyboard: ClipboardIcon,
-  video: VideoIcon,
-} as const
+const RECENT_ICON: Record<string, Icon> = {
+  image: IconPhoto,
+  music: IconMusic,
+  storyboard: IconClipboard,
+  video: IconVideo,
+}
 
 const STATUS_BAR_CLASS: Record<string, string> = {
   cancelled: "bg-zinc-400",
@@ -152,7 +152,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
             onClick={toggleSidebar}
             type="button"
           >
-            <HugeiconsIcon icon={AiChemistry02Icon} size={14} strokeWidth={2} />
+            <IconFlask size={14} />
           </button>
         ) : (
           <Link
@@ -177,7 +177,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
                     tooltip={item.label}
                   >
                     <Link href={item.href}>
-                      <HugeiconsIcon icon={item.icon} strokeWidth={2} />
+                      <item.icon size={16} />
                       <span>{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -194,9 +194,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
               <SidebarMenu>
                 {recents.map((item) => {
                   const href = getRecentHref(item)
-                  const icon =
-                    RECENT_ICON[item.type as keyof typeof RECENT_ICON] ??
-                    Image01Icon
+                  const ItemIcon = RECENT_ICON[item.type] ?? IconPhoto
                   const title = item.title
 
                   return (
@@ -213,11 +211,9 @@ export function AppSidebar({ recents }: AppSidebarProps) {
                             aria-hidden="true"
                             className={`size-1.5 shrink-0 rounded-full ${STATUS_BAR_CLASS[item.status] ?? "bg-zinc-400"} group-data-[collapsible=icon]:hidden`}
                           />
-                          <HugeiconsIcon
+                          <ItemIcon
                             className="shrink-0 group-data-[collapsible=icon]:hidden"
-                            icon={icon}
                             size={14}
-                            strokeWidth={2}
                           />
                           <span className="truncate text-sm group-data-[collapsible=icon]:hidden">
                             {title.length > 40
@@ -233,11 +229,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
                         showOnHover
                         title="Delete"
                       >
-                        <HugeiconsIcon
-                          icon={Delete01Icon}
-                          size={14}
-                          strokeWidth={2}
-                        />
+                        <IconTrash size={14} />
                       </SidebarMenuAction>
                     </SidebarMenuItem>
                   )
@@ -262,18 +254,8 @@ export function AppSidebar({ recents }: AppSidebarProps) {
               tooltip="Toggle theme"
               type="button"
             >
-              <HugeiconsIcon
-                className="hidden dark:block"
-                icon={Sun01Icon}
-                size={18}
-                strokeWidth={2}
-              />
-              <HugeiconsIcon
-                className="dark:hidden"
-                icon={Moon02Icon}
-                size={18}
-                strokeWidth={2}
-              />
+              <IconSun className="hidden dark:block" size={18} />
+              <IconMoon className="dark:hidden" size={18} />
               <span className="hidden dark:inline">Light mode</span>
               <span className="dark:hidden">Dark mode</span>
             </SidebarMenuButton>
@@ -285,7 +267,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
               tooltip="Settings"
             >
               <Link href="/settings">
-                <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
+                <IconSettings size={16} />
                 <span>Settings</span>
               </Link>
             </SidebarMenuButton>
@@ -296,7 +278,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
               tooltip="Log out"
               type="button"
             >
-              <HugeiconsIcon icon={Logout01Icon} size={18} strokeWidth={2} />
+              <IconLogout size={18} />
               <span>Log out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -1,12 +1,12 @@
 "use client"
 
 import {
-  MagicWand01Icon,
-  SmartPhone01Icon,
-  SmartPhoneLandscapeIcon,
-  SquareIcon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+  type Icon,
+  IconDeviceMobile,
+  IconDeviceTablet,
+  IconSquare,
+  IconWand,
+} from "@tabler/icons-react"
 import type {
   GeneratedImagesState,
   ImageGenerationFormApi,
@@ -54,23 +54,22 @@ import {
 } from "@/lib/image-generation"
 import { Input } from "./ui/input"
 
-const SIZE_CONFIG: Record<ImageSize, { icon: IconSvgElement; label: string }> =
-  {
-    "1:1": { icon: SquareIcon, label: "1:1" },
-    auto: { icon: MagicWand01Icon, label: "Auto" },
-    "1024x1024": { icon: SquareIcon, label: "Square" },
-    "1024x1536": { icon: SmartPhone01Icon, label: "Portrait" },
-    "16:9": { icon: SmartPhoneLandscapeIcon, label: "16:9" },
-    "2:3": { icon: SmartPhone01Icon, label: "2:3" },
-    "21:9": { icon: SmartPhoneLandscapeIcon, label: "21:9" },
-    "3:2": { icon: SmartPhoneLandscapeIcon, label: "3:2" },
-    "3:4": { icon: SmartPhone01Icon, label: "3:4" },
-    "4:3": { icon: SmartPhoneLandscapeIcon, label: "4:3" },
-    "4:5": { icon: SmartPhone01Icon, label: "4:5" },
-    "5:4": { icon: SmartPhoneLandscapeIcon, label: "5:4" },
-    "9:16": { icon: SmartPhone01Icon, label: "9:16" },
-    "1536x1024": { icon: SmartPhoneLandscapeIcon, label: "Landscape" },
-  }
+const SIZE_CONFIG: Record<ImageSize, { icon: Icon; label: string }> = {
+  "1:1": { icon: IconSquare, label: "1:1" },
+  auto: { icon: IconWand, label: "Auto" },
+  "1024x1024": { icon: IconSquare, label: "Square" },
+  "1024x1536": { icon: IconDeviceMobile, label: "Portrait" },
+  "16:9": { icon: IconDeviceTablet, label: "16:9" },
+  "2:3": { icon: IconDeviceMobile, label: "2:3" },
+  "21:9": { icon: IconDeviceTablet, label: "21:9" },
+  "3:2": { icon: IconDeviceTablet, label: "3:2" },
+  "3:4": { icon: IconDeviceMobile, label: "3:4" },
+  "4:3": { icon: IconDeviceTablet, label: "4:3" },
+  "4:5": { icon: IconDeviceMobile, label: "4:5" },
+  "5:4": { icon: IconDeviceTablet, label: "5:4" },
+  "9:16": { icon: IconDeviceMobile, label: "9:16" },
+  "1536x1024": { icon: IconDeviceTablet, label: "Landscape" },
+}
 
 const MODEL_LABELS = {
   [SUPPORTED_IMAGE_GENERATION_MODEL]: "GPT Image 2",
@@ -414,13 +413,13 @@ export function ImageForm({
                             variant="outline"
                           >
                             {capabilities.sizes.map((option) => {
-                              const { icon, label } = SIZE_CONFIG[option]
+                              const { icon: SizeIcon, label } =
+                                SIZE_CONFIG[option]
                               return (
                                 <ToggleGroupItem key={option} value={option}>
-                                  <HugeiconsIcon
+                                  <SizeIcon
                                     data-icon="inline-start"
-                                    icon={icon}
-                                    strokeWidth={2}
+                                    size={14}
                                   />
                                   {label}
                                 </ToggleGroupItem>

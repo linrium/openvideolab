@@ -1,13 +1,12 @@
 import {
-  ArrowRight01Icon,
-  CheckmarkBadge02Icon,
-  CloudServerIcon,
-  Key01Icon,
-  Rocket01Icon,
-  Settings01Icon,
-  Video01Icon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+  IconArrowRight,
+  IconCloudComputing,
+  IconKey,
+  IconRocket,
+  IconRosetteDiscountCheck,
+  IconSettings,
+  IconVideo,
+} from "@tabler/icons-react"
 import { eq } from "drizzle-orm"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
@@ -74,7 +73,7 @@ export default async function Page() {
             </Badge>
           </CardAction>
           <div className="flex items-center gap-2">
-            <HugeiconsIcon icon={Rocket01Icon} size={20} strokeWidth={2} />
+            <IconRocket size={20} />
             <CardTitle>Set up OpenVideoLab in three steps</CardTitle>
           </div>
           <CardDescription>
@@ -107,21 +106,21 @@ export default async function Page() {
         <CardFooter className="flex flex-wrap gap-2 border-t">
           <Button asChild size="lg">
             <Link href={hasOpenRouterKey ? "/videos" : "/settings"}>
-              <HugeiconsIcon
-                data-icon="inline-start"
-                icon={hasOpenRouterKey ? Video01Icon : Settings01Icon}
-                strokeWidth={2}
-              />
+              {hasOpenRouterKey ? (
+                <IconVideo data-icon="inline-start" size={18} />
+              ) : (
+                <IconSettings data-icon="inline-start" size={18} />
+              )}
               {hasOpenRouterKey ? "Go to New Video" : "Open Settings"}
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline">
             <Link href={hasOpenRouterKey ? "/settings" : "/videos"}>
-              <HugeiconsIcon
-                data-icon="inline-start"
-                icon={hasOpenRouterKey ? Settings01Icon : Video01Icon}
-                strokeWidth={2}
-              />
+              {hasOpenRouterKey ? (
+                <IconSettings data-icon="inline-start" size={18} />
+              ) : (
+                <IconVideo data-icon="inline-start" size={18} />
+              )}
               {hasOpenRouterKey ? "Review API keys" : "Preview New Video"}
             </Link>
           </Button>
@@ -137,7 +136,7 @@ export default async function Page() {
               </Badge>
             </CardAction>
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Key01Icon} size={18} strokeWidth={2} />
+              <IconKey size={18} />
               <CardTitle>1. Add OpenRouter API key</CardTitle>
             </div>
             <CardDescription>
@@ -159,11 +158,7 @@ export default async function Page() {
             <Button asChild variant="outline">
               <Link href="/settings">
                 Open Settings
-                <HugeiconsIcon
-                  data-icon="inline-end"
-                  icon={ArrowRight01Icon}
-                  strokeWidth={2}
-                />
+                <IconArrowRight data-icon="inline-end" size={16} />
               </Link>
             </Button>
           </CardFooter>
@@ -177,7 +172,7 @@ export default async function Page() {
               </Badge>
             </CardAction>
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={CloudServerIcon} size={18} strokeWidth={2} />
+              <IconCloudComputing size={18} />
               <CardTitle>2. Finish storage setup</CardTitle>
             </div>
             <CardDescription>
@@ -196,11 +191,7 @@ export default async function Page() {
             <Button asChild variant="outline">
               <Link href="/settings">
                 Configure R2
-                <HugeiconsIcon
-                  data-icon="inline-end"
-                  icon={ArrowRight01Icon}
-                  strokeWidth={2}
-                />
+                <IconArrowRight data-icon="inline-end" size={16} />
               </Link>
             </Button>
           </CardFooter>
@@ -214,7 +205,7 @@ export default async function Page() {
               </Badge>
             </CardAction>
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Video01Icon} size={18} strokeWidth={2} />
+              <IconVideo size={18} />
               <CardTitle>3. Generate your first video</CardTitle>
             </div>
             <CardDescription>
@@ -237,22 +228,14 @@ export default async function Page() {
               <Button asChild>
                 <Link href="/videos">
                   New Video
-                  <HugeiconsIcon
-                    data-icon="inline-end"
-                    icon={ArrowRight01Icon}
-                    strokeWidth={2}
-                  />
+                  <IconArrowRight data-icon="inline-end" size={16} />
                 </Link>
               </Button>
             ) : (
               <Button asChild variant="outline">
                 <Link href="/settings">
                   Add key first
-                  <HugeiconsIcon
-                    data-icon="inline-end"
-                    icon={ArrowRight01Icon}
-                    strokeWidth={2}
-                  />
+                  <IconArrowRight data-icon="inline-end" size={16} />
                 </Link>
               </Button>
             )}
@@ -263,11 +246,7 @@ export default async function Page() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <HugeiconsIcon
-              icon={CheckmarkBadge02Icon}
-              size={20}
-              strokeWidth={2}
-            />
+            <IconRosetteDiscountCheck size={20} />
             <CardTitle>Quick checklist</CardTitle>
           </div>
           <CardDescription>

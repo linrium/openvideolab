@@ -1,13 +1,12 @@
 "use client"
 
 import {
-  Download01Icon,
-  EyeIcon,
-  Image01Icon,
-  LayersIcon,
-  UndoIcon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+  IconArrowBackUp,
+  IconDownload,
+  IconEye,
+  IconPhoto,
+  IconStack2,
+} from "@tabler/icons-react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
@@ -169,12 +168,7 @@ function ImagePlaceholder({ isGenerating }: { isGenerating: boolean }) {
 
   return (
     <>
-      <HugeiconsIcon
-        className="text-muted-foreground"
-        icon={Image01Icon}
-        size={28}
-        strokeWidth={2}
-      />
+      <IconPhoto className="text-muted-foreground" size={28} />
       <span>Generated images will appear here</span>
     </>
   )
@@ -371,11 +365,7 @@ export function ImagePreview({
                                     type="button"
                                     variant="secondary"
                                   >
-                                    <HugeiconsIcon
-                                      icon={LayersIcon}
-                                      size={14}
-                                      strokeWidth={2}
-                                    />
+                                    <IconStack2 size={14} />
                                     Reference
                                   </Button>
                                 )}
@@ -390,11 +380,7 @@ export function ImagePreview({
                                     type="button"
                                     variant="secondary"
                                   >
-                                    <HugeiconsIcon
-                                      icon={EyeIcon}
-                                      size={14}
-                                      strokeWidth={2}
-                                    />
+                                    <IconEye size={14} />
                                     View Prompt
                                   </Button>
                                 ) : null}
@@ -406,11 +392,7 @@ export function ImagePreview({
                                   type="button"
                                   variant="secondary"
                                 >
-                                  <HugeiconsIcon
-                                    icon={Download01Icon}
-                                    size={14}
-                                    strokeWidth={2}
-                                  />
+                                  <IconDownload size={14} />
                                   Download
                                 </Button>
                               </div>
@@ -504,11 +486,7 @@ export function ImagePreview({
                                     type="button"
                                     variant="outline"
                                   >
-                                    <HugeiconsIcon
-                                      icon={UndoIcon}
-                                      size={14}
-                                      strokeWidth={2}
-                                    />
+                                    <IconArrowBackUp size={14} />
                                     Undo
                                   </InputGroupButton>
                                 ) : null}

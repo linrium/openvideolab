@@ -1,11 +1,11 @@
 "use client"
 
 import {
-  ArrowReloadHorizontalIcon,
-  Cancel01Icon,
-  Download01Icon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+  IconDownload,
+  IconRefresh,
+  IconVideo,
+  IconX,
+} from "@tabler/icons-react"
 import { useEffect, useEffectEvent, useState, useTransition } from "react"
 import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
 import { Badge } from "@/components/ui/badge"
@@ -73,12 +73,7 @@ function VideoPlaceholder({
   if (!hasJob) {
     return (
       <>
-        <HugeiconsIcon
-          className="text-muted-foreground"
-          icon={ArrowReloadHorizontalIcon}
-          size={24}
-          strokeWidth={2}
-        />
+        <IconVideo className="text-muted-foreground" size={28} />
         <span>Create a video to see its preview here</span>
       </>
     )
@@ -87,12 +82,7 @@ function VideoPlaceholder({
   if (status === "failed") {
     return (
       <>
-        <HugeiconsIcon
-          className="text-rose-500"
-          icon={Cancel01Icon}
-          size={24}
-          strokeWidth={2}
-        />
+        <IconX className="text-rose-500" size={24} />
         <span className="text-rose-500">Generation failed</span>
       </>
     )
@@ -100,7 +90,7 @@ function VideoPlaceholder({
   if (status === "cancelled" || status === "expired") {
     return (
       <>
-        <HugeiconsIcon icon={Cancel01Icon} size={24} strokeWidth={2} />
+        <IconX size={24} />
         <span className="capitalize">{status}</span>
       </>
     )
@@ -166,15 +156,7 @@ function SyncButton({
       size="sm"
       variant="outline"
     >
-      {isPending ? (
-        <Spokes className="size-3" />
-      ) : (
-        <HugeiconsIcon
-          icon={ArrowReloadHorizontalIcon}
-          size={16}
-          strokeWidth={2}
-        />
-      )}
+      {isPending ? <Spokes className="size-3" /> : <IconRefresh size={16} />}
       Sync
     </Button>
   )
@@ -250,11 +232,7 @@ export function VideoPreview({
             {currentUrl && (
               <Button asChild size="sm" variant="outline">
                 <a download href={currentUrl} rel="noopener">
-                  <HugeiconsIcon
-                    icon={Download01Icon}
-                    size={16}
-                    strokeWidth={2}
-                  />
+                  <IconDownload size={16} />
                   Download
                 </a>
               </Button>

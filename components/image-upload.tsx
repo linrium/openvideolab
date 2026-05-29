@@ -1,11 +1,6 @@
 "use client"
 
-import {
-  Cancel01Icon,
-  Image01Icon,
-  Upload01Icon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react"
 import Image from "next/image"
 import { useRef, useState } from "react"
 import {
@@ -249,7 +244,7 @@ export function ImageUpload({
               onClick={onRemove}
               type="button"
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={2} />
+              <IconX size={20} />
             </button>
           )}
         </div>
@@ -278,11 +273,7 @@ export function ImageUpload({
                 {uploading ? (
                   <span className="size-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 ) : (
-                  <HugeiconsIcon
-                    icon={Upload01Icon}
-                    size={20}
-                    strokeWidth={2}
-                  />
+                  <IconUpload size={20} />
                 )}
                 <span className="text-xs">
                   {uploading ? "Uploading…" : "Upload"}
@@ -298,7 +289,7 @@ export function ImageUpload({
                 }}
                 type="button"
               >
-                <HugeiconsIcon icon={Upload01Icon} size={16} strokeWidth={2} />
+                <IconUpload size={16} />
                 Upload from file
               </button>
               <button
@@ -306,7 +297,7 @@ export function ImageUpload({
                 onClick={openGallery}
                 type="button"
               >
-                <HugeiconsIcon icon={Image01Icon} size={16} strokeWidth={2} />
+                <IconPhoto size={16} />
                 From generated images
               </button>
             </PopoverContent>
@@ -502,7 +493,7 @@ export function AudioUpload({
           {uploading ? (
             <span className="size-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : (
-            <HugeiconsIcon icon={Upload01Icon} size={20} strokeWidth={2} />
+            <IconUpload size={20} />
           )}
           <span className="text-xs">
             {uploading ? "Uploading…" : "Upload MP3 or WAV"}

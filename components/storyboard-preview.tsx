@@ -1,7 +1,6 @@
 "use client"
 
-import { Copy01Icon, Image01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { IconCopy, IconPhoto } from "@tabler/icons-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -202,11 +201,9 @@ export function StoryboardPreview({
                               />
                             ) : (
                               <div className="flex h-full items-center justify-center">
-                                <HugeiconsIcon
+                                <IconPhoto
                                   className="text-muted-foreground"
-                                  icon={Image01Icon}
                                   size={18}
-                                  strokeWidth={2}
                                 />
                               </div>
                             )}
@@ -249,11 +246,7 @@ export function StoryboardPreview({
                         size="sm"
                       >
                         Copy
-                        <HugeiconsIcon
-                          icon={Copy01Icon}
-                          size={14}
-                          strokeWidth={2}
-                        />
+                        <IconCopy size={14} />
                       </InputGroupButton>
                       <InputGroupButton
                         onClick={() => handleGenerateImage(page.imagePrompt)}
@@ -261,11 +254,7 @@ export function StoryboardPreview({
                         variant="default"
                       >
                         Generate
-                        <HugeiconsIcon
-                          icon={Image01Icon}
-                          size={14}
-                          strokeWidth={2}
-                        />
+                        <IconPhoto size={14} />
                       </InputGroupButton>
                     </InputGroupAddon>
                   </InputGroup>
@@ -309,11 +298,9 @@ export function StoryboardPreview({
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">
-                            <HugeiconsIcon
+                            <IconPhoto
                               className="text-muted-foreground"
-                              icon={Image01Icon}
                               size={18}
-                              strokeWidth={2}
                             />
                           </div>
                         )}

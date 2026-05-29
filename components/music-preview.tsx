@@ -1,7 +1,6 @@
 "use client"
 
-import { Download01Icon, MusicNote01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { IconDownload, IconMusic } from "@tabler/icons-react"
 import { Button } from "@/components/ui/button"
 
 interface MusicPreviewProps {
@@ -18,12 +17,7 @@ export function MusicPreview({ url }: MusicPreviewProps) {
             <audio className="w-full" controls src={url} />
           ) : (
             <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-muted-foreground text-sm">
-              <HugeiconsIcon
-                className="text-muted-foreground"
-                icon={MusicNote01Icon}
-                size={24}
-                strokeWidth={2}
-              />
+              <IconMusic className="text-muted-foreground" size={24} />
               <span>Create a music track to see its preview here</span>
             </div>
           )}
@@ -33,11 +27,7 @@ export function MusicPreview({ url }: MusicPreviewProps) {
           <div className="flex flex-wrap items-center justify-end gap-2 px-4">
             <Button asChild size="sm" variant="outline">
               <a download href={url} rel="noopener">
-                <HugeiconsIcon
-                  icon={Download01Icon}
-                  size={16}
-                  strokeWidth={2}
-                />
+                <IconDownload size={16} />
                 Download
               </a>
             </Button>
