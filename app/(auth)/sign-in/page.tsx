@@ -1,6 +1,6 @@
 "use client"
 
-import { IconBrandGoogle } from "@tabler/icons-react"
+import { IconBrandGoogleFilled } from "@tabler/icons-react"
 import { redirect } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -45,7 +45,7 @@ export default function SignInPage() {
             size="lg"
             variant="outline"
           >
-            <IconBrandGoogle size={20} />
+            <IconBrandGoogleFilled size={20} />
             {loading ? "Signing in…" : "Continue with Google"}
           </Button>
         </CardContent>
