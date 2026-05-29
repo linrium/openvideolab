@@ -6,8 +6,6 @@
     "@aws-sdk/s3-request-presigner": "^3.1040.0",
     "@base-ui/react": "^1.5.0",
     "@better-auth/drizzle-adapter": "^1.6.9",
-    "@hugeicons/core-free-icons": "^4.1.1",
-    "@hugeicons/react": "^1.1.6",
     "@neondatabase/serverless": "^1.1.0",
     "@opennextjs/cloudflare": "^1.19.5",
     "@openrouter/sdk": "^0.12.24",
