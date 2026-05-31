@@ -6,11 +6,16 @@ import { headers } from "next/headers"
 import { db } from "@/db"
 import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
+import {
+  createAtlasCloudTask,
+  getAtlasCloudApiKeyByUserId,
+} from "@/lib/atlas-cloud-client"
 import { auth } from "@/lib/auth"
 import { type Model, PRICING } from "@/lib/constants"
 import { createKieSeedanceTask, getKieApiKeyByUserId } from "@/lib/kie-client"
 import { getOpenrouterClientByUserId } from "@/lib/openrouter-client"
 import {
+  isAtlasCloudVideoModel,
   isKieVideoModel,
   type PersistedVideoProvider,
 } from "@/lib/video-provider"
@@ -150,24 +155,39 @@ export async function submitVideoAction(
     const title = getVideoTitle(metadata.title, request.prompt)
     const callbackUrl = `${process.env.OPENROUTER_BASE_WEBHOOK_URL}/api/webhook/video-created`
     const isKieModel = isKieVideoModel(request.model)
-    const jobId = isKieModel
-      ? await createKieSeedanceTask({
-          apiKey: await getKieApiKeyByUserId(session.user.id),
-          callbackUrl,
-          providerOptions: metadata.provider?.options?.kie,
-          request,
-        })
-      : (
-          await getOpenrouterClientByUserId(session.user.id).then(
-            (openrouterClient) =>
-              openrouterClient.videoGeneration.generate({
-                videoGenerationRequest: {
-                  ...request,
-                  callbackUrl,
-                },
-              })
-          )
-        ).id
+    const isAtlasModel = isAtlasCloudVideoModel(request.model)
+    console.log("[generate-video] submitting job with metadata:", {
+      title,
+      model: request.model,
+      provider: metadata.provider,
+      isAtlasModel,
+    })
+    let jobId: string
+    if (isKieModel) {
+      jobId = await createKieSeedanceTask({
+        apiKey: await getKieApiKeyByUserId(session.user.id),
+        callbackUrl,
+        providerOptions: metadata.provider?.options?.kie,
+        request,
+      })
+    } else if (isAtlasModel) {
+      jobId = await createAtlasCloudTask({
+        apiKey: await getAtlasCloudApiKeyByUserId(session.user.id),
+        request,
+      })
+    } else {
+      jobId = (
+        await getOpenrouterClientByUserId(session.user.id).then(
+          (openrouterClient) =>
+            openrouterClient.videoGeneration.generate({
+              videoGenerationRequest: {
+                ...request,
+                callbackUrl,
+              },
+            })
+        )
+      ).id
+    }
     console.log("[generate-video] job submitted:", jobId)
 
     const [insertedGeneration] = await db

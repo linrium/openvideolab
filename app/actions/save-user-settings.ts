@@ -6,6 +6,7 @@ import { userSettings } from "@/db/schema/user-settings"
 import { auth } from "@/lib/auth"
 
 export interface SaveUserSettingsInput {
+  atlasCloudApiKey: string
   cloudflareR2AccessKeyId: string
   cloudflareR2EndpointUrl: string
   cloudflareR2SecretAccessKey: string
@@ -42,6 +43,7 @@ export async function saveUserSettingsAction(
       .insert(userSettings)
       .values({
         userId: session.user.id,
+        atlasCloudApiKey: normalizeValue(input.atlasCloudApiKey),
         cloudflareAccessKeyId: normalizeValue(input.cloudflareR2AccessKeyId),
         cloudflareR2EndpointUrl: normalizeValue(input.cloudflareR2EndpointUrl),
         cloudflareSecretAccessKey: normalizeValue(
@@ -55,6 +57,7 @@ export async function saveUserSettingsAction(
       .onConflictDoUpdate({
         target: userSettings.userId,
         set: {
+          atlasCloudApiKey: normalizeValue(input.atlasCloudApiKey),
           cloudflareAccessKeyId: normalizeValue(input.cloudflareR2AccessKeyId),
           cloudflareR2EndpointUrl: normalizeValue(
             input.cloudflareR2EndpointUrl

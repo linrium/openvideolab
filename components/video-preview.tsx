@@ -83,8 +83,8 @@ function VideoPlaceholder({
   if (status === "failed") {
     return (
       <>
-        <IconX className="text-rose-500" size={24} />
-        <span className="text-rose-500">Generation failed</span>
+        <IconX className="text-red-400" size={24} />
+        <span className="text-red-400">Generation failed</span>
       </>
     )
   }

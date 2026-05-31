@@ -66,15 +66,10 @@ import { Input } from "./ui/input"
 const VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY = "video-settings-sidebar-width"
 const VIDEO_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
 
+const MODEL_VALUES = MODELS.map((m) => m.value) as [ModelValue, ...ModelValue[]]
+
 const schema = z.object({
-  model: z.enum([
-    "kie/bytedance/seedance-2",
-    "kie/bytedance/seedance-2-fast",
-    "bytedance/seedance-2.0",
-    "bytedance/seedance-2.0-fast",
-    "alibaba/wan-2.7",
-    "alibaba/happy-horse-1.0",
-  ]),
+  model: z.enum(MODEL_VALUES),
   title: z.string().trim(),
   prompt: z.string().min(1, "Prompt is required"),
   negativePrompt: z.string().optional(),
@@ -1023,6 +1018,14 @@ export function VideoForm({
         <div className="flex flex-col gap-4 px-4 pt-4 pb-4 sm:px-5">
           {(
             [
+              [
+                "atlas-cloud/bytedance/seedance-2.0",
+                "Atlas Cloud: Seedance 2 Pro",
+              ],
+              [
+                "atlas-cloud/bytedance/seedance-2.0-fast",
+                "Atlas Cloud: Seedance 2 Fast",
+              ],
               ["kie/bytedance/seedance-2", "Kie.ai: Seedance 2"],
               ["kie/bytedance/seedance-2-fast", "Kie.ai: Seedance 2 Fast"],
               ["bytedance/seedance-2.0", "ByteDance: Seedance 2"],
@@ -1055,19 +1058,6 @@ export function VideoForm({
                       </tr>
                     </thead>
                     <tbody>
-                      {!(isKiePricing || modelId === "alibaba/wan-2.7") && (
-                        <tr className="border-border/60 border-b">
-                          <td className="px-3 py-2 text-muted-foreground">
-                            Video tokens
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
-                            ${p.tokens.with_audio}/M
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
-                            ${p.tokens.no_audio}/M
-                          </td>
-                        </tr>
-                      )}
                       {Object.keys(rateTable).map((res, index, array) => {
                         const isLastRow = index === array.length - 1
                         const noVideoRate = hasKieVideoPricing

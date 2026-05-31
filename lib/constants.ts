@@ -10,6 +10,16 @@ export const MODELS = [
     disabled: false,
   },
   {
+    value: "atlas-cloud/bytedance/seedance-2.0",
+    label: "Atlas Cloud: Seedance 2 Pro",
+    disabled: false,
+  },
+  {
+    value: "atlas-cloud/bytedance/seedance-2.0-fast",
+    label: "Atlas Cloud: Seedance 2 Fast",
+    disabled: false,
+  },
+  {
     value: "bytedance/seedance-2.0",
     label: "ByteDance: Seedance 2",
     disabled: false,
@@ -40,6 +50,13 @@ export const ASPECT_RATIOS = [
 ] as const
 
 export const RESOLUTIONS = ["480p", "720p", "1080p"] as const
+export const ATLAS_CLOUD_RESOLUTIONS = [
+  "480p",
+  "720p",
+  "720p-SR",
+  "1080p-SR",
+  "1440p-SR",
+] as const
 export const WAN_ASPECT_RATIOS = ["9:16", "16:9", "1:1", "4:3", "3:4"] as const
 export const WAN_RESOLUTIONS = ["720p", "1080p"] as const
 
@@ -74,6 +91,46 @@ export const PRICING = {
     usd_per_second: {
       with_video_input: { "480p": 0.045, "720p": 0.1 },
       no_video_input: { "480p": 0.0775, "720p": 0.165 },
+    },
+  },
+  "atlas-cloud/bytedance/seedance-2.0": {
+    cost_type: "money",
+    tokens: { with_audio: 0, no_audio: 0 },
+    per_second: {
+      with_audio: {
+        "480p": 0.096,
+        "720p": 0.1285,
+        "720p-SR": 0.1714,
+        "1080p-SR": 0.2893,
+        "1440p-SR": 0.5786,
+      },
+      no_audio: {
+        "480p": 0.096,
+        "720p": 0.1285,
+        "720p-SR": 0.1714,
+        "1080p-SR": 0.2893,
+        "1440p-SR": 0.5786,
+      },
+    },
+  },
+  "atlas-cloud/bytedance/seedance-2.0-fast": {
+    cost_type: "money",
+    tokens: { with_audio: 0, no_audio: 0 },
+    per_second: {
+      with_audio: {
+        "480p": 0.076,
+        "720p": 0.1029,
+        "720p-SR": 0.1372,
+        "1080p-SR": 0.2314,
+        "1440p-SR": 0.4628,
+      },
+      no_audio: {
+        "480p": 0.076,
+        "720p": 0.1029,
+        "720p-SR": 0.1372,
+        "1080p-SR": 0.2314,
+        "1440p-SR": 0.4628,
+      },
     },
   },
   "bytedance/seedance-2.0": {
@@ -171,6 +228,30 @@ const kieSeedanceFastConfig: ModelFieldConfig = {
   resolutions: ["480p", "720p"],
 }
 
+const atlasCloudConfig: ModelFieldConfig = {
+  aspectRatios: ["9:16", "16:9", "1:1", "4:3", "3:4", "21:9"],
+  resolutions: ATLAS_CLOUD_RESOLUTIONS,
+  duration: { type: "toggle", options: DURATIONS },
+  promptMaxLength: 2500,
+  defaults: {
+    aspectRatio: "9:16",
+    resolution: "480p",
+    duration: 5,
+  },
+  features: {
+    atlasCloudAudioUrl: false,
+    atlasCloudNegativePrompt: false,
+    atlasCloudPromptExtend: false,
+    generateAudio: true,
+    inputReferences: true,
+    kieNsfwChecker: false,
+    kieReferenceAudioUrls: false,
+    kieReferenceVideoUrls: false,
+    frames: true,
+    watermark: false,
+  },
+}
+
 const wanConfig: ModelFieldConfig = {
   aspectRatios: WAN_ASPECT_RATIOS,
   resolutions: WAN_RESOLUTIONS,
@@ -198,6 +279,8 @@ const wanConfig: ModelFieldConfig = {
 export const MODEL_CONFIGS: Record<ModelValue, ModelFieldConfig> = {
   "kie/bytedance/seedance-2": kieSeedanceConfig,
   "kie/bytedance/seedance-2-fast": kieSeedanceFastConfig,
+  "atlas-cloud/bytedance/seedance-2.0": atlasCloudConfig,
+  "atlas-cloud/bytedance/seedance-2.0-fast": atlasCloudConfig,
   "bytedance/seedance-2.0": seedanceConfig,
   "bytedance/seedance-2.0-fast": seedanceConfig,
   "alibaba/wan-2.7": wanConfig,

@@ -10,6 +10,7 @@ export const userSettings = pgTable("user_settings", {
   cloudflareR2EndpointUrl: text("cloudflare_r2_endpoint_url"),
   cloudflareSecretAccessKey: text("cloudflare_secret_access_key"),
   deepseekApiKey: text("deepseek_api_key"),
+  atlasCloudApiKey: text("atlas_cloud_api_key"),
   kieApiKey: text("kie_api_key"),
   openrouterApiKey: text("openrouter_api_key"),
   openaiApiKey: text("openai_api_key"),

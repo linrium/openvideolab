@@ -43,6 +43,7 @@ const optionalUrlSchema = z
   )
 
 const settingsSchema = z.object({
+  atlasCloudApiKey: apiKeySchema,
   cloudflareR2AccessKeyId: apiKeySchema,
   cloudflareR2EndpointUrl: optionalUrlSchema,
   cloudflareR2SecretAccessKey: apiKeySchema,
@@ -56,6 +57,7 @@ export type SettingsValues = z.infer<typeof settingsSchema>
 type KeyFieldName = keyof SettingsValues
 
 const EMPTY_SETTINGS_VALUES: SettingsValues = {
+  atlasCloudApiKey: "",
   cloudflareR2AccessKeyId: "",
   cloudflareR2EndpointUrl: "",
   cloudflareR2SecretAccessKey: "",
@@ -66,6 +68,7 @@ const EMPTY_SETTINGS_VALUES: SettingsValues = {
 }
 
 const fieldLabels: Record<KeyFieldName, string> = {
+  atlasCloudApiKey: "Atlas Cloud API Key",
   cloudflareR2AccessKeyId: "Cloudflare R2 Access Key ID",
   cloudflareR2EndpointUrl: "Cloudflare R2 Endpoint URL",
   cloudflareR2SecretAccessKey: "Cloudflare R2 Secret Access Key",
@@ -88,6 +91,7 @@ interface SettingsFormProps {
 export function SettingsForm({
   initialValues = EMPTY_SETTINGS_VALUES,
 }: SettingsFormProps) {
+  const [isAtlasCloudVisible, setIsAtlasCloudVisible] = useState(false)
   const [isDeepSeekVisible, setIsDeepSeekVisible] = useState(false)
   const [isKieVisible, setIsKieVisible] = useState(false)
   const [isOpenRouterVisible, setIsOpenRouterVisible] = useState(false)
@@ -412,6 +416,71 @@ export function SettingsForm({
                         message: String(error),
                       }))}
                     />
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <h2 className="font-medium text-sm">Atlas Cloud</h2>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    Configure the API key used for Atlas Cloud Seedance video
+                    generation.
+                  </p>
+                </div>
+              </div>
+
+              <form.Field
+                name="atlasCloudApiKey"
+                validators={{
+                  onBlur: ({ value }) =>
+                    getFieldError("atlasCloudApiKey", value),
+                }}
+              >
+                {(field) => (
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>
+                      {fieldLabels.atlasCloudApiKey}
+                    </FieldLabel>
+                    <FieldDescription>
+                      Used when you select the Atlas Cloud Seedance models.
+                    </FieldDescription>
+                    <InputGroup>
+                      <InputGroupInput
+                        aria-invalid={
+                          field.state.meta.errors.length > 0 || undefined
+                        }
+                        autoComplete="off"
+                        id={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value)
+                          setStatusMessage(null)
+                        }}
+                        placeholder="ac_..."
+                        spellCheck={false}
+                        type={isAtlasCloudVisible ? "text" : "password"}
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupButton
+                          onClick={() => {
+                            setIsAtlasCloudVisible(
+                              (currentValue) => !currentValue
+                            )
+                          }}
+                        >
+                          {isAtlasCloudVisible ? "Hide" : "Show"}
+                        </InputGroupButton>
+                      </InputGroupAddon>
+                    </InputGroup>
+                    <FieldError />
                   </Field>
                 )}
               </form.Field>

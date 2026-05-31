@@ -28,8 +28,6 @@ export interface GenerateVideoResult {
 const BASE_URL = process.env.OPENROUTER_BASE_URL
 
 export function createOpenrouterClient(apiKey: string): OpenRouter {
-  console.log("BASE_URL", BASE_URL)
-
   return new OpenRouter({
     apiKey,
     serverURL: BASE_URL,

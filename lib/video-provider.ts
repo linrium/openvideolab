@@ -42,3 +42,7 @@ export function isKieVideoModel(model: string): boolean {
 export function toKieModel(model: string): string {
   return isKieVideoModel(model) ? model.slice("kie/".length) : model
 }
+
+export function isAtlasCloudVideoModel(model: string): boolean {
+  return model.startsWith("atlas-cloud/")
+}

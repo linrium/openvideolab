@@ -6,6 +6,10 @@ import { headers } from "next/headers"
 import { db } from "@/db"
 import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
+import {
+  getAtlasCloudApiKeyByUserId,
+  getAtlasCloudTaskDetail,
+} from "@/lib/atlas-cloud-client"
 import { auth } from "@/lib/auth"
 import { getKieApiKeyByUserId, getKieTaskDetail } from "@/lib/kie-client"
 import {
@@ -15,7 +19,7 @@ import {
   type VideoJobStatus,
 } from "@/lib/openrouter-client"
 import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
-import { isKieVideoModel } from "@/lib/video-provider"
+import { isAtlasCloudVideoModel, isKieVideoModel } from "@/lib/video-provider"
 
 export interface PollJobStatusResult {
   ok: true
@@ -148,6 +152,81 @@ export async function pollJobStatusAction(
     }
 
     const { current, userId } = context
+
+    if (isAtlasCloudVideoModel(current.model)) {
+      const apiKey = await getAtlasCloudApiKeyByUserId(userId)
+      let detail: Awaited<ReturnType<typeof getAtlasCloudTaskDetail>>
+      try {
+        detail = await getAtlasCloudTaskDetail({ apiKey, taskId: jobId })
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Atlas Cloud polling failed"
+        await db
+          .update(videos)
+          .set({
+            costType: "money",
+            error: message,
+            status: "failed",
+            updatedAt: new Date(),
+          })
+          .where(eq(videos.jobId, jobId))
+        await db
+          .update(generations)
+          .set({ status: "failed", updatedAt: new Date() })
+          .where(eq(generations.id, current.generationId))
+        if (options.refreshClient !== false) {
+          revalidatePath("/videos")
+          refresh()
+        }
+        return { ok: false, message }
+      }
+      const statusChanged = current.status !== detail.status
+
+      if (statusChanged) {
+        await db
+          .update(videos)
+          .set({
+            costType: "money",
+            error: detail.error,
+            status: detail.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(videos.jobId, jobId))
+
+        await db
+          .update(generations)
+          .set({
+            status: detail.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(generations.id, current.generationId))
+
+        if (options.refreshClient !== false) {
+          revalidatePath("/videos")
+          refresh()
+        }
+      }
+
+      if (detail.status === "completed" && !current.path) {
+        if (!detail.resultUrl) {
+          return { ok: false, message: "Atlas Cloud result URL is missing" }
+        }
+
+        const key = await syncCompletedKieVideoAction({
+          jobId,
+          resultUrl: detail.resultUrl,
+          userId,
+        })
+        if (key === null) {
+          return { ok: false, message: "Failed to sync" }
+        }
+        const url = await getPresignedUrl({ key })
+        return { ok: true, status: detail.status as VideoJobStatus, url }
+      }
+
+      return { ok: true, status: detail.status as VideoJobStatus }
+    }
+
     if (isKieVideoModel(current.model)) {
       const apiKey = await getKieApiKeyByUserId(userId)
       const detail = await getKieTaskDetail({ apiKey, taskId: jobId })

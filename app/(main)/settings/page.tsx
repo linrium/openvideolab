@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 }
 
 const EMPTY_SETTINGS_VALUES: SettingsValues = {
+  atlasCloudApiKey: "",
   cloudflareR2AccessKeyId: "",
   cloudflareR2EndpointUrl: "",
   cloudflareR2SecretAccessKey: "",
@@ -39,6 +40,7 @@ export default async function SettingsPage() {
       initialValues={
         settings
           ? {
+              atlasCloudApiKey: settings.atlasCloudApiKey ?? "",
               cloudflareR2AccessKeyId: settings.cloudflareAccessKeyId ?? "",
               cloudflareR2EndpointUrl: settings.cloudflareR2EndpointUrl ?? "",
               cloudflareR2SecretAccessKey:
