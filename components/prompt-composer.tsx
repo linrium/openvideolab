@@ -283,6 +283,7 @@ export function PromptComposer({
   ).current
 
   const editor = useEditor({
+    immediatelyRender: true,
     extensions: [
       StarterKit.configure({
         heading: false,

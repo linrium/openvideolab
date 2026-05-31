@@ -10,10 +10,13 @@ import {
 } from "@tabler/icons-react"
 import { useForm } from "@tanstack/react-form"
 import { useRouter } from "next/navigation"
-import { type ReactNode, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import z from "zod/v4"
-import { submitVideoAction } from "@/app/actions/generate-video"
+import {
+  submitVideoAction,
+  updateVideoGenerationTitleAction,
+} from "@/app/actions/generate-video"
 import {
   AudioUpload,
   ImageUpload,
@@ -38,6 +41,7 @@ import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
+  InputGroupInput,
 } from "@/components/ui/input-group"
 import {
   Select,
@@ -66,6 +70,7 @@ import { Input } from "./ui/input"
 
 const VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY = "video-settings-sidebar-width"
 const VIDEO_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
+const TITLE_SAVE_DEBOUNCE_MS = 600
 
 const MODEL_VALUES = MODELS.map((m) => m.value) as [ModelValue, ...ModelValue[]]
 
@@ -310,6 +315,7 @@ interface VideoFormProps {
   initialValues?: VideoFormValues
   preview?: ReactNode
   readOnly?: boolean
+  videoId?: string
 }
 
 function getSubmitLabel(
@@ -333,10 +339,18 @@ export function VideoForm({
   initialValues = DEFAULT_VALUES,
   preview,
   readOnly = false,
+  videoId,
 }: VideoFormProps) {
   const router = useRouter()
   const [confirming, setConfirming] = useState(false)
+  const [isSavingTitle, setIsSavingTitle] = useState(false)
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingTitleSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savedTitleRef = useRef(initialValues.title)
+  const latestTitleRef = useRef(initialValues.title)
+  const titleSaveCountRef = useRef(0)
+  const titleSaveVersionRef = useRef(0)
+  const canEditTitle = Boolean(videoId)
 
   const handleGenerateClick = () => {
     if (confirming) {
@@ -448,6 +462,113 @@ export function VideoForm({
     },
   })
 
+  useEffect(() => {
+    savedTitleRef.current = initialValues.title
+    latestTitleRef.current = initialValues.title
+  }, [initialValues.title])
+
+  useEffect(
+    () => () => {
+      if (pendingTitleSaveRef.current) {
+        clearTimeout(pendingTitleSaveRef.current)
+      }
+    },
+    []
+  )
+
+  const startTitleSave = () => {
+    titleSaveCountRef.current += 1
+    setIsSavingTitle(true)
+  }
+
+  const finishTitleSave = () => {
+    titleSaveCountRef.current = Math.max(0, titleSaveCountRef.current - 1)
+    setIsSavingTitle(titleSaveCountRef.current > 0)
+  }
+
+  const saveVideoTitle = async (title: string, version: number) => {
+    if (!(videoId && canEditTitle)) {
+      return
+    }
+
+    const trimmedTitle = title.trim()
+    if (trimmedTitle === savedTitleRef.current) {
+      return
+    }
+
+    startTitleSave()
+    try {
+      const result = await updateVideoGenerationTitleAction({
+        title: trimmedTitle,
+        videoId,
+      })
+
+      if (version !== titleSaveVersionRef.current) {
+        return
+      }
+
+      if (!result.ok) {
+        toast.error("Failed to save video title", {
+          description: result.message,
+        })
+        return
+      }
+
+      const isLatestTitle = latestTitleRef.current === title
+      savedTitleRef.current = result.title
+      if (isLatestTitle) {
+        latestTitleRef.current = result.title
+        form.setFieldValue("title", result.title)
+      }
+      router.refresh()
+    } finally {
+      finishTitleSave()
+    }
+  }
+
+  const scheduleVideoTitleSave = (title: string) => {
+    latestTitleRef.current = title
+
+    if (!(videoId && canEditTitle)) {
+      return
+    }
+
+    if (pendingTitleSaveRef.current) {
+      clearTimeout(pendingTitleSaveRef.current)
+    }
+
+    const version = titleSaveVersionRef.current + 1
+    titleSaveVersionRef.current = version
+
+    pendingTitleSaveRef.current = setTimeout(() => {
+      pendingTitleSaveRef.current = null
+      saveVideoTitle(title, version).catch(() => {
+        toast.error("Failed to save video title")
+      })
+    }, TITLE_SAVE_DEBOUNCE_MS)
+  }
+
+  const handleVideoTitleChange = (
+    title: string,
+    handleChange: (value: string) => void
+  ) => {
+    handleChange(title)
+    scheduleVideoTitleSave(title)
+  }
+
+  const flushPendingTitleSave = () => {
+    if (!pendingTitleSaveRef.current) {
+      return
+    }
+
+    clearTimeout(pendingTitleSaveRef.current)
+    pendingTitleSaveRef.current = null
+    const version = titleSaveVersionRef.current
+    saveVideoTitle(latestTitleRef.current, version).catch(() => {
+      toast.error("Failed to save video title")
+    })
+  }
+
   const settings = (
     <Tabs className="flex h-full min-h-0 flex-col gap-0" defaultValue="compose">
       <CardHeader
@@ -513,19 +634,44 @@ export function VideoForm({
                       Optional. Give this video a short title for your sidebar
                       and detail views.
                     </FieldDescription>
-                    <Input
-                      aria-invalid={
-                        field.state.meta.errors.length > 0 || undefined
-                      }
-                      disabled={readOnly}
-                      id={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="e.g. Golden Hour Lake"
-                      spellCheck={false}
-                      type="text"
-                      value={field.state.value}
-                    />
+                    <InputGroup
+                      aria-busy={isSavingTitle}
+                      data-disabled={(readOnly && !canEditTitle) || undefined}
+                    >
+                      <InputGroupInput
+                        aria-invalid={
+                          field.state.meta.errors.length > 0 || undefined
+                        }
+                        disabled={readOnly && !canEditTitle}
+                        id={field.name}
+                        onBlur={() => {
+                          field.handleBlur()
+                        }}
+                        onChange={(e) =>
+                          handleVideoTitleChange(
+                            e.target.value,
+                            field.handleChange
+                          )
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            flushPendingTitleSave()
+                          }
+                        }}
+                        placeholder="e.g. Golden Hour Lake"
+                        spellCheck={false}
+                        type="text"
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon
+                        align="inline-end"
+                        aria-live="polite"
+                        className={isSavingTitle ? undefined : "invisible"}
+                      >
+                        <Spokes aria-hidden className="size-3" />
+                        <span className="sr-only">Saving title</span>
+                      </InputGroupAddon>
+                    </InputGroup>
                     <FieldError
                       errors={field.state.meta.errors.map((e) => ({
                         message: String(e),

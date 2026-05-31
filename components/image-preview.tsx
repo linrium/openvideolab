@@ -1,15 +1,20 @@
 "use client"
 
 import {
+  type Icon,
   IconArrowBackUp,
   IconArrowUp,
   IconArrowUpRight,
+  IconCalendarTime,
+  IconCpu,
+  IconCurrencyDollar,
   IconDownload,
   IconEye,
   IconPhoto,
+  IconRulerMeasure,
 } from "@tabler/icons-react"
 import Image from "next/image"
-import { useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import type {
   GeneratedImagesState,
@@ -177,6 +182,21 @@ function ImagePlaceholder({ isGenerating }: { isGenerating: boolean }) {
   )
 }
 
+function MetadataText({
+  children,
+  icon: IconComponent,
+}: {
+  children: ReactNode
+  icon: Icon
+}) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <IconComponent aria-hidden size={14} />
+      <span className="min-w-0">{children}</span>
+    </span>
+  )
+}
+
 export function ImagePreview({
   form,
   generatedImages,
@@ -269,6 +289,7 @@ export function ImagePreview({
   const selectedDimensions = selectedImage
     ? IMAGE_SIZE_DIMENSIONS[selectedImage.size]
     : null
+  const lcpImageUrl = generatedImages[0]?.images[0]
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
@@ -307,6 +328,7 @@ export function ImagePreview({
                   )
                   const metadataItems = [
                     {
+                      icon: IconRulerMeasure,
                       label: "Size",
                       value: [
                         batch.metadata.size.replace("x", " × "),
@@ -317,8 +339,13 @@ export function ImagePreview({
                         .filter(Boolean)
                         .join(" · "),
                     },
-                    { label: "Model", value: batch.metadata.model },
                     {
+                      icon: IconCpu,
+                      label: "Model",
+                      value: batch.metadata.model,
+                    },
+                    {
+                      icon: IconCurrencyDollar,
                       label: "Cost",
                       value: formatCost(batch.metadata.cost),
                     },
@@ -342,21 +369,23 @@ export function ImagePreview({
                     <div key={batchKey}>
                       {batchIndex > 0 && <Separator className="mb-4" />}
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-muted-foreground text-xs">
-                        <span>{createdAtLabel ?? " "}</span>
+                        <MetadataText icon={IconCalendarTime}>
+                          {createdAtLabel ?? " "}
+                        </MetadataText>
                         {isGallery ? (
-                          <span>{batch.images.length} images</span>
+                          <MetadataText icon={IconPhoto}>
+                            {batch.images.length} images
+                          </MetadataText>
                         ) : null}
                       </div>
-                      <div className="mb-3 flex flex-wrap items-center gap-y-1 text-muted-foreground text-xs">
-                        {metadataItems.map((item, index) => (
-                          <div className="flex items-center" key={item.label}>
-                            {index > 0 ? (
-                              <span className="mx-2 text-border">|</span>
-                            ) : null}
-                            <span>
-                              {item.label}: {item.value}
+                      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
+                        {metadataItems.map((item) => (
+                          <MetadataText icon={item.icon} key={item.label}>
+                            <span className="font-medium text-foreground/80">
+                              {item.label}
                             </span>
-                          </div>
+                            : {item.value}
+                          </MetadataText>
                         ))}
                       </div>
                       <div
@@ -373,7 +402,7 @@ export function ImagePreview({
                             )}
                             key={image}
                           >
-                            <div className="group relative overflow-hidden rounded-md border border-border/70 bg-muted/20">
+                            <div className="group @container/image-card relative overflow-hidden rounded-md border border-border/70 bg-muted/20">
                               <button
                                 aria-label="Open image viewer"
                                 className={cn(
@@ -393,7 +422,7 @@ export function ImagePreview({
                                   className="h-auto w-full"
                                   height={dimensions.height}
                                   loading={
-                                    batchIndex === 0 && imageIndex === 0
+                                    image === lcpImageUrl && imageIndex === 0
                                       ? "eager"
                                       : "lazy"
                                   }
@@ -407,42 +436,54 @@ export function ImagePreview({
                                 {!readOnly && (
                                   <Button
                                     aria-label="Use as reference"
+                                    className="@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
                                     onClick={() => handleReferenceClick(image)}
-                                    size="icon-sm"
+                                    size="sm"
                                     title="Reference"
                                     type="button"
                                     variant="secondary"
                                   >
-                                    <IconArrowUpRight size={14} />
+                                    <IconArrowUpRight data-icon="inline-start" />
+                                    <span className="@md/image-card:inline hidden">
+                                      Reference
+                                    </span>
                                   </Button>
                                 )}
                                 {!readOnly && batch.metadata.prompt ? (
                                   <Button
                                     aria-label="View prompt"
+                                    className="@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
                                     onClick={() =>
                                       handleViewPromptClick(
                                         batch.metadata.prompt ?? ""
                                       )
                                     }
-                                    size="icon-sm"
+                                    size="sm"
                                     title="View Prompt"
                                     type="button"
                                     variant="secondary"
                                   >
-                                    <IconEye size={14} />
+                                    <IconEye data-icon="inline-start" />
+                                    <span className="@md/image-card:inline hidden">
+                                      View Prompt
+                                    </span>
                                   </Button>
                                 ) : null}
                                 <Button
                                   aria-label="Download image"
+                                  className="@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
                                   onClick={() => {
                                     downloadImage(image)
                                   }}
-                                  size="icon-sm"
+                                  size="sm"
                                   title="Download"
                                   type="button"
                                   variant="secondary"
                                 >
-                                  <IconDownload size={14} />
+                                  <IconDownload data-icon="inline-start" />
+                                  <span className="@md/image-card:inline hidden">
+                                    Download
+                                  </span>
                                 </Button>
                               </div>
                             </div>

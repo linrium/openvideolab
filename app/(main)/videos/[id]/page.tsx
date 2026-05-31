@@ -176,6 +176,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
         <VideoPreview jobId={video.jobId} url={videoUrl} video={video} />
       }
       readOnly
+      videoId={video.videoId}
     />
   )
 }

@@ -1,8 +1,10 @@
 "use server"
 
 import type { VideoGenerationRequest } from "@openrouter/sdk/models"
+import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
+import z from "zod/v4"
 import { db } from "@/db"
 import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
@@ -30,6 +32,16 @@ export interface SubmitVideoError {
   ok: false
 }
 
+export interface UpdateVideoTitleSuccess {
+  ok: true
+  title: string
+}
+
+export interface UpdateVideoTitleError {
+  message: string
+  ok: false
+}
+
 interface ImageKeys {
   audioReferenceKey?: string
   frameFirstKey?: string
@@ -43,6 +55,10 @@ interface VideoMetadata {
 }
 
 const TITLE_MAX_LENGTH = 80
+const updateVideoTitleSchema = z.object({
+  title: z.string().trim(),
+  videoId: z.string().min(1),
+})
 
 function getVideoTitle(metadataTitle: string, prompt: string): string {
   const trimmedTitle = metadataTitle.trim()
@@ -139,6 +155,55 @@ function getEstimatedCost(
   const rate = table[resolution as keyof typeof table]
 
   return String(rate * duration)
+}
+
+export async function updateVideoGenerationTitleAction(
+  input: unknown
+): Promise<UpdateVideoTitleSuccess | UpdateVideoTitleError> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) {
+    return { ok: false, message: "Unauthorized" }
+  }
+
+  const parsedInput = updateVideoTitleSchema.safeParse(input)
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: parsedInput.error.issues
+        .map((issue) => issue.message)
+        .join(", "),
+    }
+  }
+
+  const [video] = await db
+    .select({
+      generationId: videos.generationId,
+      prompt: videos.prompt,
+      userId: videos.userId,
+    })
+    .from(videos)
+    .where(eq(videos.id, parsedInput.data.videoId))
+    .limit(1)
+
+  if (!video || video.userId !== session.user.id) {
+    return { ok: false, message: "Unauthorized" }
+  }
+
+  const title = getVideoTitle(parsedInput.data.title, video.prompt)
+
+  await db
+    .update(generations)
+    .set({
+      title,
+      updatedAt: new Date(),
+    })
+    .where(eq(generations.id, video.generationId))
+
+  revalidatePath("/", "layout")
+  revalidatePath(`/videos/${parsedInput.data.videoId}`)
+  revalidatePath("/videos")
+
+  return { ok: true, title }
 }
 
 export async function submitVideoAction(

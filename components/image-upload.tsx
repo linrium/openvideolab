@@ -240,6 +240,7 @@ export function ImageUpload({
               !disabled && "group-hover:brightness-50"
             )}
             fill
+            sizes="144px"
             src={value.url}
           />
           {!disabled && (

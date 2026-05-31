@@ -22,6 +22,11 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -52,7 +57,7 @@ import {
   SUPPORTED_IMAGE_MODEL,
   SUPPORTED_SEEDREAM_IMAGE_MODEL,
 } from "@/lib/image-generation"
-import { Input } from "./ui/input"
+import { Spokes } from "./loading-ui/spokes"
 
 const SIZE_CONFIG: Record<ImageSize, { icon: Icon; label: string }> = {
   "1:1": { icon: IconSquare, label: "1:1" },
@@ -127,12 +132,16 @@ function getModelForSourceImageState(currentModel: ImageModel): ImageModel {
 
 export function ImageForm({
   form,
-  onTitleBlur,
+  isSavingTitle = false,
+  onTitleChange,
+  onTitleSaveNow,
   readOnly = false,
 }: {
   form: ImageGenerationFormApi
   generatedImages?: GeneratedImagesState[]
-  onTitleBlur?: (title: string) => void | Promise<void>
+  isSavingTitle?: boolean
+  onTitleChange?: (title: string) => void
+  onTitleSaveNow?: () => void
   readOnly?: boolean
 }) {
   return (
@@ -355,22 +364,38 @@ export function ImageForm({
                             Optional. Leave blank to derive a title from the
                             prompt.
                           </FieldDescription>
-                          <Input
-                            disabled={readOnly}
-                            id={field.name}
-                            name={field.name}
-                            onBlur={() => {
-                              field.handleBlur()
-                              Promise.resolve(
-                                onTitleBlur?.(field.state.value)
-                              ).catch(() => undefined)
-                            }}
-                            onChange={(event) =>
-                              field.handleChange(event.target.value)
-                            }
-                            placeholder="Name this image set"
-                            value={field.state.value}
-                          />
+                          <InputGroup
+                            aria-busy={isSavingTitle}
+                            data-disabled={readOnly || undefined}
+                          >
+                            <InputGroupInput
+                              disabled={readOnly}
+                              id={field.name}
+                              name={field.name}
+                              onBlur={field.handleBlur}
+                              onChange={(event) => {
+                                field.handleChange(event.target.value)
+                                onTitleChange?.(event.target.value)
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  onTitleSaveNow?.()
+                                }
+                              }}
+                              placeholder="Name this image set"
+                              value={field.state.value}
+                            />
+                            <InputGroupAddon
+                              align="inline-end"
+                              aria-live="polite"
+                              className={
+                                isSavingTitle ? undefined : "invisible"
+                              }
+                            >
+                              <Spokes aria-hidden className="size-3" />
+                              <span className="sr-only">Saving title</span>
+                            </InputGroupAddon>
+                          </InputGroup>
                         </Field>
                       )}
                     </form.Field>

@@ -22,6 +22,7 @@ import {
 
 const PENDING_IMAGE_GENERATION_KEY_PREFIX = "pending-image-generation:"
 const IMAGE_SETTINGS_SIDEBAR_WIDTH_KEY = "image-settings-sidebar-width"
+const TITLE_SAVE_DEBOUNCE_MS = 600
 
 export interface GeneratedImageMetadata {
   cost: string | null
@@ -137,7 +138,12 @@ export function ImageStudio({
     message: string
     createdAt: string
   } | null>(null)
+  const [isSavingTitle, setIsSavingTitle] = useState(false)
+  const pendingTitleSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedTitleRef = useRef(initialValues.title)
+  const latestTitleRef = useRef(initialValues.title)
+  const titleSaveCountRef = useRef(0)
+  const titleSaveVersionRef = useRef(0)
   const hasAttemptedAutoGenerationRef = useRef(false)
 
   const handleGenerated = (result: GeneratedImagesState | null) => {
@@ -152,7 +158,17 @@ export function ImageStudio({
     setGenerationError({ message, createdAt: new Date().toISOString() })
   }
 
-  const handleTitleBlur = async (title: string) => {
+  const startTitleSave = () => {
+    titleSaveCountRef.current += 1
+    setIsSavingTitle(true)
+  }
+
+  const finishTitleSave = () => {
+    titleSaveCountRef.current = Math.max(0, titleSaveCountRef.current - 1)
+    setIsSavingTitle(titleSaveCountRef.current > 0)
+  }
+
+  const saveTitle = async (title: string, version: number) => {
     if (!sessionId || readOnly) {
       return
     }
@@ -162,20 +178,69 @@ export function ImageStudio({
       return
     }
 
-    const result = await updateImageGenerationTitleAction({
-      sessionId,
-      title: trimmedTitle,
-    })
-
-    if (!result.ok) {
-      toast.error("Failed to save image title", {
-        description: result.message,
+    startTitleSave()
+    try {
+      const result = await updateImageGenerationTitleAction({
+        sessionId,
+        title: trimmedTitle,
       })
+
+      if (version !== titleSaveVersionRef.current) {
+        return
+      }
+
+      if (!result.ok) {
+        toast.error("Failed to save image title", {
+          description: result.message,
+        })
+        return
+      }
+
+      const isLatestTitle = latestTitleRef.current === title
+      savedTitleRef.current = result.title
+      if (isLatestTitle) {
+        latestTitleRef.current = result.title
+        form.setFieldValue("title", result.title)
+      }
+      router.refresh()
+    } finally {
+      finishTitleSave()
+    }
+  }
+
+  const scheduleTitleSave = (title: string) => {
+    latestTitleRef.current = title
+
+    if (!sessionId || readOnly) {
       return
     }
 
-    savedTitleRef.current = result.title
-    router.refresh()
+    if (pendingTitleSaveRef.current) {
+      clearTimeout(pendingTitleSaveRef.current)
+    }
+
+    const version = titleSaveVersionRef.current + 1
+    titleSaveVersionRef.current = version
+
+    pendingTitleSaveRef.current = setTimeout(() => {
+      pendingTitleSaveRef.current = null
+      saveTitle(title, version).catch(() => {
+        toast.error("Failed to save image title")
+      })
+    }, TITLE_SAVE_DEBOUNCE_MS)
+  }
+
+  const flushPendingTitleSave = () => {
+    if (!pendingTitleSaveRef.current) {
+      return
+    }
+
+    clearTimeout(pendingTitleSaveRef.current)
+    pendingTitleSaveRef.current = null
+    const version = titleSaveVersionRef.current
+    saveTitle(latestTitleRef.current, version).catch(() => {
+      toast.error("Failed to save image title")
+    })
   }
 
   const form = useImageGenerationForm(handleGenerated, handleError, {
@@ -186,7 +251,17 @@ export function ImageStudio({
 
   useEffect(() => {
     savedTitleRef.current = initialValues.title
+    latestTitleRef.current = initialValues.title
   }, [initialValues.title])
+
+  useEffect(
+    () => () => {
+      if (pendingTitleSaveRef.current) {
+        clearTimeout(pendingTitleSaveRef.current)
+      }
+    },
+    []
+  )
 
   useEffect(() => {
     if (
@@ -247,7 +322,9 @@ export function ImageStudio({
         <ImageForm
           form={form}
           generatedImages={generatedImages}
-          onTitleBlur={handleTitleBlur}
+          isSavingTitle={isSavingTitle}
+          onTitleChange={scheduleTitleSave}
+          onTitleSaveNow={flushPendingTitleSave}
           readOnly={readOnly}
         />
       </ResizableRightSidebar>
