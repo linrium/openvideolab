@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import { MobileWarning } from "@/components/mobile-warning"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -31,6 +32,7 @@ export default function RootLayout({
           enableSystem
           scriptProps={{ type: "application/json" }}
         >
+          <MobileWarning />
           <TooltipProvider>{children}</TooltipProvider>
           <Toaster />
         </ThemeProvider>
