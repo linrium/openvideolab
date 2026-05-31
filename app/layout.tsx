@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Inter, Playwrite_US_Modern } from "next/font/google"
+import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -7,11 +7,6 @@ import "./globals.css"
 import { cn } from "@/lib/utils"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
-
-const playwrite = Playwrite_US_Modern({
-  variable: "--font-display",
-  weight: "400",
-})
 
 export const metadata: Metadata = {
   title: "OpenVideoLab",
@@ -25,13 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={cn(
-        "h-screen",
-        "antialiased",
-        "font-sans",
-        inter.variable,
-        playwrite.variable
-      )}
+      className={cn("h-screen", "antialiased", "font-sans", inter.variable)}
       lang="en"
       suppressHydrationWarning
     >
