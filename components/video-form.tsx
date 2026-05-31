@@ -22,7 +22,9 @@ import {
   MultiVideoUpload,
 } from "@/components/image-upload"
 import { Spokes } from "@/components/loading-ui/spokes"
+import { PromptComposer } from "@/components/prompt-composer"
 import { ResizableRightSidebar } from "@/components/resizable-right-sidebar"
+import { SwapText } from "@/components/swap-text"
 import { CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import {
   Field,
@@ -36,7 +38,6 @@ import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
-  InputGroupTextarea,
 } from "@/components/ui/input-group"
 import {
   Select,
@@ -309,6 +310,23 @@ interface VideoFormProps {
   initialValues?: VideoFormValues
   preview?: ReactNode
   readOnly?: boolean
+}
+
+function getSubmitLabel(
+  readOnly: boolean,
+  confirming: boolean,
+  isSubmitting: boolean
+) {
+  if (readOnly) {
+    return "Video Already Exists"
+  }
+  if (isSubmitting) {
+    return "Submitting…"
+  }
+  if (confirming) {
+    return "Confirm?"
+  }
+  return "Generate Video"
 }
 
 export function VideoForm({
@@ -1137,78 +1155,90 @@ export function VideoForm({
         <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
           <div className={VIDEO_PREVIEW_CONTENT_CLASS}>
             <div className="px-4">
-              <form.Field name="prompt">
-                {(field) => (
-                  <>
-                    <InputGroup>
-                      <InputGroupTextarea
-                        aria-invalid={
-                          field.state.meta.errors.length > 0 || undefined
-                        }
-                        className="max-h-[min(40svh,24rem)] overflow-y-auto"
-                        disabled={readOnly}
-                        onBlur={field.handleBlur}
-                        onChange={(event) =>
-                          field.handleChange(event.target.value)
-                        }
-                        placeholder="Describe the video you want to generate…"
-                        rows={4}
-                        spellCheck={false}
-                        value={field.state.value}
-                      />
-                      <InputGroupAddon
-                        align="block-end"
-                        className="justify-end"
-                      >
-                        <form.Subscribe
-                          selector={(state) => ({
-                            canSubmit: state.canSubmit,
-                            isSubmitting: state.isSubmitting,
-                            prompt: state.values.prompt,
-                          })}
-                        >
-                          {({ canSubmit, isSubmitting, prompt }) => {
-                            const hasPrompt = prompt.trim().length > 0
-                            let submitLabel = "Generate Video"
-                            if (readOnly) {
-                              submitLabel = "Video Already Exists"
-                            } else if (isSubmitting) {
-                              submitLabel = "Submitting…"
+              <form.Subscribe
+                selector={(state) =>
+                  (state.values.inputReferences ?? []).map((ref, i) => ({
+                    id: ref.url,
+                    label: `Image${i + 1}`,
+                    thumbnailUrl: ref.url,
+                    url: ref.url,
+                  }))
+                }
+              >
+                {(mentionItems) => (
+                  <form.Field name="prompt">
+                    {(field) => (
+                      <>
+                        <InputGroup>
+                          <PromptComposer
+                            aria-invalid={
+                              field.state.meta.errors.length > 0 || undefined
                             }
-
-                            return (
-                              <InputGroupButton
-                                aria-label={submitLabel}
-                                disabled={
-                                  readOnly ||
-                                  !(canSubmit && hasPrompt) ||
+                            className="max-h-[min(40svh,24rem)] overflow-y-auto"
+                            disabled={readOnly}
+                            items={mentionItems}
+                            onBlur={field.handleBlur}
+                            onChange={(value) => field.handleChange(value)}
+                            placeholder="Describe the video you want to generate…"
+                            value={field.state.value}
+                          />
+                          <InputGroupAddon
+                            align="block-end"
+                            className="justify-end"
+                          >
+                            <form.Subscribe
+                              selector={(state) => ({
+                                canSubmit: state.canSubmit,
+                                isSubmitting: state.isSubmitting,
+                                prompt: state.values.prompt,
+                              })}
+                            >
+                              {({ canSubmit, isSubmitting, prompt }) => {
+                                const hasPrompt = prompt.trim().length > 0
+                                const submitLabel = getSubmitLabel(
+                                  readOnly,
+                                  confirming,
                                   isSubmitting
-                                }
-                                onClick={handleGenerateClick}
-                                size="icon-sm"
-                                title={submitLabel}
-                                type="button"
-                                variant={confirming ? "destructive" : "default"}
-                              >
-                                {isSubmitting ? (
-                                  <Spokes className="size-3" />
-                                ) : (
-                                  <IconArrowUp size={16} />
-                                )}
-                              </InputGroupButton>
-                            )
-                          }}
-                        </form.Subscribe>
-                      </InputGroupAddon>
-                    </InputGroup>
-                    <FieldError
-                      errors={field.state.meta.errors.map((error) => ({
-                        message: String(error),
-                      }))}
-                    />
-                  </>
+                                )
+
+                                return (
+                                  <InputGroupButton
+                                    aria-label={submitLabel}
+                                    disabled={
+                                      readOnly ||
+                                      !(canSubmit && hasPrompt) ||
+                                      isSubmitting
+                                    }
+                                    onClick={handleGenerateClick}
+                                    size="sm"
+                                    title={submitLabel}
+                                    type="button"
+                                    variant={
+                                      confirming ? "destructive" : "default"
+                                    }
+                                  >
+                                    {isSubmitting ? (
+                                      <Spokes className="size-3" />
+                                    ) : (
+                                      <IconArrowUp size={16} />
+                                    )}
+                                    <SwapText text={submitLabel} />
+                                  </InputGroupButton>
+                                )
+                              }}
+                            </form.Subscribe>
+                          </InputGroupAddon>
+                        </InputGroup>
+                        <FieldError
+                          errors={field.state.meta.errors.map((error) => ({
+                            message: String(error),
+                          }))}
+                        />
+                      </>
+                    )}
+                  </form.Field>
                 )}
-              </form.Field>
+              </form.Subscribe>
             </div>
           </div>
         </div>

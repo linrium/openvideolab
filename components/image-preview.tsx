@@ -16,6 +16,8 @@ import type {
   ImageGenerationFormApi,
 } from "@/components/image-studio"
 import { Spokes } from "@/components/loading-ui/spokes"
+import { PromptComposer } from "@/components/prompt-composer"
+import { SwapText } from "@/components/swap-text"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -28,7 +30,6 @@ import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
-  InputGroupTextarea,
 } from "@/components/ui/input-group"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -84,7 +85,7 @@ function getSubmitLabel({
   }
 
   if (confirming) {
-    return "Click again to confirm"
+    return "Confirm?"
   }
 
   return isEdit ? "Edit Image" : "Generate Image"
@@ -471,91 +472,108 @@ export function ImagePreview({
         <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
           <div className={IMAGE_PREVIEW_CONTENT_CLASS}>
             <div className="px-4">
-              <form.Field name="prompt">
-                {(field) => (
-                  <>
-                    <InputGroup>
-                      <InputGroupTextarea
-                        aria-invalid={
-                          field.state.meta.errors.length > 0 || undefined
-                        }
-                        className="max-h-[min(40svh,24rem)] overflow-y-auto"
-                        onBlur={field.handleBlur}
-                        onChange={(event) =>
-                          field.handleChange(event.target.value)
-                        }
-                        placeholder="Describe the image you want to generate…"
-                        rows={4}
-                        spellCheck={false}
-                        value={field.state.value}
-                      />
-                      <InputGroupAddon
-                        align="block-end"
-                        className="justify-end"
-                      >
-                        <form.Subscribe
-                          selector={(state) => ({
-                            canSubmit: state.canSubmit,
-                            isEdit: state.values.inputImages.length > 0,
-                            isSubmitting: state.isSubmitting,
-                            prompt: state.values.prompt,
-                          })}
-                        >
-                          {({ canSubmit, isEdit, isSubmitting, prompt }) => {
-                            const hasPrompt = prompt.trim().length > 0
-                            const submitLabel = getSubmitLabel({
-                              confirming,
-                              isEdit,
-                              isSubmitting,
-                            })
+              <form.Subscribe
+                selector={(state) =>
+                  state.values.inputImages.map((img, i) => ({
+                    id: img.key,
+                    label: `Image${i + 1}`,
+                    thumbnailUrl: img.url,
+                    url: img.url,
+                  }))
+                }
+              >
+                {(mentionItems) => (
+                  <form.Field name="prompt">
+                    {(field) => (
+                      <>
+                        <InputGroup>
+                          <PromptComposer
+                            aria-invalid={
+                              field.state.meta.errors.length > 0 || undefined
+                            }
+                            className="max-h-[min(40svh,24rem)] overflow-y-auto"
+                            items={mentionItems}
+                            onBlur={field.handleBlur}
+                            onChange={(value) => field.handleChange(value)}
+                            placeholder="Describe the image you want to generate…"
+                            value={field.state.value}
+                          />
+                          <InputGroupAddon
+                            align="block-end"
+                            className="justify-end"
+                          >
+                            <form.Subscribe
+                              selector={(state) => ({
+                                canSubmit: state.canSubmit,
+                                isEdit: state.values.inputImages.length > 0,
+                                isSubmitting: state.isSubmitting,
+                                prompt: state.values.prompt,
+                              })}
+                            >
+                              {({
+                                canSubmit,
+                                isEdit,
+                                isSubmitting,
+                                prompt,
+                              }) => {
+                                const hasPrompt = prompt.trim().length > 0
+                                const submitLabel = getSubmitLabel({
+                                  confirming,
+                                  isEdit,
+                                  isSubmitting,
+                                })
 
-                            return (
-                              <div className="flex items-center gap-2">
-                                {canUndoPrompt ? (
-                                  <InputGroupButton
-                                    disabled={isSubmitting}
-                                    onClick={handleUndoPromptClick}
-                                    size="sm"
-                                    type="button"
-                                    variant="outline"
-                                  >
-                                    <IconArrowBackUp size={14} />
-                                    Undo
-                                  </InputGroupButton>
-                                ) : null}
-                                <InputGroupButton
-                                  aria-label={submitLabel}
-                                  disabled={
-                                    !(canSubmit && hasPrompt) || isSubmitting
-                                  }
-                                  onClick={handleGenerateClick}
-                                  size="icon-sm"
-                                  title={submitLabel}
-                                  type="button"
-                                  variant={
-                                    confirming ? "destructive" : "default"
-                                  }
-                                >
-                                  {isSubmitting ? (
-                                    <Spokes className="size-3" />
-                                  ) : (
-                                    <IconArrowUp size={16} />
-                                  )}
-                                </InputGroupButton>
-                              </div>
-                            )
-                          }}
-                        </form.Subscribe>
-                      </InputGroupAddon>
-                    </InputGroup>
-                    <FieldError
-                      errors={field.state.meta.errors.map((error) => ({
-                        message: String(error),
-                      }))}
-                    />
-                  </>
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    {canUndoPrompt ? (
+                                      <InputGroupButton
+                                        disabled={isSubmitting}
+                                        onClick={handleUndoPromptClick}
+                                        size="sm"
+                                        type="button"
+                                        variant="outline"
+                                      >
+                                        <IconArrowBackUp size={14} />
+                                        Undo
+                                      </InputGroupButton>
+                                    ) : null}
+                                    <InputGroupButton
+                                      aria-label={submitLabel}
+                                      disabled={
+                                        !(canSubmit && hasPrompt) ||
+                                        isSubmitting
+                                      }
+                                      onClick={handleGenerateClick}
+                                      size="sm"
+                                      title={submitLabel}
+                                      type="button"
+                                      variant={
+                                        confirming ? "destructive" : "default"
+                                      }
+                                    >
+                                      {isSubmitting ? (
+                                        <Spokes className="size-3" />
+                                      ) : (
+                                        <IconArrowUp size={16} />
+                                      )}
+                                      <SwapText text={submitLabel} />
+                                    </InputGroupButton>
+                                  </div>
+                                )
+                              }}
+                            </form.Subscribe>
+                          </InputGroupAddon>
+                        </InputGroup>
+                        <FieldError
+                          errors={field.state.meta.errors.map((error) => ({
+                            message: String(error),
+                          }))}
+                        />
+                      </>
+                    )}
+                  </form.Field>
                 )}
-              </form.Field>
+              </form.Subscribe>
             </div>
           </div>
         </div>

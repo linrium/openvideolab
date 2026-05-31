@@ -81,6 +81,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* transitions-dev — text states swap */
+  --text-swap-dur: 150ms;
+  --text-swap-translate-y: 4px;
+  --text-swap-blur: 2px;
+  --text-swap-ease: ease-in-out;
 }
 
 .dark {
@@ -228,6 +234,44 @@
     background-clip: content-box;
     border: 2px solid transparent;
     border-radius: 999px;
+  }
+
+  .t-text-swap {
+    display: inline-block;
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+    transition:
+      transform var(--text-swap-dur) var(--text-swap-ease),
+      filter var(--text-swap-dur) var(--text-swap-ease),
+      opacity var(--text-swap-dur) var(--text-swap-ease);
+    will-change: transform, filter, opacity;
+  }
+  .t-text-swap.is-exit {
+    opacity: 0;
+    filter: blur(var(--text-swap-blur));
+    transform: translateY(calc(var(--text-swap-translate-y) * -1));
+  }
+  .t-text-swap.is-enter-start {
+    opacity: 0;
+    filter: blur(var(--text-swap-blur));
+    transform: translateY(var(--text-swap-translate-y));
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-text-swap {
+      transition: none !important;
+    }
+  }
+
+  /* Tiptap prompt composer placeholder */
+  .tiptap p.is-editor-empty:first-child::before {
+    float: left;
+    height: 0;
+    color: var(--muted-foreground);
+    pointer-events: none;
+    content: attr(data-placeholder);
   }
 
   .scrollbar-subtle:hover::-webkit-scrollbar-thumb,
