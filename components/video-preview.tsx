@@ -11,6 +11,7 @@ import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { VideoJsPlayer } from "@/components/video-js-player"
 import { KIE_CREDIT_USD_RATE } from "@/lib/constants"
 import type { VideoJobStatus } from "@/lib/openrouter-client"
 import { Spokes } from "./loading-ui/spokes"
@@ -224,6 +225,7 @@ export function VideoPreview({
     video?.status ?? initialStatus
   )
   const [currentUrl, setCurrentUrl] = useState(url)
+  const displayedTotalCost = video?.totalCost || video?.estimatedCost
 
   const statusConfig = currentStatus
     ? (STATUS_CONFIG[currentStatus] ?? STATUS_CONFIG.pending)
@@ -233,13 +235,8 @@ export function VideoPreview({
     <div className="w-full space-y-3">
       <div className="mx-auto w-full max-w-4xl space-y-3">
         <div className="flex items-center justify-center px-4 pt-4">
-          {currentStatus === "completed" ? (
-            // biome-ignore lint/a11y/useMediaCaption: no captions available for generated video
-            <video
-              className="max-h-[40vh] w-full rounded-md"
-              controls
-              src={currentUrl}
-            />
+          {currentStatus === "completed" && currentUrl ? (
+            <VideoJsPlayer aspectRatio={video?.aspectRatio} src={currentUrl} />
           ) : (
             <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-muted-foreground text-sm">
               <VideoPlaceholder
@@ -334,8 +331,8 @@ export function VideoPreview({
                     Total Cost
                   </dt>
                   <dd className="tabular-nums">
-                    {formatCostValue(video.totalCost, video.costType)}
-                    {formatCostUsdValue(video.totalCost, video.costType)}
+                    {formatCostValue(displayedTotalCost, video.costType)}
+                    {formatCostUsdValue(displayedTotalCost, video.costType)}
                   </dd>
                 </>
               )}
