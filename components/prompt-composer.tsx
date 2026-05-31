@@ -1,5 +1,6 @@
 "use client"
 
+import type { Editor } from "@tiptap/core"
 import Mention from "@tiptap/extension-mention"
 import Placeholder from "@tiptap/extension-placeholder"
 import { EditorContent, useEditor } from "@tiptap/react"
@@ -240,6 +241,18 @@ function textToContent(text: string, items: MentionItem[]) {
   return { type: "doc", content: paragraphs }
 }
 
+function getEditorPlainText(editor: Editor): string | null {
+  if (editor.isDestroyed) {
+    return null
+  }
+
+  try {
+    return editor.getText({ blockSeparator: "\n" })
+  } catch {
+    return null
+  }
+}
+
 // ---------------------------------------------------------------------------
 // PromptComposer
 // ---------------------------------------------------------------------------
@@ -370,8 +383,12 @@ export function PromptComposer({
       },
     },
     onUpdate({ editor: e }) {
+      const nextValue = getEditorPlainText(e)
+      if (nextValue === null) {
+        return
+      }
       isInternalChangeRef.current = true
-      onChange(e.getText({ blockSeparator: "\n" }))
+      onChange(nextValue)
     },
     onBlur() {
       onBlur?.()
@@ -387,7 +404,11 @@ export function PromptComposer({
       isInternalChangeRef.current = false
       return
     }
-    if (editor.getText({ blockSeparator: "\n" }) !== value) {
+    const currentValue = getEditorPlainText(editor)
+    if (currentValue === null) {
+      return
+    }
+    if (currentValue !== value) {
       editor.commands.setContent(textToContent(value, mentionItemsRef.current))
     }
   }, [editor, value])

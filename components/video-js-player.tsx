@@ -1,8 +1,9 @@
 "use client"
 
-import "@videojs/react/video/skin.css"
+import "@videojs/react/video/minimal-skin.css"
 import { createPlayer } from "@videojs/react"
-import { Video, VideoSkin, videoFeatures } from "@videojs/react/video"
+import { MinimalVideoSkin, Video, videoFeatures } from "@videojs/react/video"
+import type { CSSProperties } from "react"
 import { useEffect, useState } from "react"
 
 const Player = createPlayer({ features: videoFeatures })
@@ -16,6 +17,11 @@ function getPlayerAspectRatio(value: string | null | undefined): string {
   return value?.replace(":", " / ") ?? "16 / 9"
 }
 
+type VideoSkinStyle = CSSProperties & {
+  "--media-border-radius": string
+  "--media-video-border-radius": string
+}
+
 export function VideoJsPlayer({ aspectRatio, src }: VideoJsPlayerProps) {
   const [isContainerReady, setIsContainerReady] = useState(false)
 
@@ -23,15 +29,17 @@ export function VideoJsPlayer({ aspectRatio, src }: VideoJsPlayerProps) {
     setIsContainerReady(true)
   }, [])
 
+  const videoSkinStyle: VideoSkinStyle = {
+    "--media-border-radius": "0.5rem",
+    "--media-video-border-radius": "0.5rem",
+    aspectRatio: getPlayerAspectRatio(aspectRatio),
+  }
+
   return (
     <Player.Provider>
-      <VideoSkin
+      <MinimalVideoSkin
         className="max-h-[40vh] w-full overflow-hidden rounded-lg bg-black"
-        style={{
-          "--media-border-radius": "0.5rem",
-          "--media-video-border-radius": "0.5rem",
-          aspectRatio: getPlayerAspectRatio(aspectRatio),
-        }}
+        style={videoSkinStyle}
       >
         {isContainerReady ? (
           <Video
@@ -41,7 +49,7 @@ export function VideoJsPlayer({ aspectRatio, src }: VideoJsPlayerProps) {
             src={src}
           />
         ) : null}
-      </VideoSkin>
+      </MinimalVideoSkin>
     </Player.Provider>
   )
 }
