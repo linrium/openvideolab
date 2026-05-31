@@ -9,6 +9,8 @@ import { type RefObject, useEffect, useImperativeHandle, useRef } from "react"
 import { createRoot } from "react-dom/client"
 import { cn } from "@/lib/utils"
 
+const AT_WORD_REGEX = /@\w+/
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -194,6 +196,51 @@ function buildMentionExtension(getItems: () => MentionItem[]) {
 }
 
 // ---------------------------------------------------------------------------
+// Plain-text → Tiptap JSON converter
+// ---------------------------------------------------------------------------
+
+function textToContent(text: string, items: MentionItem[]) {
+  const labelToItem = new Map(items.map((item) => [item.label, item]))
+
+  // Match @Word (alphanumeric + digits) tokens
+  const mentionRegex = /@(\w+)/g
+
+  const paragraphs = text.split("\n").map((line) => {
+    const content: object[] = []
+    let lastIndex = 0
+    mentionRegex.lastIndex = 0
+    for (
+      let match = mentionRegex.exec(line);
+      match !== null;
+      match = mentionRegex.exec(line)
+    ) {
+      const label = match[1]
+      const item = labelToItem.get(label)
+      if (!item) {
+        continue
+      }
+
+      if (match.index > lastIndex) {
+        content.push({ type: "text", text: line.slice(lastIndex, match.index) })
+      }
+      content.push({
+        type: "mention",
+        attrs: { id: item.id, label: item.label, url: item.url },
+      })
+      lastIndex = match.index + match[0].length
+    }
+
+    if (lastIndex < line.length) {
+      content.push({ type: "text", text: line.slice(lastIndex) })
+    }
+
+    return { type: "paragraph", content }
+  })
+
+  return { type: "doc", content: paragraphs }
+}
+
+// ---------------------------------------------------------------------------
 // PromptComposer
 // ---------------------------------------------------------------------------
 
@@ -250,7 +297,7 @@ export function PromptComposer({
       Placeholder.configure({ placeholder }),
       mentionExt,
     ],
-    content: value,
+    content: textToContent(value, items),
     editable: !disabled,
     editorProps: {
       attributes: {
@@ -262,6 +309,63 @@ export function PromptComposer({
           "[&_.mention]:inline-flex [&_.mention]:items-center [&_.mention]:rounded [&_.mention]:bg-primary/15 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary [&_.mention]:text-xs",
           className
         ),
+      },
+      handlePaste(view, event) {
+        const plain = event.clipboardData?.getData("text/plain")
+        if (!(plain && AT_WORD_REGEX.test(plain))) {
+          return false
+        }
+        const items = mentionItemsRef.current
+        const labels = new Set(items.map((i) => i.label))
+        if (![...plain.matchAll(/@(\w+)/g)].some(([, l]) => labels.has(l))) {
+          return false
+        }
+        const content = textToContent(plain, items)
+        const { schema, tr, selection } = view.state
+
+        interface RawNode {
+          attrs?: Record<string, string>
+          content?: RawNode[]
+          text?: string
+          type: string
+        }
+
+        const toInline = (node: RawNode) =>
+          node.type === "text"
+            ? schema.text(node.text ?? "")
+            : schema.nodes.mention.create(node.attrs)
+
+        const paras = content.content as RawNode[]
+        const inlineFragments = paras.map((p) =>
+          (p.content ?? []).map(toInline)
+        )
+
+        let transaction = tr
+        if (inlineFragments.length === 1) {
+          // Single line: insert inline nodes at cursor
+          const fragment = schema.nodes.paragraph.create(
+            null,
+            inlineFragments[0]
+          ).content
+          transaction = transaction.replaceWith(
+            selection.from,
+            selection.to,
+            fragment
+          )
+        } else {
+          // Multi-line: insert paragraphs
+          const paragraphNodes = inlineFragments.map((nodes) =>
+            schema.nodes.paragraph.create(null, nodes)
+          )
+          transaction = transaction.replaceWith(
+            selection.from,
+            selection.to,
+            paragraphNodes
+          )
+        }
+
+        view.dispatch(transaction)
+        return true
       },
     },
     onUpdate({ editor: e }) {
@@ -283,7 +387,7 @@ export function PromptComposer({
       return
     }
     if (editor.getText({ blockSeparator: "\n" }) !== value) {
-      editor.commands.setContent(value)
+      editor.commands.setContent(textToContent(value, mentionItemsRef.current))
     }
   }, [editor, value])
 

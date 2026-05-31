@@ -1046,8 +1046,8 @@ export function VideoForm({
               ],
               ["kie/bytedance/seedance-2", "Kie.ai: Seedance 2"],
               ["kie/bytedance/seedance-2-fast", "Kie.ai: Seedance 2 Fast"],
-              ["bytedance/seedance-2.0", "ByteDance: Seedance 2"],
-              ["bytedance/seedance-2.0-fast", "ByteDance: Seedance 2 Fast"],
+              ["bytedance/seedance-2.0", "OpenRouter: Seedance 2"],
+              ["bytedance/seedance-2.0-fast", "OpenRouter: Seedance 2 Fast"],
               ["alibaba/wan-2.7", "Alibaba: Wan 2.7"],
             ] as const
           ).map(([modelId, modelLabel]) => {

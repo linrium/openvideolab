@@ -21,19 +21,19 @@ export const MODELS = [
   },
   {
     value: "bytedance/seedance-2.0",
-    label: "ByteDance: Seedance 2",
+    label: "OpenRouter: Seedance 2",
     disabled: false,
   },
   {
     value: "bytedance/seedance-2.0-fast",
-    label: "ByteDance: Seedance 2 Fast",
+    label: "OpenRouter: Seedance 2 Fast",
     disabled: false,
   },
-  { value: "alibaba/wan-2.7", label: "Alibaba: Wan 2.7", disabled: false },
+  { value: "alibaba/wan-2.7", label: "Alibaba: Wan 2.7", disabled: true },
   {
     value: "alibaba/happy-horse-1.0",
     label: "Alibaba: Happy Horse 1.0",
-    disabled: false,
+    disabled: true,
   },
 ] as const
 
