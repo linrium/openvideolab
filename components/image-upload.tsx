@@ -23,12 +23,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 export interface ImageValue {
+  durationSeconds?: number
   key: string
   url: string
 }
 
 export type AudioValue = ImageValue
-export type VideoValue = ImageValue
+export interface VideoValue extends ImageValue {
+  durationSeconds?: number
+}
 
 async function uploadImage(file: File): Promise<ImageValue> {
   const body = new FormData()
@@ -386,6 +389,7 @@ interface MultiMediaUploadProps {
   buttonLabel: string
   className?: string
   disabled?: boolean
+  getMetadata?: (file: File) => Promise<Partial<ImageValue>>
   max?: number
   onChange: (values: ImageValue[]) => void
   removeLabel: string
@@ -398,6 +402,7 @@ function MultiMediaUpload({
   buttonLabel,
   values,
   onChange,
+  getMetadata,
   renderPreview,
   removeLabel,
   max = 3,
@@ -428,7 +433,8 @@ function MultiMediaUpload({
     setUploading(true)
     setError(null)
     try {
-      onChange([...values, await uploadImage(file)])
+      const metadata = (await getMetadata?.(file)) ?? {}
+      onChange([...values, { ...(await uploadImage(file)), ...metadata }])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -525,6 +531,38 @@ function MultiMediaUpload({
   )
 }
 
+function getVideoDuration(file: File): Promise<Partial<VideoValue>> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video")
+    const objectUrl = URL.createObjectURL(file)
+    const cleanup = () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+
+    video.preload = "metadata"
+    video.onloadedmetadata = () => {
+      const durationSeconds = Number.isFinite(video.duration)
+        ? Math.floor(Math.max(0, video.duration))
+        : undefined
+      cleanup()
+      if (durationSeconds && durationSeconds > 0) {
+        resolve({ durationSeconds })
+        return
+      }
+      reject(new Error("Could not read video duration"))
+    }
+    video.onerror = () => {
+      cleanup()
+      reject(new Error("Could not read video duration"))
+    }
+    video.src = objectUrl
+  })
+}
+
+function formatDuration(seconds: number | undefined): string {
+  return seconds == null ? "unknown length" : `${seconds.toFixed(1)}s`
+}
+
 interface MultiAudioUploadProps {
   className?: string
   disabled?: boolean
@@ -579,16 +617,22 @@ export function MultiVideoUpload({
       buttonLabel="Upload MP4, MOV, or WebM"
       className={className}
       disabled={disabled}
+      getMetadata={getVideoDuration}
       max={max}
       onChange={onChange}
       removeLabel="Remove video"
       renderPreview={(value) => (
-        // biome-ignore lint/a11y/useMediaCaption: uploaded reference video has no caption track
-        <video
-          className="aspect-video w-full rounded-md bg-muted"
-          controls
-          src={value.url}
-        />
+        <>
+          {/* biome-ignore lint/a11y/useMediaCaption: uploaded reference video has no caption track */}
+          <video
+            className="aspect-video w-full rounded-md bg-muted"
+            controls
+            src={value.url}
+          />
+          <p className="text-muted-foreground text-xs">
+            Length: {formatDuration(value.durationSeconds)}
+          </p>
+        </>
       )}
       values={values}
     />

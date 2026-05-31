@@ -45,22 +45,39 @@ export const WAN_RESOLUTIONS = ["720p", "1080p"] as const
 
 export const DURATIONS = [5, 10, 15] as const
 
+export const KIE_CREDIT_USD_RATE = 0.005
+
 export const PRICING = {
   "kie/bytedance/seedance-2": {
-    tokens: { with_audio: 7, no_audio: 7 },
+    cost_type: "credit",
+    tokens: { with_audio: 0, no_audio: 0 },
     per_second: {
-      with_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
-      no_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
+      with_audio: { "480p": 19, "720p": 41, "1080p": 102 },
+      no_audio: { "480p": 19, "720p": 41, "1080p": 102 },
+      with_video_input: { "480p": 11.5, "720p": 25, "1080p": 62 },
+      no_video_input: { "480p": 19, "720p": 41, "1080p": 102 },
+    },
+    usd_per_second: {
+      with_video_input: { "480p": 0.057, "720p": 0.125, "1080p": 0.31 },
+      no_video_input: { "480p": 0.095, "720p": 0.205, "1080p": 0.51 },
     },
   },
   "kie/bytedance/seedance-2-fast": {
-    tokens: { with_audio: 5.6, no_audio: 5.6 },
+    cost_type: "credit",
+    tokens: { with_audio: 0, no_audio: 0 },
     per_second: {
-      with_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
-      no_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
+      with_audio: { "480p": 15.5, "720p": 33 },
+      no_audio: { "480p": 15.5, "720p": 33 },
+      with_video_input: { "480p": 9, "720p": 20 },
+      no_video_input: { "480p": 15.5, "720p": 33 },
+    },
+    usd_per_second: {
+      with_video_input: { "480p": 0.045, "720p": 0.1 },
+      no_video_input: { "480p": 0.0775, "720p": 0.165 },
     },
   },
   "bytedance/seedance-2.0": {
+    cost_type: "money",
     tokens: { with_audio: 7, no_audio: 7 },
     per_second: {
       with_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
@@ -68,6 +85,7 @@ export const PRICING = {
     },
   },
   "bytedance/seedance-2.0-fast": {
+    cost_type: "money",
     tokens: { with_audio: 5.6, no_audio: 5.6 },
     per_second: {
       with_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
@@ -75,6 +93,7 @@ export const PRICING = {
     },
   },
   "alibaba/wan-2.7": {
+    cost_type: "money",
     tokens: { with_audio: 7, no_audio: 7 },
     per_second: {
       with_audio: { "720p": 0.1, "1080p": 0.1 },
@@ -147,6 +166,11 @@ const kieSeedanceConfig: ModelFieldConfig = {
   },
 }
 
+const kieSeedanceFastConfig: ModelFieldConfig = {
+  ...kieSeedanceConfig,
+  resolutions: ["480p", "720p"],
+}
+
 const wanConfig: ModelFieldConfig = {
   aspectRatios: WAN_ASPECT_RATIOS,
   resolutions: WAN_RESOLUTIONS,
@@ -173,7 +197,7 @@ const wanConfig: ModelFieldConfig = {
 
 export const MODEL_CONFIGS: Record<ModelValue, ModelFieldConfig> = {
   "kie/bytedance/seedance-2": kieSeedanceConfig,
-  "kie/bytedance/seedance-2-fast": kieSeedanceConfig,
+  "kie/bytedance/seedance-2-fast": kieSeedanceFastConfig,
   "bytedance/seedance-2.0": seedanceConfig,
   "bytedance/seedance-2.0-fast": seedanceConfig,
   "alibaba/wan-2.7": wanConfig,

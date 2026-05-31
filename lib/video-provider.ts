@@ -14,6 +14,7 @@ export interface PersistedVideoProvider {
   metadata?: {
     audioKey?: string | null
     kieReferenceAudioKeys?: string[]
+    kieReferenceVideoDurations?: number[]
     kieReferenceVideoKeys?: string[]
   }
   options?: {

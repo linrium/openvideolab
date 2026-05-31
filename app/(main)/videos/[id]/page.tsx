@@ -62,6 +62,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const [video] = await db
     .select({
       aspectRatio: videos.aspectRatio,
+      costType: videos.costType,
       duration: videos.duration,
       error: videos.error,
       estimatedCost: videos.estimatedCost,
@@ -70,6 +71,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       generateAudio: videos.generateAudio,
       generationId: videos.referenceId,
       generationTime: videos.generationTime,
+      inputVideoDuration: videos.inputVideoDuration,
       inputReferences: videos.inputReferences,
       jobId: videos.jobId,
       latency: videos.latency,

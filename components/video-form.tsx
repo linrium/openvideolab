@@ -51,6 +51,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   DEFAULT_MODEL_CONFIG,
+  KIE_CREDIT_USD_RATE,
   MODEL_CONFIGS,
   MODELS,
   type ModelValue,
@@ -93,7 +94,13 @@ const schema = z.object({
     .array(z.object({ url: z.string(), key: z.string() }))
     .optional(),
   referenceVideoUrls: z
-    .array(z.object({ url: z.string(), key: z.string() }))
+    .array(
+      z.object({
+        durationSeconds: z.number().optional(),
+        key: z.string(),
+        url: z.string(),
+      })
+    )
     .optional(),
   watermark: z.boolean().optional(),
 })
@@ -168,7 +175,7 @@ function createKieProvider({
   isKieModel: boolean
   nsfwChecker?: boolean
   referenceAudioUrls?: { key: string; url: string }[]
-  referenceVideoUrls?: { key: string; url: string }[]
+  referenceVideoUrls?: { durationSeconds?: number; key: string; url: string }[]
 }): PersistedVideoProvider | null {
   if (!isKieModel) {
     return null
@@ -180,6 +187,10 @@ function createKieProvider({
   return {
     metadata: {
       kieReferenceAudioKeys: referenceAudioUrls?.map(({ key }) => key) ?? [],
+      kieReferenceVideoDurations:
+        referenceVideoUrls?.map(
+          ({ durationSeconds }) => durationSeconds ?? 0
+        ) ?? [],
       kieReferenceVideoKeys: referenceVideoUrls?.map(({ key }) => key) ?? [],
     },
     options: {
@@ -190,6 +201,113 @@ function createKieProvider({
       },
     },
   }
+}
+
+function getReferenceVideoDuration(
+  referenceVideoUrls: { durationSeconds?: number }[] | undefined
+): number {
+  return (
+    referenceVideoUrls?.reduce(
+      (sum, video) => sum + (video.durationSeconds ?? 0),
+      0
+    ) ?? 0
+  )
+}
+
+function getPricingEstimate({
+  duration,
+  generateAudio,
+  model,
+  referenceVideoUrls,
+  resolution,
+}: {
+  duration?: number
+  generateAudio?: boolean
+  model: string
+  referenceVideoUrls?: { durationSeconds?: number }[]
+  resolution?: string
+}): null | {
+  billableDuration: number
+  costType: "credit" | "money"
+  inputDuration: number
+  outputDuration: number
+  rate: number
+  total: number
+  usesVideoInput: boolean
+} {
+  if (!(duration && resolution)) {
+    return null
+  }
+
+  const pricing = PRICING[model as keyof typeof PRICING]
+  if (!pricing) {
+    return null
+  }
+
+  const usesVideoInput =
+    isKieVideoModel(model) && (referenceVideoUrls?.length ?? 0) > 0
+
+  if (isKieVideoModel(model)) {
+    if (!("with_video_input" in pricing.per_second)) {
+      return null
+    }
+
+    const table = usesVideoInput
+      ? pricing.per_second.with_video_input
+      : pricing.per_second.no_video_input
+    const rate = table?.[resolution as keyof typeof table]
+    if (rate == null) {
+      return null
+    }
+
+    const inputDuration = usesVideoInput
+      ? getReferenceVideoDuration(referenceVideoUrls)
+      : 0
+    const billableDuration = duration + inputDuration
+    return {
+      billableDuration,
+      costType: "credit",
+      inputDuration,
+      outputDuration: duration,
+      rate,
+      total: rate * billableDuration,
+      usesVideoInput,
+    }
+  }
+
+  const table = generateAudio
+    ? pricing.per_second.with_audio
+    : pricing.per_second.no_audio
+  const rate = table[resolution as keyof typeof table]
+  return rate == null
+    ? null
+    : {
+        billableDuration: duration,
+        costType: "money",
+        inputDuration: 0,
+        outputDuration: duration,
+        rate,
+        total: rate * duration,
+        usesVideoInput: false,
+      }
+}
+
+function formatPricingAmount(value: number, costType: "credit" | "money") {
+  return costType === "credit"
+    ? `${value.toFixed(2)} credits`
+    : `$${value.toFixed(4)}`
+}
+
+function formatCreditUsdEstimate(credits: number): string {
+  return `~$${(credits * KIE_CREDIT_USD_RATE).toFixed(4)}`
+}
+
+function formatKiePricingRate(credits: number | null): string {
+  if (credits == null) {
+    return "—"
+  }
+
+  return `${credits.toFixed(1)}/s (${formatCreditUsdEstimate(credits)}/s)`
 }
 
 interface VideoFormProps {
@@ -829,44 +947,69 @@ export function VideoForm({
                 resolution: s.values.resolution,
                 duration: s.values.duration,
                 generateAudio: s.values.generateAudio,
+                referenceVideoUrls: s.values.referenceVideoUrls,
               })}
             >
-              {({ model, resolution, duration, generateAudio }) => {
-                const pricing =
-                  PRICING[model as keyof typeof PRICING] ??
-                  PRICING["bytedance/seedance-2.0"]
-                const key = resolution as
-                  | keyof typeof pricing.per_second.with_audio
-                  | undefined
-                const table = generateAudio
-                  ? pricing.per_second.with_audio
-                  : pricing.per_second.no_audio
-                const rate = key ? table[key] : null
-                const total = rate != null && duration ? rate * duration : null
+              {({
+                model,
+                resolution,
+                duration,
+                generateAudio,
+                referenceVideoUrls,
+              }) => {
+                const estimate = getPricingEstimate({
+                  duration,
+                  generateAudio,
+                  model,
+                  referenceVideoUrls,
+                  resolution,
+                })
 
-                if (total === null) {
+                if (estimate === null) {
                   return null
                 }
+
+                const rateLabel =
+                  estimate.costType === "credit"
+                    ? `${estimate.rate.toFixed(2)} credits / sec`
+                    : `$${estimate.rate.toFixed(5)} / sec`
 
                 return (
                   <div className="w-full rounded-md border bg-muted/40 px-3 py-2 text-xs">
                     <div className="flex flex-col gap-1">
                       <div className="flex justify-between text-muted-foreground">
                         <span>Rate</span>
-                        <span className="tabular-nums">
-                          ${rate?.toFixed(5)} / sec
-                        </span>
+                        <span className="tabular-nums">{rateLabel}</span>
                       </div>
                       <div className="flex justify-between text-muted-foreground">
-                        <span>Duration</span>
-                        <span>{duration}s</span>
+                        <span>
+                          {estimate.usesVideoInput
+                            ? "Billable duration"
+                            : "Duration"}
+                        </span>
+                        <span className="tabular-nums">
+                          {estimate.usesVideoInput
+                            ? `${estimate.inputDuration.toFixed(1)}s + ${estimate.outputDuration}s = ${estimate.billableDuration.toFixed(1)}s`
+                            : `${estimate.outputDuration}s`}
+                        </span>
                       </div>
                       <div className="flex justify-between border-border/60 border-t pt-1 font-medium text-foreground">
                         <span>Estimated cost</span>
                         <span className="tabular-nums">
-                          ${total.toFixed(4)}
+                          {formatPricingAmount(
+                            estimate.total,
+                            estimate.costType
+                          )}
                         </span>
                       </div>
+                      {estimate.costType === "credit" && (
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Approx. USD</span>
+                          <span className="tabular-nums">
+                            {formatCreditUsdEstimate(estimate.total)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -888,6 +1031,11 @@ export function VideoForm({
             ] as const
           ).map(([modelId, modelLabel]) => {
             const p = PRICING[modelId]
+            const hasKieVideoPricing = "no_video_input" in p.per_second
+            const isKiePricing = isKieVideoModel(modelId) && hasKieVideoPricing
+            const rateTable = hasKieVideoPricing
+              ? p.per_second.no_video_input
+              : p.per_second.with_audio
             return (
               <div className="space-y-3" key={modelId}>
                 <p className="font-medium text-xs">{modelLabel}</p>
@@ -899,15 +1047,15 @@ export function VideoForm({
                           Type
                         </th>
                         <th className="px-3 py-2 text-right font-medium text-foreground">
-                          With audio
+                          {isKiePricing ? "No video input" : "With audio"}
                         </th>
                         <th className="px-3 py-2 text-right font-medium text-foreground">
-                          No audio
+                          {isKiePricing ? "With video input" : "No audio"}
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {modelId !== "alibaba/wan-2.7" && (
+                      {!(isKiePricing || modelId === "alibaba/wan-2.7") && (
                         <tr className="border-border/60 border-b">
                           <td className="px-3 py-2 text-muted-foreground">
                             Video tokens
@@ -920,32 +1068,63 @@ export function VideoForm({
                           </td>
                         </tr>
                       )}
-                      {Object.keys(p.per_second.with_audio).map(
-                        (res, index, array) => {
-                          const key =
-                            res as keyof typeof p.per_second.with_audio
-                          const isLastRow = index === array.length - 1
+                      {Object.keys(rateTable).map((res, index, array) => {
+                        const isLastRow = index === array.length - 1
+                        const noVideoRate = hasKieVideoPricing
+                          ? (
+                              p.per_second.no_video_input as Record<
+                                string,
+                                number
+                              >
+                            )[res]
+                          : null
+                        const withVideoRate = hasKieVideoPricing
+                          ? (
+                              p.per_second.with_video_input as Record<
+                                string,
+                                number
+                              >
+                            )[res]
+                          : null
+                        const withAudioRate = (
+                          p.per_second.with_audio as Record<string, number>
+                        )[res]
+                        const noAudioRate = (
+                          p.per_second.no_audio as Record<string, number>
+                        )[res]
 
-                          return (
-                            <tr
-                              className={
-                                isLastRow ? "" : "border-border/60 border-b"
-                              }
-                              key={res}
-                            >
-                              <td className="px-3 py-2 text-muted-foreground">
-                                {res}
-                              </td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                ${p.per_second.with_audio[key]}/s
-                              </td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                ${p.per_second.no_audio[key]}/s
-                              </td>
-                            </tr>
-                          )
-                        }
-                      )}
+                        return (
+                          <tr
+                            className={
+                              isLastRow ? "" : "border-border/60 border-b"
+                            }
+                            key={res}
+                          >
+                            <td className="px-3 py-2 text-muted-foreground">
+                              {res}
+                            </td>
+                            {isKiePricing ? (
+                              <>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  {formatKiePricingRate(noVideoRate)}
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  {formatKiePricingRate(withVideoRate)}
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  ${withAudioRate}/s
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  ${noAudioRate}/s
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>

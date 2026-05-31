@@ -20,6 +20,8 @@ export interface PersistedVideoUsage {
   isByok?: boolean
 }
 
+export type VideoCostType = "credit" | "money"
+
 export const videos = pgTable(
   "videos",
   {
@@ -38,6 +40,7 @@ export const videos = pgTable(
     model: text("model").notNull().default(""),
     referenceId: text("reference_id"),
     usage: jsonb("usage").$type<PersistedVideoUsage | null>(),
+    costType: text("cost_type").$type<VideoCostType | null>(),
     estimatedCost: numeric("estimated_cost", { precision: 12, scale: 6 }),
     totalCost: numeric("total_cost", { precision: 12, scale: 6 }),
     generationTime: numeric("generation_time", { precision: 12, scale: 3 }),
@@ -46,6 +49,7 @@ export const videos = pgTable(
     aspectRatio: text("aspect_ratio"),
     resolution: text("resolution"),
     duration: integer("duration"),
+    inputVideoDuration: integer("input_video_duration"),
     generateAudio: boolean("generate_audio").notNull().default(true),
     path: text("path"),
     inputReferences: text("input_references").array(),

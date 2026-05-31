@@ -157,6 +157,7 @@ export async function pollJobStatusAction(
         await db
           .update(videos)
           .set({
+            costType: "credit",
             error: detail.error,
             status: detail.status,
             updatedAt: new Date(),
@@ -213,6 +214,7 @@ export async function pollJobStatusAction(
         await db
           .update(videos)
           .set({
+            costType: "money",
             error: data.error ?? null,
             generationTime:
               generation?.data.generationTime == null
@@ -235,6 +237,7 @@ export async function pollJobStatusAction(
         await db
           .update(videos)
           .set({
+            costType: "money",
             error: data.error ?? null,
             status: data.status,
             updatedAt: new Date(),

@@ -11,6 +11,7 @@ import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { KIE_CREDIT_USD_RATE } from "@/lib/constants"
 import type { VideoJobStatus } from "@/lib/openrouter-client"
 import { Spokes } from "./loading-ui/spokes"
 
@@ -164,12 +165,14 @@ function SyncButton({
 
 export interface VideoData {
   aspectRatio?: string | null
+  costType?: "credit" | "money" | null
   duration?: number | null
   error?: string | null
   estimatedCost?: string | null
   generateAudio: boolean
   generationId?: string | null
   generationTime?: string | null
+  inputVideoDuration?: number | null
   jobId: string
   latency?: string | null
   model: string
@@ -177,6 +180,31 @@ export interface VideoData {
   resolution?: string | null
   status: string
   totalCost?: string | null
+}
+
+function formatCostValue(
+  value: string | null | undefined,
+  costType: VideoData["costType"]
+): string {
+  if (!value) {
+    return "—"
+  }
+
+  const formattedValue = Number(value).toFixed(4)
+  return costType === "credit"
+    ? `${formattedValue} credits`
+    : `$${formattedValue}`
+}
+
+function formatCostUsdValue(
+  value: string | null | undefined,
+  costType: VideoData["costType"]
+): string {
+  if (!(value && costType === "credit")) {
+    return ""
+  }
+
+  return ` (~$${(Number(value) * KIE_CREDIT_USD_RATE).toFixed(4)})`
 }
 
 interface VideoPreviewProps {
@@ -275,23 +303,39 @@ export function VideoPreview({
                   </dd>
                 </>
               )}
+              {video.inputVideoDuration != null && (
+                <>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Input Video
+                  </dt>
+                  <dd className="tabular-nums">{video.inputVideoDuration}s</dd>
+                  <dt className="whitespace-nowrap text-muted-foreground/70">
+                    Billable
+                  </dt>
+                  <dd className="tabular-nums">
+                    {video.duration == null
+                      ? `${video.inputVideoDuration}s + —`
+                      : `${video.inputVideoDuration}s + ${video.duration}s = ${
+                          video.inputVideoDuration + video.duration
+                        }s`}
+                  </dd>
+                </>
+              )}
               {(video.estimatedCost || video.totalCost) && (
                 <>
                   <dt className="whitespace-nowrap text-muted-foreground/70">
                     Est Cost
                   </dt>
                   <dd className="tabular-nums">
-                    {video.estimatedCost
-                      ? `$${Number(video.estimatedCost).toFixed(4)}`
-                      : "—"}
+                    {formatCostValue(video.estimatedCost, video.costType)}
+                    {formatCostUsdValue(video.estimatedCost, video.costType)}
                   </dd>
                   <dt className="whitespace-nowrap text-muted-foreground/70">
                     Total Cost
                   </dt>
                   <dd className="tabular-nums">
-                    {video.totalCost
-                      ? `$${Number(video.totalCost).toFixed(4)}`
-                      : "—"}
+                    {formatCostValue(video.totalCost, video.costType)}
+                    {formatCostUsdValue(video.totalCost, video.costType)}
                   </dd>
                 </>
               )}

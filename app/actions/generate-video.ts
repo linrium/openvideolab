@@ -51,9 +51,56 @@ function getVideoTitle(metadataTitle: string, prompt: string): string {
     : trimmedPrompt
 }
 
-function getEstimatedCost(request: VideoGenerationRequest): string | null {
-  const { model, resolution, duration, generateAudio } = request
+function getKieBillableDuration(
+  duration: number,
+  provider: PersistedVideoProvider | null | undefined
+): number {
+  const videoInputCount =
+    provider?.options?.kie?.reference_video_urls?.length ?? 0
+  const hasVideoInput = videoInputCount > 0
+  if (!hasVideoInput) {
+    return duration
+  }
 
+  const videoDurations = provider?.metadata?.kieReferenceVideoDurations ?? []
+  if (
+    videoDurations.length !== videoInputCount ||
+    videoDurations.some((value) => !(value > 0))
+  ) {
+    throw new Error("Kie.ai reference video duration is missing")
+  }
+
+  const inputDuration =
+    videoDurations.reduce((sum, value) => sum + value, 0) ?? 0
+
+  return duration + inputDuration
+}
+
+function getKieInputVideoDuration(
+  provider: PersistedVideoProvider | null | undefined
+): number | null {
+  const videoInputCount =
+    provider?.options?.kie?.reference_video_urls?.length ?? 0
+  if (videoInputCount === 0) {
+    return null
+  }
+
+  const videoDurations = provider?.metadata?.kieReferenceVideoDurations ?? []
+  if (
+    videoDurations.length !== videoInputCount ||
+    videoDurations.some((value) => !(value > 0))
+  ) {
+    throw new Error("Kie.ai reference video duration is missing")
+  }
+
+  return videoDurations.reduce((sum, value) => sum + value, 0)
+}
+
+function getEstimatedCost(
+  request: VideoGenerationRequest,
+  provider: PersistedVideoProvider | null | undefined
+): string | null {
+  const { model, resolution, duration, generateAudio } = request
   if (!resolution || (duration !== 5 && duration !== 10 && duration !== 15)) {
     return null
   }
@@ -61,6 +108,22 @@ function getEstimatedCost(request: VideoGenerationRequest): string | null {
   const modelPricing = PRICING[model as keyof typeof PRICING]
   if (!modelPricing) {
     return null
+  }
+
+  if (isKieVideoModel(model)) {
+    if (!("with_video_input" in modelPricing.per_second)) {
+      return null
+    }
+
+    const hasVideoInput =
+      (provider?.options?.kie?.reference_video_urls?.length ?? 0) > 0
+    const table = hasVideoInput
+      ? modelPricing.per_second.with_video_input
+      : modelPricing.per_second.no_video_input
+    const rate = table?.[resolution as keyof typeof table]
+    return rate == null
+      ? null
+      : String(rate * getKieBillableDuration(duration, provider))
   }
 
   const table =
@@ -86,7 +149,8 @@ export async function submitVideoAction(
   try {
     const title = getVideoTitle(metadata.title, request.prompt)
     const callbackUrl = `${process.env.OPENROUTER_BASE_WEBHOOK_URL}/api/webhook/video-created`
-    const jobId = isKieVideoModel(request.model)
+    const isKieModel = isKieVideoModel(request.model)
+    const jobId = isKieModel
       ? await createKieSeedanceTask({
           apiKey: await getKieApiKeyByUserId(session.user.id),
           callbackUrl,
@@ -119,12 +183,14 @@ export async function submitVideoAction(
       .insert(videos)
       .values({
         aspectRatio: request.aspectRatio ?? null,
+        costType: isKieModel ? "credit" : "money",
         duration: request.duration ?? null,
-        estimatedCost: getEstimatedCost(request),
+        estimatedCost: getEstimatedCost(request, metadata.provider),
         frameFirst: imageKeys.frameFirstKey ?? null,
         frameLast: imageKeys.frameLastKey ?? null,
         generateAudio: request.generateAudio ?? true,
         generationId: insertedGeneration.id,
+        inputVideoDuration: getKieInputVideoDuration(metadata.provider),
         inputReferences: imageKeys.inputReferenceKeys ?? [],
         jobId,
         model: request.model as Model,
