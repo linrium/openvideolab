@@ -8,8 +8,12 @@ import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 import { type Model, PRICING } from "@/lib/constants"
+import { createKieSeedanceTask, getKieApiKeyByUserId } from "@/lib/kie-client"
 import { getOpenrouterClientByUserId } from "@/lib/openrouter-client"
-import type { PersistedVideoProvider } from "@/lib/video-provider"
+import {
+  isKieVideoModel,
+  type PersistedVideoProvider,
+} from "@/lib/video-provider"
 
 export interface SubmitVideoResult {
   id: string
@@ -81,14 +85,26 @@ export async function submitVideoAction(
 
   try {
     const title = getVideoTitle(metadata.title, request.prompt)
-    const openrouterClient = await getOpenrouterClientByUserId(session.user.id)
-    const job = await openrouterClient.videoGeneration.generate({
-      videoGenerationRequest: {
-        ...request,
-        callbackUrl: `${process.env.OPENROUTER_BASE_WEBHOOK_URL}/api/webhook/video-created`,
-      },
-    })
-    console.log("[generate-video] job submitted:", job)
+    const callbackUrl = `${process.env.OPENROUTER_BASE_WEBHOOK_URL}/api/webhook/video-created`
+    const jobId = isKieVideoModel(request.model)
+      ? await createKieSeedanceTask({
+          apiKey: await getKieApiKeyByUserId(session.user.id),
+          callbackUrl,
+          providerOptions: metadata.provider?.options?.kie,
+          request,
+        })
+      : (
+          await getOpenrouterClientByUserId(session.user.id).then(
+            (openrouterClient) =>
+              openrouterClient.videoGeneration.generate({
+                videoGenerationRequest: {
+                  ...request,
+                  callbackUrl,
+                },
+              })
+          )
+        ).id
+    console.log("[generate-video] job submitted:", jobId)
 
     const [insertedGeneration] = await db
       .insert(generations)
@@ -110,7 +126,7 @@ export async function submitVideoAction(
         generateAudio: request.generateAudio ?? true,
         generationId: insertedGeneration.id,
         inputReferences: imageKeys.inputReferenceKeys ?? [],
-        jobId: job.id,
+        jobId,
         model: request.model as Model,
         userId: session.user.id,
         provider:

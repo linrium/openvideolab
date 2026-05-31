@@ -17,7 +17,9 @@ import { submitVideoAction } from "@/app/actions/generate-video"
 import {
   AudioUpload,
   ImageUpload,
+  MultiAudioUpload,
   MultiImageUpload,
+  MultiVideoUpload,
 } from "@/components/image-upload"
 import { Spokes } from "@/components/loading-ui/spokes"
 import { ResizableRightSidebar } from "@/components/resizable-right-sidebar"
@@ -54,7 +56,10 @@ import {
   type ModelValue,
   PRICING,
 } from "@/lib/constants"
-import type { PersistedVideoProvider } from "@/lib/video-provider"
+import {
+  isKieVideoModel,
+  type PersistedVideoProvider,
+} from "@/lib/video-provider"
 import { Input } from "./ui/input"
 
 const VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY = "video-settings-sidebar-width"
@@ -62,6 +67,8 @@ const VIDEO_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
 
 const schema = z.object({
   model: z.enum([
+    "kie/bytedance/seedance-2",
+    "kie/bytedance/seedance-2-fast",
     "bytedance/seedance-2.0",
     "bytedance/seedance-2.0-fast",
     "alibaba/wan-2.7",
@@ -81,6 +88,13 @@ const schema = z.object({
     .optional(),
   firstFrame: z.object({ url: z.string(), key: z.string() }).optional(),
   lastFrame: z.object({ url: z.string(), key: z.string() }).optional(),
+  nsfwChecker: z.boolean().optional(),
+  referenceAudioUrls: z
+    .array(z.object({ url: z.string(), key: z.string() }))
+    .optional(),
+  referenceVideoUrls: z
+    .array(z.object({ url: z.string(), key: z.string() }))
+    .optional(),
   watermark: z.boolean().optional(),
 })
 
@@ -100,6 +114,9 @@ const DEFAULT_VALUES: VideoFormValues = {
   inputReferences: [],
   firstFrame: undefined,
   lastFrame: undefined,
+  nsfwChecker: false,
+  referenceAudioUrls: [],
+  referenceVideoUrls: [],
   watermark: false,
 }
 
@@ -111,6 +128,68 @@ const ASPECT_RATIO_CONFIG: Record<string, { icon: Icon; label: string }> = {
   "4:3": { icon: IconDeviceTablet, label: "4:3" },
   "9:16": { icon: IconDeviceMobile, label: "9:16" },
   "9:21": { icon: IconDeviceMobile, label: "9:21" },
+}
+
+function createAtlasCloudProvider({
+  audioKey,
+  audioUrl,
+  isWanModel,
+  negativePrompt,
+  promptExtend,
+}: {
+  audioKey?: string
+  audioUrl?: string
+  isWanModel: boolean
+  negativePrompt?: string
+  promptExtend?: boolean
+}): PersistedVideoProvider | null {
+  return isWanModel
+    ? {
+        metadata: {
+          audioKey: audioKey ?? null,
+        },
+        options: {
+          "atlas-cloud": {
+            audio_url: audioUrl,
+            negative_prompt: negativePrompt?.trim() || undefined,
+            prompt_extend: promptExtend ?? false,
+          },
+        },
+      }
+    : null
+}
+
+function createKieProvider({
+  isKieModel,
+  nsfwChecker,
+  referenceAudioUrls,
+  referenceVideoUrls,
+}: {
+  isKieModel: boolean
+  nsfwChecker?: boolean
+  referenceAudioUrls?: { key: string; url: string }[]
+  referenceVideoUrls?: { key: string; url: string }[]
+}): PersistedVideoProvider | null {
+  if (!isKieModel) {
+    return null
+  }
+
+  const audioUrls = referenceAudioUrls?.map(({ url }) => url) ?? []
+  const videoUrls = referenceVideoUrls?.map(({ url }) => url) ?? []
+
+  return {
+    metadata: {
+      kieReferenceAudioKeys: referenceAudioUrls?.map(({ key }) => key) ?? [],
+      kieReferenceVideoKeys: referenceVideoUrls?.map(({ key }) => key) ?? [],
+    },
+    options: {
+      kie: {
+        nsfw_checker: nsfwChecker ?? false,
+        reference_audio_urls: audioUrls.length > 0 ? audioUrls : undefined,
+        reference_video_urls: videoUrls.length > 0 ? videoUrls : undefined,
+      },
+    },
+  }
 }
 
 interface VideoFormProps {
@@ -159,27 +238,31 @@ export function VideoForm({
         firstFrame,
         lastFrame,
         audioReference,
+        nsfwChecker,
         promptExtend,
+        referenceAudioUrls,
+        referenceVideoUrls,
         watermark: _watermark,
         aspectRatio,
         resolution,
         ...restBase
       } = value
       const isWanModel = value.model === "alibaba/wan-2.7"
-      const atlasCloudProvider: PersistedVideoProvider | null = isWanModel
-        ? {
-            metadata: {
-              audioKey: audioReference?.key ?? null,
-            },
-            options: {
-              "atlas-cloud": {
-                audio_url: audioReference?.url,
-                negative_prompt: negativePrompt?.trim() || undefined,
-                prompt_extend: promptExtend ?? false,
-              },
-            },
-          }
-        : null
+      const isKieModel = isKieVideoModel(value.model)
+      const atlasCloudProvider = createAtlasCloudProvider({
+        audioKey: audioReference?.key,
+        audioUrl: audioReference?.url,
+        isWanModel,
+        negativePrompt,
+        promptExtend,
+      })
+      const kieProvider = createKieProvider({
+        isKieModel,
+        nsfwChecker,
+        referenceAudioUrls,
+        referenceVideoUrls,
+      })
+      const persistedProvider = atlasCloudProvider ?? kieProvider
       const result = await submitVideoAction(
         {
           ...restBase,
@@ -215,7 +298,7 @@ export function VideoForm({
               : []),
           ],
         },
-        { provider: atlasCloudProvider, title },
+        { provider: persistedProvider, title },
         {
           audioReferenceKey: audioReference?.key,
           inputReferenceKeys: inputReferences?.map(({ key }) => key),
@@ -572,6 +655,70 @@ export function VideoForm({
                       </form.Field>
                     )}
 
+                    {config.features.kieNsfwChecker && (
+                      <form.Field name="nsfwChecker">
+                        {(field) => (
+                          <Field orientation="horizontal">
+                            <div className="flex flex-1 flex-col gap-0.5">
+                              <FieldLabel htmlFor={field.name}>
+                                NSFW Checker
+                              </FieldLabel>
+                              <FieldDescription>
+                                Ask Kie.ai to run its NSFW safety check for this
+                                Seedance task.
+                              </FieldDescription>
+                            </div>
+                            <Switch
+                              checked={field.state.value ?? false}
+                              disabled={readOnly}
+                              id={field.name}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                    )}
+
+                    {config.features.kieReferenceVideoUrls && (
+                      <form.Field name="referenceVideoUrls">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Reference Videos</FieldLabel>
+                            <FieldDescription>
+                              Optional Kie.ai reference videos. Upload MP4, MOV,
+                              or WebM files to R2 for this task.
+                            </FieldDescription>
+                            <MultiVideoUpload
+                              disabled={readOnly}
+                              onChange={(values) => field.handleChange(values)}
+                              values={field.state.value ?? []}
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                    )}
+
+                    {config.features.kieReferenceAudioUrls && (
+                      <form.Field name="referenceAudioUrls">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Reference Audio</FieldLabel>
+                            <FieldDescription>
+                              Optional Kie.ai reference audio. Upload MP3 or WAV
+                              files to R2 for this task.
+                            </FieldDescription>
+                            <MultiAudioUpload
+                              disabled={readOnly}
+                              onChange={(values) => field.handleChange(values)}
+                              values={field.state.value ?? []}
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                    )}
+
                     {config.features.watermark && (
                       <form.Field name="watermark">
                         {(field) => (
@@ -733,6 +880,8 @@ export function VideoForm({
         <div className="flex flex-col gap-4 px-4 pt-4 pb-4 sm:px-5">
           {(
             [
+              ["kie/bytedance/seedance-2", "Kie.ai: Seedance 2"],
+              ["kie/bytedance/seedance-2-fast", "Kie.ai: Seedance 2 Fast"],
               ["bytedance/seedance-2.0", "ByteDance: Seedance 2"],
               ["bytedance/seedance-2.0-fast", "ByteDance: Seedance 2 Fast"],
               ["alibaba/wan-2.7", "Alibaba: Wan 2.7"],

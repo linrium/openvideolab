@@ -47,6 +47,7 @@ const settingsSchema = z.object({
   cloudflareR2EndpointUrl: optionalUrlSchema,
   cloudflareR2SecretAccessKey: apiKeySchema,
   deepSeekApiKey: apiKeySchema,
+  kieApiKey: apiKeySchema,
   openRouterApiKey: apiKeySchema,
   openAiApiKey: apiKeySchema,
 })
@@ -59,6 +60,7 @@ const EMPTY_SETTINGS_VALUES: SettingsValues = {
   cloudflareR2EndpointUrl: "",
   cloudflareR2SecretAccessKey: "",
   deepSeekApiKey: "",
+  kieApiKey: "",
   openAiApiKey: "",
   openRouterApiKey: "",
 }
@@ -68,6 +70,7 @@ const fieldLabels: Record<KeyFieldName, string> = {
   cloudflareR2EndpointUrl: "Cloudflare R2 Endpoint URL",
   cloudflareR2SecretAccessKey: "Cloudflare R2 Secret Access Key",
   deepSeekApiKey: "DeepSeek API Key",
+  kieApiKey: "Kie.ai API Key",
   openAiApiKey: "OpenAI API Key",
   openRouterApiKey: "OpenRouter API Key",
 }
@@ -86,6 +89,7 @@ export function SettingsForm({
   initialValues = EMPTY_SETTINGS_VALUES,
 }: SettingsFormProps) {
   const [isDeepSeekVisible, setIsDeepSeekVisible] = useState(false)
+  const [isKieVisible, setIsKieVisible] = useState(false)
   const [isOpenRouterVisible, setIsOpenRouterVisible] = useState(false)
   const [isOpenAiVisible, setIsOpenAiVisible] = useState(false)
   const [isR2AccessKeyVisible, setIsR2AccessKeyVisible] = useState(false)
@@ -400,6 +404,72 @@ export function SettingsForm({
                           }}
                         >
                           {isDeepSeekVisible ? "Hide" : "Show"}
+                        </InputGroupButton>
+                      </InputGroupAddon>
+                    </InputGroup>
+                    <FieldError
+                      errors={field.state.meta.errors.map((error) => ({
+                        message: String(error),
+                      }))}
+                    />
+                  </Field>
+                )}
+              </form.Field>
+
+              <FieldSeparator />
+
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <h2 className="font-medium text-sm">Kie.ai</h2>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    Configure the API key used for direct Kie.ai Seedance video
+                    generation.
+                  </p>
+                </div>
+              </div>
+
+              <form.Field
+                name="kieApiKey"
+                validators={{
+                  onBlur: ({ value }) => getFieldError("kieApiKey", value),
+                }}
+              >
+                {(field) => (
+                  <Field
+                    data-invalid={
+                      field.state.meta.errors.length > 0 || undefined
+                    }
+                  >
+                    <FieldLabel htmlFor={field.name}>
+                      {fieldLabels.kieApiKey}
+                    </FieldLabel>
+                    <FieldDescription>
+                      Used when you select the Kie.ai Seedance models.
+                    </FieldDescription>
+                    <InputGroup>
+                      <InputGroupInput
+                        aria-invalid={
+                          field.state.meta.errors.length > 0 || undefined
+                        }
+                        autoComplete="off"
+                        id={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value)
+                          setStatusMessage(null)
+                        }}
+                        placeholder="kie_..."
+                        spellCheck={false}
+                        type={isKieVisible ? "text" : "password"}
+                        value={field.state.value}
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupButton
+                          onClick={() => {
+                            setIsKieVisible((currentValue) => !currentValue)
+                          }}
+                        >
+                          {isKieVisible ? "Hide" : "Show"}
                         </InputGroupButton>
                       </InputGroupAddon>
                     </InputGroup>

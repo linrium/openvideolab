@@ -7,6 +7,7 @@ import { db } from "@/db"
 import { generations } from "@/db/schema/generations"
 import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
+import { getKieApiKeyByUserId, getKieTaskDetail } from "@/lib/kie-client"
 import {
   fetchVideoContent,
   getOpenRouterApiKeyByUserId,
@@ -14,6 +15,7 @@ import {
   type VideoJobStatus,
 } from "@/lib/openrouter-client"
 import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
+import { isKieVideoModel } from "@/lib/video-provider"
 
 export interface PollJobStatusResult {
   ok: true
@@ -38,6 +40,7 @@ async function resolvePollJobContext(
   | {
       current: {
         generationId: string
+        model: string
         path: string | null
         status: string
         userId: string
@@ -57,6 +60,7 @@ async function resolvePollJobContext(
   const [current] = await db
     .select({
       generationId: generations.id,
+      model: videos.model,
       path: videos.path,
       status: videos.status,
       userId: generations.userId,
@@ -101,6 +105,37 @@ async function syncCompletedVideoAction(
   }
 }
 
+async function syncCompletedKieVideoAction({
+  jobId,
+  resultUrl,
+  userId,
+}: {
+  jobId: string
+  resultUrl: string
+  userId: string
+}): Promise<string | null> {
+  try {
+    const response = await fetch(resultUrl)
+    if (!response.ok) {
+      throw new Error(`Kie.ai video download failed: ${response.statusText}`)
+    }
+
+    const contentType = response.headers.get("Content-Type") ?? "video/mp4"
+    const ext = contentType.split("/").pop()?.toLowerCase() ?? "mp4"
+    const key = `${userId}/videos/${jobId}.${ext}`
+    const buffer = Buffer.from(await response.arrayBuffer())
+
+    await uploadToR2(key, buffer, contentType)
+    console.log("[syncCompletedKieVideo] uploaded", key)
+    await db.update(videos).set({ path: key }).where(eq(videos.jobId, jobId))
+
+    return key
+  } catch (err) {
+    console.error("[syncCompletedKieVideo] error", err)
+    return null
+  }
+}
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: false positive
 export async function pollJobStatusAction(
   jobId: string,
@@ -113,6 +148,55 @@ export async function pollJobStatusAction(
     }
 
     const { current, userId } = context
+    if (isKieVideoModel(current.model)) {
+      const apiKey = await getKieApiKeyByUserId(userId)
+      const detail = await getKieTaskDetail({ apiKey, taskId: jobId })
+      const statusChanged = current.status !== detail.status
+
+      if (statusChanged) {
+        await db
+          .update(videos)
+          .set({
+            error: detail.error,
+            status: detail.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(videos.jobId, jobId))
+
+        await db
+          .update(generations)
+          .set({
+            status: detail.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(generations.id, current.generationId))
+
+        if (options.refreshClient !== false) {
+          revalidatePath("/videos")
+          refresh()
+        }
+      }
+
+      if (detail.status === "completed" && !current.path) {
+        if (!detail.resultUrl) {
+          return { ok: false, message: "Kie.ai result URL is missing" }
+        }
+
+        const key = await syncCompletedKieVideoAction({
+          jobId,
+          resultUrl: detail.resultUrl,
+          userId,
+        })
+        if (key === null) {
+          return { ok: false, message: "Failed to sync" }
+        }
+        const url = await getPresignedUrl({ key })
+        return { ok: true, status: detail.status as VideoJobStatus, url }
+      }
+
+      return { ok: true, status: detail.status as VideoJobStatus }
+    }
+
     const openrouterClient = await getOpenrouterClientByUserId(userId)
     const openrouterApiKey = await getOpenRouterApiKeyByUserId(userId)
     const data = await openrouterClient.videoGeneration.getGeneration({ jobId })

@@ -28,6 +28,7 @@ export interface ImageValue {
 }
 
 export type AudioValue = ImageValue
+export type VideoValue = ImageValue
 
 async function uploadImage(file: File): Promise<ImageValue> {
   const body = new FormData()
@@ -378,6 +379,220 @@ interface AudioUploadProps {
   disabled?: boolean
   onChange: (value: AudioValue | undefined) => void
   value?: AudioValue
+}
+
+interface MultiMediaUploadProps {
+  accept: string
+  buttonLabel: string
+  className?: string
+  disabled?: boolean
+  max?: number
+  onChange: (values: ImageValue[]) => void
+  removeLabel: string
+  renderPreview: (value: ImageValue) => React.ReactNode
+  values: ImageValue[]
+}
+
+function MultiMediaUpload({
+  accept,
+  buttonLabel,
+  values,
+  onChange,
+  renderPreview,
+  removeLabel,
+  max = 3,
+  className,
+  disabled = false,
+}: MultiMediaUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+
+  function remove(index: number) {
+    if (disabled) {
+      return
+    }
+
+    const next = [...values]
+    next.splice(index, 1)
+    onChange(next)
+    setError(null)
+  }
+
+  async function upload(file: File) {
+    if (disabled || values.length >= max) {
+      return
+    }
+
+    setUploading(true)
+    setError(null)
+    try {
+      onChange([...values, await uploadImage(file)])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (disabled) {
+      e.target.value = ""
+      return
+    }
+
+    const file = e.target.files?.[0]
+    if (file) {
+      upload(file)
+    }
+    e.target.value = ""
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    if (disabled) {
+      return
+    }
+
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      upload(file)
+    }
+  }
+
+  return (
+    <div className={cn("flex flex-col gap-2", className)}>
+      <div className="flex flex-col gap-2">
+        {values.map((value, index) => (
+          <div className="space-y-2 rounded-md border p-3" key={value.key}>
+            {renderPreview(value)}
+            {!disabled && (
+              <ButtonLike onClick={() => remove(index)} text={removeLabel} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <input
+        accept={accept}
+        className="hidden h-0"
+        disabled={disabled}
+        onChange={onFileChange}
+        ref={inputRef}
+        tabIndex={-1}
+        type="file"
+      />
+
+      {values.length < max && (
+        <button
+          className={cn(
+            "flex min-h-24 w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground transition-colors",
+            "hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            dragging && "border-primary bg-primary/5 text-primary",
+            (uploading || disabled) && "pointer-events-none opacity-50"
+          )}
+          disabled={disabled || uploading}
+          onClick={() => {
+            if (!disabled) {
+              inputRef.current?.click()
+            }
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDragOver={(e) => {
+            e.preventDefault()
+            if (!disabled) {
+              setDragging(true)
+            }
+          }}
+          onDrop={onDrop}
+          type="button"
+        >
+          {uploading ? (
+            <span className="size-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <IconUpload size={20} />
+          )}
+          <span className="text-xs">
+            {uploading ? "Uploading…" : buttonLabel}
+          </span>
+        </button>
+      )}
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
+    </div>
+  )
+}
+
+interface MultiAudioUploadProps {
+  className?: string
+  disabled?: boolean
+  max?: number
+  onChange: (values: AudioValue[]) => void
+  values: AudioValue[]
+}
+
+export function MultiAudioUpload({
+  values,
+  onChange,
+  max,
+  className,
+  disabled = false,
+}: MultiAudioUploadProps) {
+  return (
+    <MultiMediaUpload
+      accept="audio/mpeg,audio/wav,audio/x-wav,audio/wave"
+      buttonLabel="Upload MP3 or WAV"
+      className={className}
+      disabled={disabled}
+      max={max}
+      onChange={onChange}
+      removeLabel="Remove audio"
+      renderPreview={(value) => (
+        // biome-ignore lint/a11y/useMediaCaption: uploaded reference audio has no caption track
+        <audio className="w-full" controls src={value.url} />
+      )}
+      values={values}
+    />
+  )
+}
+
+interface MultiVideoUploadProps {
+  className?: string
+  disabled?: boolean
+  max?: number
+  onChange: (values: VideoValue[]) => void
+  values: VideoValue[]
+}
+
+export function MultiVideoUpload({
+  values,
+  onChange,
+  max,
+  className,
+  disabled = false,
+}: MultiVideoUploadProps) {
+  return (
+    <MultiMediaUpload
+      accept="video/mp4,video/quicktime,video/webm"
+      buttonLabel="Upload MP4, MOV, or WebM"
+      className={className}
+      disabled={disabled}
+      max={max}
+      onChange={onChange}
+      removeLabel="Remove video"
+      renderPreview={(value) => (
+        // biome-ignore lint/a11y/useMediaCaption: uploaded reference video has no caption track
+        <video
+          className="aspect-video w-full rounded-md bg-muted"
+          controls
+          src={value.url}
+        />
+      )}
+      values={values}
+    />
+  )
 }
 
 export function AudioUpload({

@@ -27,6 +27,27 @@ const webhookBodySchema = z.object({
   }),
 })
 
+function extractKieTaskId(body: unknown): string | null {
+  if (typeof body !== "object" || body === null) {
+    return null
+  }
+
+  const record = body as Record<string, unknown>
+  const directTaskId = record.taskId ?? record.task_id
+  if (typeof directTaskId === "string") {
+    return directTaskId
+  }
+
+  const data = record.data
+  if (typeof data !== "object" || data === null) {
+    return null
+  }
+
+  const dataRecord = data as Record<string, unknown>
+  const dataTaskId = dataRecord.taskId ?? dataRecord.task_id
+  return typeof dataTaskId === "string" ? dataTaskId : null
+}
+
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") ?? ""
 
@@ -35,6 +56,26 @@ export async function POST(request: NextRequest) {
       const body = await request.json()
       const result = webhookBodySchema.safeParse(body)
       if (!result.success) {
+        const kieTaskId = extractKieTaskId(body)
+        if (kieTaskId) {
+          const [video] = await db
+            .select({ userId: generations.userId })
+            .from(videos)
+            .innerJoin(generations, eq(videos.generationId, generations.id))
+            .where(eq(videos.jobId, kieTaskId))
+            .limit(1)
+
+          if (video) {
+            const syncResult = await pollJobStatusAction(kieTaskId, {
+              refreshClient: false,
+              userId: video.userId,
+            })
+            console.log("[webhook:video-created] kie sync result:", syncResult)
+          }
+
+          return NextResponse.json({ ok: true })
+        }
+
         console.error(
           "[webhook:video-created] invalid body:",
           result.error.flatten()

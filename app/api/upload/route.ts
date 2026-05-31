@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { getPresignedUrl, uploadToR2 } from "@/lib/r2"
 
 const MAX_SIZE = 15 * 1024 * 1024
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024
 const UPLOAD_CONFIG = {
   "audio/mpeg": {
     category: "audio",
@@ -30,6 +31,18 @@ const UPLOAD_CONFIG = {
   "image/webp": {
     category: "images",
   },
+  "video/mp4": {
+    category: "videos",
+    maxSize: MAX_VIDEO_SIZE,
+  },
+  "video/quicktime": {
+    category: "videos",
+    maxSize: MAX_VIDEO_SIZE,
+  },
+  "video/webm": {
+    category: "videos",
+    maxSize: MAX_VIDEO_SIZE,
+  },
 } as const
 
 export async function POST(request: NextRequest) {
@@ -49,21 +62,35 @@ export async function POST(request: NextRequest) {
 
   if (!uploadConfig) {
     return NextResponse.json(
-      { error: "Only JPEG, PNG, WebP, GIF, MP3, and WAV files are allowed" },
+      {
+        error:
+          "Only JPEG, PNG, WebP, GIF, MP3, WAV, MP4, MOV, and WebM files are allowed",
+      },
       { status: 400 }
     )
   }
 
-  if (file.size > MAX_SIZE) {
+  const maxSize = "maxSize" in uploadConfig ? uploadConfig.maxSize : MAX_SIZE
+  if (file.size > maxSize) {
     return NextResponse.json(
-      { error: "File exceeds the 15 MB limit" },
+      {
+        error:
+          uploadConfig.category === "videos"
+            ? "File exceeds the 100 MB limit"
+            : "File exceeds the 15 MB limit",
+      },
       { status: 400 }
     )
   }
 
-  const ext =
-    file.name.split(".").pop()?.toLowerCase() ??
-    (uploadConfig.category === "audio" ? "mp3" : "jpg")
+  let fallbackExt = "jpg"
+  if (uploadConfig.category === "audio") {
+    fallbackExt = "mp3"
+  } else if (uploadConfig.category === "videos") {
+    fallbackExt = "mp4"
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? fallbackExt
   const key = `${session.user.id}/${uploadConfig.category}/${uuidv7()}.${ext}`
 
   const buffer = await file.arrayBuffer()

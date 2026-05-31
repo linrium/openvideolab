@@ -9,7 +9,7 @@ import { videos } from "@/db/schema/videos"
 import { auth } from "@/lib/auth"
 import { MODELS, type ModelValue } from "@/lib/constants"
 import { getPresignedUrl } from "@/lib/r2"
-import { getAtlasCloudOptions } from "@/lib/video-provider"
+import { getAtlasCloudOptions, getKieOptions } from "@/lib/video-provider"
 
 const ASPECT_RATIOS = ["9:16", "16:9", "1:1", "4:3", "3:4", "21:9", "9:21"]
 
@@ -97,31 +97,58 @@ export default async function VideoPage({ params }: VideoPageProps) {
     ? await getPresignedUrl({ key: video.path }).catch(() => "")
     : ""
   const atlasCloudOptions = getAtlasCloudOptions(video.provider)
+  const kieOptions = getKieOptions(video.provider)
   const audioKey = video.provider?.metadata?.audioKey
-  const [inputReferences, firstFrame, lastFrame, audioReference] =
-    await Promise.all([
-      Promise.all(
-        (video.inputReferences ?? []).map(async (key) => ({
-          key,
-          url: await getPresignedUrl({ key }),
-        }))
-      ).catch(() => []),
-      video.frameFirst
-        ? getPresignedUrl({ key: video.frameFirst })
-            .then((url) => ({ key: video.frameFirst as string, url }))
-            .catch(() => undefined)
-        : Promise.resolve(undefined),
-      video.frameLast
-        ? getPresignedUrl({ key: video.frameLast })
-            .then((url) => ({ key: video.frameLast as string, url }))
-            .catch(() => undefined)
-        : Promise.resolve(undefined),
-      audioKey
-        ? getPresignedUrl({ key: audioKey })
-            .then((url) => ({ key: audioKey, url }))
-            .catch(() => undefined)
-        : Promise.resolve(undefined),
-    ])
+  const kieReferenceAudioKeys =
+    video.provider?.metadata?.kieReferenceAudioKeys ?? []
+  const kieReferenceVideoKeys =
+    video.provider?.metadata?.kieReferenceVideoKeys ?? []
+  const [
+    inputReferences,
+    firstFrame,
+    lastFrame,
+    audioReference,
+    referenceAudioUrls,
+    referenceVideoUrls,
+  ] = await Promise.all([
+    Promise.all(
+      (video.inputReferences ?? []).map(async (key) => ({
+        key,
+        url: await getPresignedUrl({ key }),
+      }))
+    ).catch(() => []),
+    video.frameFirst
+      ? getPresignedUrl({ key: video.frameFirst })
+          .then((url) => ({ key: video.frameFirst as string, url }))
+          .catch(() => undefined)
+      : Promise.resolve(undefined),
+    video.frameLast
+      ? getPresignedUrl({ key: video.frameLast })
+          .then((url) => ({ key: video.frameLast as string, url }))
+          .catch(() => undefined)
+      : Promise.resolve(undefined),
+    audioKey
+      ? getPresignedUrl({ key: audioKey })
+          .then((url) => ({ key: audioKey, url }))
+          .catch(() => undefined)
+      : Promise.resolve(undefined),
+    Promise.all(
+      kieReferenceAudioKeys.map(async (key) => ({
+        key,
+        url: await getPresignedUrl({ key }),
+      }))
+    ).catch(() =>
+      (kieOptions?.reference_audio_urls ?? []).map((url) => ({ key: url, url }))
+    ),
+    Promise.all(
+      kieReferenceVideoKeys.map(async (key) => ({
+        key,
+        url: await getPresignedUrl({ key }),
+      }))
+    ).catch(() =>
+      (kieOptions?.reference_video_urls ?? []).map((url) => ({ key: url, url }))
+    ),
+  ])
 
   return (
     <VideoForm
@@ -135,6 +162,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
         duration: normalizeDuration(video.duration),
         generateAudio: video.generateAudio,
         promptExtend: atlasCloudOptions?.prompt_extend ?? false,
+        nsfwChecker: kieOptions?.nsfw_checker ?? false,
+        referenceAudioUrls,
+        referenceVideoUrls,
         audioReference,
         inputReferences,
         firstFrame,

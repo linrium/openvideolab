@@ -160,9 +160,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
             className="flex items-center gap-2 overflow-hidden rounded-md"
             href="/videos"
           >
-            <span className="truncate font-display font-semibold text-sm">
-              OpenVideoLab
-            </span>
+            <span className="truncate font-semibold text-sm">OpenVideoLab</span>
           </Link>
         )}
         <SidebarTrigger className="shrink-0 group-data-[collapsible=icon]:hidden" />

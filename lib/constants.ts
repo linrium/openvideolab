@@ -1,5 +1,15 @@
 export const MODELS = [
   {
+    value: "kie/bytedance/seedance-2",
+    label: "Kie.ai: Seedance 2",
+    disabled: false,
+  },
+  {
+    value: "kie/bytedance/seedance-2-fast",
+    label: "Kie.ai: Seedance 2 Fast",
+    disabled: false,
+  },
+  {
     value: "bytedance/seedance-2.0",
     label: "ByteDance: Seedance 2",
     disabled: false,
@@ -36,6 +46,20 @@ export const WAN_RESOLUTIONS = ["720p", "1080p"] as const
 export const DURATIONS = [5, 10, 15] as const
 
 export const PRICING = {
+  "kie/bytedance/seedance-2": {
+    tokens: { with_audio: 7, no_audio: 7 },
+    per_second: {
+      with_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
+      no_audio: { "480p": 0.067_26, "720p": 0.1512, "1080p": 0.3402 },
+    },
+  },
+  "kie/bytedance/seedance-2-fast": {
+    tokens: { with_audio: 5.6, no_audio: 5.6 },
+    per_second: {
+      with_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
+      no_audio: { "480p": 0.0538, "720p": 0.121, "1080p": 0.2722 },
+    },
+  },
   "bytedance/seedance-2.0": {
     tokens: { with_audio: 7, no_audio: 7 },
     per_second: {
@@ -79,6 +103,9 @@ export interface ModelFieldConfig {
     atlasCloudPromptExtend: boolean
     generateAudio: boolean
     inputReferences: boolean
+    kieNsfwChecker: boolean
+    kieReferenceAudioUrls: boolean
+    kieReferenceVideoUrls: boolean
     frames: boolean
     watermark: boolean
   }
@@ -102,8 +129,21 @@ const seedanceConfig: ModelFieldConfig = {
     atlasCloudPromptExtend: false,
     generateAudio: true,
     inputReferences: true,
+    kieNsfwChecker: false,
+    kieReferenceAudioUrls: false,
+    kieReferenceVideoUrls: false,
     frames: true,
     watermark: false,
+  },
+}
+
+const kieSeedanceConfig: ModelFieldConfig = {
+  ...seedanceConfig,
+  features: {
+    ...seedanceConfig.features,
+    kieNsfwChecker: true,
+    kieReferenceAudioUrls: true,
+    kieReferenceVideoUrls: true,
   },
 }
 
@@ -123,12 +163,17 @@ const wanConfig: ModelFieldConfig = {
     atlasCloudPromptExtend: true,
     generateAudio: true,
     inputReferences: true,
+    kieNsfwChecker: false,
+    kieReferenceAudioUrls: false,
+    kieReferenceVideoUrls: false,
     frames: true,
     watermark: false,
   },
 }
 
 export const MODEL_CONFIGS: Record<ModelValue, ModelFieldConfig> = {
+  "kie/bytedance/seedance-2": kieSeedanceConfig,
+  "kie/bytedance/seedance-2-fast": kieSeedanceConfig,
   "bytedance/seedance-2.0": seedanceConfig,
   "bytedance/seedance-2.0-fast": seedanceConfig,
   "alibaba/wan-2.7": wanConfig,
@@ -148,6 +193,9 @@ export const MODEL_CONFIGS: Record<ModelValue, ModelFieldConfig> = {
       atlasCloudPromptExtend: false,
       generateAudio: false,
       inputReferences: false,
+      kieNsfwChecker: false,
+      kieReferenceAudioUrls: false,
+      kieReferenceVideoUrls: false,
       frames: false,
       watermark: true,
     },
