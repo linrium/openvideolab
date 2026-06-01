@@ -79,11 +79,13 @@ export default async function VideoPage({ params }: VideoPageProps) {
       path: videos.path,
       prompt: videos.prompt,
       provider: videos.provider,
+      publishedAt: generations.publishedAt,
       resolution: videos.resolution,
       status: videos.status,
       title: generations.title,
       totalCost: videos.totalCost,
       userId: generations.userId,
+      videoGenerationId: generations.id,
       videoId: videos.id,
     })
     .from(videos)
@@ -173,7 +175,13 @@ export default async function VideoPage({ params }: VideoPageProps) {
         lastFrame,
       }}
       preview={
-        <VideoPreview jobId={video.jobId} url={videoUrl} video={video} />
+        <VideoPreview
+          generationId={video.videoGenerationId}
+          isPublished={video.publishedAt !== null}
+          jobId={video.jobId}
+          url={videoUrl}
+          video={video}
+        />
       }
       readOnly
       videoId={video.videoId}

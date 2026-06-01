@@ -34,9 +34,15 @@ export interface GeneratedImageMetadata {
   totalCost: string | null
 }
 
+export interface GeneratedImage {
+  id: string
+  publishedAt: string | null
+  url: string
+}
+
 export interface GeneratedImagesState {
   error?: string | null
-  images: string[]
+  images: GeneratedImage[]
   metadata: GeneratedImageMetadata
   size: ImageSize
 }
@@ -103,7 +109,7 @@ function useImageGenerationForm(
       }
 
       onGenerated({
-        images: result.images,
+        images: result.images.map((img) => ({ ...img, publishedAt: null })),
         metadata: result.metadata,
         size: result.size,
       })

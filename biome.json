@@ -12,6 +12,7 @@
       "!.next",
       "!dist",
       "!build",
+      "!.agents",
       "!components/ui",
       "!components/loading-ui"
     ]

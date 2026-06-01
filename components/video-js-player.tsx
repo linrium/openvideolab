@@ -38,7 +38,7 @@ export function VideoJsPlayer({ aspectRatio, src }: VideoJsPlayerProps) {
   return (
     <Player.Provider>
       <MinimalVideoSkin
-        className="max-h-[40vh] w-full overflow-hidden rounded-lg bg-black"
+        className="max-h-[50vh] w-full overflow-hidden rounded-lg bg-black"
         style={videoSkinStyle}
       >
         {isContainerReady ? (

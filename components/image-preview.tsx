@@ -12,11 +12,21 @@ import {
   IconEye,
   IconPhoto,
   IconRulerMeasure,
+  IconWorld,
+  IconWorldOff,
 } from "@tabler/icons-react"
 import Image from "next/image"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import {
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react"
 import { v4 as uuidv4 } from "uuid"
+import { publishImageAction } from "@/app/actions/publish-image"
 import type {
+  GeneratedImage,
   GeneratedImagesState,
   ImageGenerationFormApi,
 } from "@/components/image-studio"
@@ -47,6 +57,8 @@ import { cn } from "@/lib/utils"
 
 const LABEL_SPLIT_PATTERN = /[-x]/
 const IMAGE_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
+const IMAGE_ACTION_BUTTON_CLASS =
+  "@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
 const PROMPT_UNDO_STORAGE_PREFIX = "image-prompt-composer-undo:"
 
 function formatTimestamp(value: string | null): string | null {
@@ -197,6 +209,57 @@ function MetadataText({
   )
 }
 
+function ImagePublishButton({
+  image,
+  onToggle,
+}: {
+  image: GeneratedImage
+  onToggle: (imageId: string, publishedAt: string | null) => void
+}) {
+  const [publishedAt, setPublishedAt] = useState(image.publishedAt)
+  const [isPending, startTransition] = useTransition()
+  const published = publishedAt !== null
+
+  const handleToggle = () => {
+    startTransition(async () => {
+      const result = await publishImageAction(image.id, !published)
+      if (result.ok) {
+        setPublishedAt(result.publishedAt)
+        onToggle(image.id, result.publishedAt)
+      }
+    })
+  }
+
+  return (
+    <Button
+      aria-label={published ? "Unpublish image" : "Publish image"}
+      className={cn(
+        IMAGE_ACTION_BUTTON_CLASS,
+        published &&
+          "border-primary/50 bg-primary text-primary-foreground hover:bg-primary/90"
+      )}
+      disabled={isPending}
+      onClick={handleToggle}
+      size="sm"
+      title={published ? "Unpublish" : "Publish"}
+      type="button"
+      variant="secondary"
+    >
+      {published ? (
+        <>
+          <IconWorldOff data-icon="inline-start" />
+          <span className="@md/image-card:inline hidden">Unpublish</span>
+        </>
+      ) : (
+        <>
+          <IconWorld data-icon="inline-start" />
+          <span className="@md/image-card:inline hidden">Publish</span>
+        </>
+      )}
+    </Button>
+  )
+}
+
 export function ImagePreview({
   form,
   generatedImages,
@@ -289,7 +352,7 @@ export function ImagePreview({
   const selectedDimensions = selectedImage
     ? IMAGE_SIZE_DIMENSIONS[selectedImage.size]
     : null
-  const lcpImageUrl = generatedImages[0]?.images[0]
+  const lcpImageUrl = generatedImages[0]?.images[0]?.url
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
@@ -321,7 +384,9 @@ export function ImagePreview({
               {generatedImages.length > 0 ? (
                 generatedImages.toReversed().map((batch, batchIndex) => {
                   const batchKey =
-                    batch.images[0] ?? batch.metadata.createdAt ?? batchIndex
+                    batch.images[0]?.url ??
+                    batch.metadata.createdAt ??
+                    batchIndex
                   const dimensions = IMAGE_SIZE_DIMENSIONS[batch.size]
                   const createdAtLabel = formatTimestamp(
                     batch.metadata.createdAt
@@ -400,7 +465,7 @@ export function ImagePreview({
                               "space-y-2",
                               isGallery && "mb-3 break-inside-avoid"
                             )}
-                            key={image}
+                            key={image.url}
                           >
                             <div className="group @container/image-card relative overflow-hidden rounded-md border border-border/70 bg-muted/20">
                               <button
@@ -411,7 +476,7 @@ export function ImagePreview({
                                 )}
                                 onClick={() =>
                                   setSelectedImage({
-                                    url: image,
+                                    url: image.url,
                                     size: batch.size,
                                   })
                                 }
@@ -422,22 +487,31 @@ export function ImagePreview({
                                   className="h-auto w-full"
                                   height={dimensions.height}
                                   loading={
-                                    image === lcpImageUrl && imageIndex === 0
+                                    image.url === lcpImageUrl &&
+                                    imageIndex === 0
                                       ? "eager"
                                       : "lazy"
                                   }
-                                  src={image}
+                                  src={image.url}
                                   unoptimized
                                   width={dimensions.width}
                                 />
                               </button>
                               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/15 to-transparent opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" />
                               <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                                {!readOnly && image.id && (
+                                  <ImagePublishButton
+                                    image={image}
+                                    onToggle={() => undefined}
+                                  />
+                                )}
                                 {!readOnly && (
                                   <Button
                                     aria-label="Use as reference"
-                                    className="@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
-                                    onClick={() => handleReferenceClick(image)}
+                                    className={IMAGE_ACTION_BUTTON_CLASS}
+                                    onClick={() =>
+                                      handleReferenceClick(image.url)
+                                    }
                                     size="sm"
                                     title="Reference"
                                     type="button"
@@ -452,7 +526,7 @@ export function ImagePreview({
                                 {!readOnly && batch.metadata.prompt ? (
                                   <Button
                                     aria-label="View prompt"
-                                    className="@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
+                                    className={IMAGE_ACTION_BUTTON_CLASS}
                                     onClick={() =>
                                       handleViewPromptClick(
                                         batch.metadata.prompt ?? ""
@@ -471,9 +545,9 @@ export function ImagePreview({
                                 ) : null}
                                 <Button
                                   aria-label="Download image"
-                                  className="@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
+                                  className={IMAGE_ACTION_BUTTON_CLASS}
                                   onClick={() => {
-                                    downloadImage(image)
+                                    downloadImage(image.url)
                                   }}
                                   size="sm"
                                   title="Download"

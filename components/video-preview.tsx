@@ -4,10 +4,13 @@ import {
   IconDownload,
   IconRefresh,
   IconVideo,
+  IconWorld,
+  IconWorldOff,
   IconX,
 } from "@tabler/icons-react"
 import { useEffect, useEffectEvent, useState, useTransition } from "react"
 import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
+import { publishGenerationAction } from "@/app/actions/publish-generation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -208,18 +211,157 @@ function formatCostUsdValue(
   return ` (~$${(Number(value) * KIE_CREDIT_USD_RATE).toFixed(4)})`
 }
 
+function PublishButton({
+  generationId,
+  isPublished,
+}: {
+  generationId: string
+  isPublished: boolean
+}) {
+  const [published, setPublished] = useState(isPublished)
+  const [isPending, startTransition] = useTransition()
+
+  const handleToggle = () => {
+    startTransition(async () => {
+      const result = await publishGenerationAction(generationId, !published)
+      if (result.ok) {
+        setPublished(result.publishedAt !== null)
+      }
+    })
+  }
+
+  return (
+    <Button
+      disabled={isPending}
+      onClick={handleToggle}
+      size="sm"
+      type="button"
+      variant={published ? "default" : "outline"}
+    >
+      {published ? (
+        <>
+          <IconWorldOff size={16} />
+          Unpublish
+        </>
+      ) : (
+        <>
+          <IconWorld size={16} />
+          Publish
+        </>
+      )}
+    </Button>
+  )
+}
+
+function VideoMetadata({
+  video,
+  displayedTotalCost,
+}: {
+  video: VideoData
+  displayedTotalCost: string | null | undefined
+}) {
+  return (
+    <div className="mx-auto flex w-full max-w-4xl gap-6 px-4 pb-4 text-xs">
+      <dl className="grid flex-1 grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-0.5">
+        {(video.latency || video.generationTime) && (
+          <>
+            <dt className="whitespace-nowrap text-muted-foreground/70">
+              Latency
+            </dt>
+            <dd className="tabular-nums">
+              {video.latency ? formatMillisecondsAsSeconds(video.latency) : "—"}
+            </dd>
+            <dt className="whitespace-nowrap text-muted-foreground/70">
+              Gen Time
+            </dt>
+            <dd className="tabular-nums">
+              {video.generationTime
+                ? formatMillisecondsAsMinutes(video.generationTime)
+                : "—"}
+            </dd>
+          </>
+        )}
+        {video.inputVideoDuration != null && (
+          <>
+            <dt className="whitespace-nowrap text-muted-foreground/70">
+              Input Video
+            </dt>
+            <dd className="tabular-nums">{video.inputVideoDuration}s</dd>
+            <dt className="whitespace-nowrap text-muted-foreground/70">
+              Billable
+            </dt>
+            <dd className="tabular-nums">
+              {video.duration == null
+                ? `${video.inputVideoDuration}s + —`
+                : `${video.inputVideoDuration}s + ${video.duration}s = ${video.inputVideoDuration + video.duration}s`}
+            </dd>
+          </>
+        )}
+        {(video.estimatedCost || video.totalCost) && (
+          <>
+            <dt className="whitespace-nowrap text-muted-foreground/70">
+              Est Cost
+            </dt>
+            <dd className="tabular-nums">
+              {formatCostValue(video.estimatedCost, video.costType)}
+              {formatCostUsdValue(video.estimatedCost, video.costType)}
+            </dd>
+            <dt className="whitespace-nowrap text-muted-foreground/70">
+              Total Cost
+            </dt>
+            <dd className="tabular-nums">
+              {formatCostValue(displayedTotalCost, video.costType)}
+              {formatCostUsdValue(displayedTotalCost, video.costType)}
+            </dd>
+          </>
+        )}
+        {video.error && (
+          <>
+            <dt className="whitespace-nowrap text-muted-foreground/70">
+              Error
+            </dt>
+            <dd className="col-span-3 text-rose-600 dark:text-rose-400">
+              {video.error}
+            </dd>
+          </>
+        )}
+      </dl>
+      <dl className="grid w-52 shrink-0 grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
+        <dt className="whitespace-nowrap text-muted-foreground/70">Job ID</dt>
+        <dd className="min-w-0 truncate font-mono text-muted-foreground">
+          {video.jobId}
+        </dd>
+        {video.generationId && (
+          <>
+            <dt className="whitespace-nowrap text-muted-foreground/70">
+              Gen ID
+            </dt>
+            <dd className="min-w-0 truncate font-mono text-muted-foreground">
+              {video.generationId}
+            </dd>
+          </>
+        )}
+      </dl>
+    </div>
+  )
+}
+
 interface VideoPreviewProps {
+  generationId?: string
   initialStatus?: string
+  isPublished?: boolean
   jobId?: string
   url: string
   video?: VideoData
 }
 
 export function VideoPreview({
+  generationId,
   jobId,
   url,
   video,
   initialStatus,
+  isPublished = false,
 }: VideoPreviewProps) {
   const [currentStatus, setCurrentStatus] = useState(
     video?.status ?? initialStatus
@@ -254,6 +396,12 @@ export function VideoPreview({
             </Badge>
           )}
           <div className="ml-auto flex items-center gap-2">
+            {generationId && currentStatus === "completed" && (
+              <PublishButton
+                generationId={generationId}
+                isPublished={isPublished}
+              />
+            )}
             {currentUrl && (
               <Button asChild size="sm" variant="outline">
                 <a download href={currentUrl} rel="noopener">
@@ -277,97 +425,10 @@ export function VideoPreview({
       {video && (
         <>
           <Separator />
-          <div className="mx-auto flex w-full max-w-4xl gap-6 px-4 pb-4 text-xs">
-            {/* Left: time + cost */}
-            <dl className="grid flex-1 grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-0.5">
-              {(video.latency || video.generationTime) && (
-                <>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Latency
-                  </dt>
-                  <dd className="tabular-nums">
-                    {video.latency
-                      ? formatMillisecondsAsSeconds(video.latency)
-                      : "—"}
-                  </dd>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Gen Time
-                  </dt>
-                  <dd className="tabular-nums">
-                    {video.generationTime
-                      ? formatMillisecondsAsMinutes(video.generationTime)
-                      : "—"}
-                  </dd>
-                </>
-              )}
-              {video.inputVideoDuration != null && (
-                <>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Input Video
-                  </dt>
-                  <dd className="tabular-nums">{video.inputVideoDuration}s</dd>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Billable
-                  </dt>
-                  <dd className="tabular-nums">
-                    {video.duration == null
-                      ? `${video.inputVideoDuration}s + —`
-                      : `${video.inputVideoDuration}s + ${video.duration}s = ${
-                          video.inputVideoDuration + video.duration
-                        }s`}
-                  </dd>
-                </>
-              )}
-              {(video.estimatedCost || video.totalCost) && (
-                <>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Est Cost
-                  </dt>
-                  <dd className="tabular-nums">
-                    {formatCostValue(video.estimatedCost, video.costType)}
-                    {formatCostUsdValue(video.estimatedCost, video.costType)}
-                  </dd>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Total Cost
-                  </dt>
-                  <dd className="tabular-nums">
-                    {formatCostValue(displayedTotalCost, video.costType)}
-                    {formatCostUsdValue(displayedTotalCost, video.costType)}
-                  </dd>
-                </>
-              )}
-              {video.error && (
-                <>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Error
-                  </dt>
-                  <dd className="col-span-3 text-rose-600 dark:text-rose-400">
-                    {video.error}
-                  </dd>
-                </>
-              )}
-            </dl>
-
-            {/* Right: IDs */}
-            <dl className="grid w-52 shrink-0 grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
-              <dt className="whitespace-nowrap text-muted-foreground/70">
-                Job ID
-              </dt>
-              <dd className="min-w-0 truncate font-mono text-muted-foreground">
-                {video.jobId}
-              </dd>
-              {video.generationId && (
-                <>
-                  <dt className="whitespace-nowrap text-muted-foreground/70">
-                    Gen ID
-                  </dt>
-                  <dd className="min-w-0 truncate font-mono text-muted-foreground">
-                    {video.generationId}
-                  </dd>
-                </>
-              )}
-            </dl>
-          </div>
+          <VideoMetadata
+            displayedTotalCost={displayedTotalCost}
+            video={video}
+          />
         </>
       )}
     </div>

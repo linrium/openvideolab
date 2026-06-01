@@ -4,6 +4,8 @@ import {
   type Icon,
   IconArrowBarToRight,
   IconClipboard,
+  IconCompass,
+  IconLogin,
   IconLogout,
   IconMoon,
   IconMusic,
@@ -47,6 +49,7 @@ import {
 import { authClient } from "@/lib/auth-client"
 
 const mainNavigation: { href: string; icon: Icon; label: string }[] = [
+  { href: "/explore", icon: IconCompass, label: "Explore" },
   { href: "/videos/new", icon: IconVideo, label: "New Video" },
   { href: "/images/new", icon: IconPhoto, label: "New Image" },
   // { href: "/storyboard/new", icon: IconClipboard, label: "New Storyboard" },
@@ -84,6 +87,7 @@ interface RecentItem {
 }
 
 interface AppSidebarProps {
+  isAuthenticated?: boolean
   recents: RecentItem[]
 }
 
@@ -107,7 +111,10 @@ function getRecentHref(item: RecentItem): string {
   return "/images/new"
 }
 
-export function AppSidebar({ recents }: AppSidebarProps) {
+export function AppSidebar({
+  recents,
+  isAuthenticated = false,
+}: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { setTheme } = useTheme()
@@ -158,7 +165,7 @@ export function AppSidebar({ recents }: AppSidebarProps) {
         ) : (
           <Link
             className="flex items-center gap-2 overflow-hidden rounded-md"
-            href="/videos"
+            href="/explore"
           >
             <span className="truncate font-semibold text-sm">OpenVideoLab</span>
           </Link>
@@ -261,27 +268,38 @@ export function AppSidebar({ recents }: AppSidebarProps) {
               <span className="dark:hidden">Dark mode</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          {isAuthenticated && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/settings"}
+                tooltip="Settings"
+              >
+                <Link href="/settings">
+                  <IconSettings size={16} />
+                  <span>Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={pathname === "/settings"}
-              tooltip="Settings"
-            >
-              <Link href="/settings">
-                <IconSettings size={16} />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={handleLogout}
-              tooltip="Log out"
-              type="button"
-            >
-              <IconLogout size={18} />
-              <span>Log out</span>
-            </SidebarMenuButton>
+            {isAuthenticated ? (
+              <SidebarMenuButton
+                onClick={handleLogout}
+                tooltip="Log out"
+                type="button"
+              >
+                <IconLogout size={18} />
+                <span>Log out</span>
+              </SidebarMenuButton>
+            ) : (
+              <SidebarMenuButton asChild tooltip="Log in">
+                <Link href="/sign-in">
+                  <IconLogin size={18} />
+                  <span>Log in</span>
+                </Link>
+              </SidebarMenuButton>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

@@ -46,6 +46,7 @@ export const generations = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
   },
   (t) => [
     index("generations_user_id_idx").on(t.userId),

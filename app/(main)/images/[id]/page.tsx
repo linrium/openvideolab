@@ -54,6 +54,7 @@ type ImageRow = Awaited<ReturnType<typeof fetchImageRows>>[number]
 async function fetchImageRows(generationId: string) {
   return db
     .select({
+      id: images.id,
       batchId: images.batchId,
       createdAt: images.createdAt,
       error: images.error,
@@ -63,6 +64,7 @@ async function fetchImageRows(generationId: string) {
       path: images.path,
       position: images.position,
       prompt: images.prompt,
+      publishedAt: images.publishedAt,
       quality: images.quality,
       referenceId: images.referenceId,
       size: images.size,
@@ -110,7 +112,11 @@ async function buildGeneratedBatches(
       if (!isFailed) {
         const imageUrl = await resolveImageUrl(image)
         if (imageUrl) {
-          existingBatch.images.push(imageUrl)
+          existingBatch.images.push({
+            id: image.id,
+            url: imageUrl,
+            publishedAt: image.publishedAt?.toISOString() ?? null,
+          })
         }
       }
       continue
@@ -129,7 +135,13 @@ async function buildGeneratedBatches(
     const imageUrl = await resolveImageUrl(image)
     if (imageUrl) {
       batchMap.set(image.batchId, {
-        images: [imageUrl],
+        images: [
+          {
+            id: image.id,
+            url: imageUrl,
+            publishedAt: image.publishedAt?.toISOString() ?? null,
+          },
+        ],
         metadata: buildBatchMetadata(image, resolvedSize),
         size: resolvedSize,
       })

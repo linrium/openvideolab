@@ -451,7 +451,7 @@ async function prepareImageGeneration(
 
 export interface SubmitImageSuccess {
   generationId: string
-  images: string[]
+  images: { id: string; url: string }[]
   metadata: GeneratedImageMetadata
   ok: true
   size: ImageSize
@@ -648,32 +648,35 @@ export async function submitImageAction(
       .where(eq(generations.id, sessionId))
       .limit(1)
 
-    await db.insert(imagesTable).values(
-      uploadedImages.map((image, index) => ({
-        batchId,
-        estimatedCost,
-        generationId: sessionId,
-        inputFidelity: data.inputFidelity,
-        mask: data.mask?.url ?? null,
-        mode: data.mode,
-        model,
-        prompt,
-        quality: resolvedQuality,
-        referenceId,
-        size: resolvedSize,
-        sourceImages: data.inputImages.map((img) => img.url),
-        status: "completed",
-        totalCost,
-        usage,
-        userId: session.user.id,
-        height: dimensions?.height ?? null,
-        mimeType: image.mimeType,
-        path: image.key,
-        position: index,
-        sourceUrl: image.sourceUrl,
-        width: dimensions?.width ?? null,
-      }))
-    )
+    const insertedImages = await db
+      .insert(imagesTable)
+      .values(
+        uploadedImages.map((image, index) => ({
+          batchId,
+          estimatedCost,
+          generationId: sessionId,
+          inputFidelity: data.inputFidelity,
+          mask: data.mask?.url ?? null,
+          mode: data.mode,
+          model,
+          prompt,
+          quality: resolvedQuality,
+          referenceId,
+          size: resolvedSize,
+          sourceImages: data.inputImages.map((img) => img.url),
+          status: "completed",
+          totalCost,
+          usage,
+          userId: session.user.id,
+          height: dimensions?.height ?? null,
+          mimeType: image.mimeType,
+          path: image.key,
+          position: index,
+          sourceUrl: image.sourceUrl,
+          width: dimensions?.width ?? null,
+        }))
+      )
+      .returning({ id: imagesTable.id })
 
     revalidatePath("/", "layout")
     revalidatePath(`/images/${sessionId}`)
@@ -682,7 +685,10 @@ export async function submitImageAction(
     return {
       generationId: sessionId,
       ok: true,
-      images: uploadedImages.map((image) => image.previewUrl),
+      images: uploadedImages.map((image, index) => ({
+        id: insertedImages[index]?.id ?? "",
+        url: image.previewUrl,
+      })),
       metadata: {
         cost: estimatedCost,
         createdAt: generation.createdAt.toISOString(),

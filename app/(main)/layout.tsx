@@ -13,31 +13,38 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode
 }) {
+  const requestHeaders = await headers()
+  const pathname = requestHeaders.get("x-pathname") ?? ""
+  const isExploreRoute = pathname.startsWith("/explore")
+
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   })
 
-  if (!session) {
+  if (!(session || isExploreRoute)) {
     return redirect("/sign-in")
   }
 
-  const recents = await db
-    .select({
-      id: generations.id,
-      title: generations.title,
-      status: generations.status,
-      type: generations.type,
-      videoId: videos.id,
-    })
-    .from(generations)
-    .leftJoin(videos, eq(videos.generationId, generations.id))
-    .where(eq(generations.userId, session.user.id))
-    .orderBy(desc(generations.createdAt))
-    .limit(20)
+  const recents =
+    session == null
+      ? []
+      : await db
+          .select({
+            id: generations.id,
+            title: generations.title,
+            status: generations.status,
+            type: generations.type,
+            videoId: videos.id,
+          })
+          .from(generations)
+          .leftJoin(videos, eq(videos.generationId, generations.id))
+          .where(eq(generations.userId, session.user.id))
+          .orderBy(desc(generations.createdAt))
+          .limit(20)
 
   return (
     <SidebarProvider>
-      <AppSidebar recents={recents} />
+      <AppSidebar isAuthenticated={session != null} recents={recents} />
       <SidebarInset>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </SidebarInset>

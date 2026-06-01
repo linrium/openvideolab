@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  allowedDevOrigins: ["linhs-macbook-pro.tailba52d0.ts.net"],
 }
 
 export default nextConfig

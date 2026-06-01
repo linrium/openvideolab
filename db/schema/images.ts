@@ -68,6 +68,7 @@ export const images = pgTable(
     width: integer("width"),
     height: integer("height"),
     position: integer("position").notNull().default(0),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
