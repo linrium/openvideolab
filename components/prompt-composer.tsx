@@ -253,6 +253,14 @@ function getEditorPlainText(editor: Editor): string | null {
   }
 }
 
+function hasMentionableToken(text: string, items: MentionItem[]): boolean {
+  if (!AT_WORD_REGEX.test(text)) {
+    return false
+  }
+
+  return items.some((item) => text.includes(`@${item.label}`))
+}
+
 // ---------------------------------------------------------------------------
 // PromptComposer
 // ---------------------------------------------------------------------------
@@ -401,7 +409,7 @@ export function PromptComposer({
     },
   })
 
-  // Sync externally-driven value changes into editor (e.g. "undo prompt")
+  // Sync externally-driven value/config changes into editor.
   useEffect(() => {
     if (!editor) {
       return
@@ -414,11 +422,16 @@ export function PromptComposer({
     if (currentValue === null) {
       return
     }
-    if (currentValue !== value) {
+
+    const shouldSyncValue = currentValue !== value
+    const shouldRehydrateMentions =
+      !shouldSyncValue && hasMentionableToken(value, items)
+
+    if (shouldSyncValue || shouldRehydrateMentions) {
       isExternalSyncRef.current = true
-      editor.commands.setContent(textToContent(value, mentionItemsRef.current))
+      editor.commands.setContent(textToContent(value, items))
     }
-  }, [editor, value])
+  }, [editor, items, value])
 
   useEffect(() => {
     editor?.setEditable(!disabled)
