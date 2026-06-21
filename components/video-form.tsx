@@ -1401,7 +1401,9 @@ export function VideoForm({
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden">
       <section className="flex h-full min-h-0 flex-1 flex-col justify-center overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-y-auto">{preview}</div>
+        <div className="max-h-[65vh] min-h-0 flex-1 overflow-y-auto">
+          {preview}
+        </div>
         <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
           <div className={VIDEO_PREVIEW_CONTENT_CLASS}>
             <div className="px-4">
@@ -1424,7 +1426,7 @@ export function VideoForm({
                             aria-invalid={
                               field.state.meta.errors.length > 0 || undefined
                             }
-                            className="max-h-[min(40svh,24rem)] overflow-y-auto"
+                            className="max-h-[calc(16*1.25rem+1rem)] overflow-y-auto"
                             disabled={readOnly}
                             items={mentionItems}
                             onBlur={field.handleBlur}
