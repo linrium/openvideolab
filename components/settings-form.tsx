@@ -744,7 +744,7 @@ export function SettingsForm({
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
                 <Button disabled={isSubmitting} type="submit">
-                  {isSubmitting ? "Saving..." : "Save Keys"}
+                  {isSubmitting ? "Saving..." : "Save"}
                 </Button>
               )}
             </form.Subscribe>
