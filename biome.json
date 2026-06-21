@@ -14,7 +14,8 @@
       "!build",
       "!.agents",
       "!components/ui",
-      "!components/loading-ui"
+      "!components/loading-ui",
+      "!worker"
     ]
   },
   "formatter": {

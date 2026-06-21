@@ -1,4 +1,4 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare"
+import { env } from "cloudflare:workers"
 import { drizzle } from "drizzle-orm/d1"
 
-export const db = drizzle(getCloudflareContext().env.DB)
+export const db = drizzle(env.DB)

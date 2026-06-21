@@ -43,6 +43,10 @@ next-env.d.ts
 # OpenNext
 .open-next
 
+# vinext
+/dist/
+.vinext/
+
 # wrangler files
 .wrangler
 .dev.vars*

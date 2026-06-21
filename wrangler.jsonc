@@ -1,48 +1,30 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"main": ".open-next/worker.js",
-	"name": "openvideolab",
-	"compatibility_date": "2026-05-01",
-	"compatibility_flags": [
-		"nodejs_compat"
-	],
-	"assets": {
-		"directory": ".open-next/assets",
-		"binding": "ASSETS"
-	},
-	"services": [
-		{
-			"binding": "WORKER_SELF_REFERENCE",
-			"service": "openvideolab"
-		}
-	],
-	"r2_buckets": [
-		{
-			"binding": "NEXT_INC_CACHE_R2_BUCKET",
-			"bucket_name": "openvideolab-opennext-cache"
-		}
-	],
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "openvideolab",
-			"migrations_dir": "drizzle"
-		},
-		{
-			"binding": "openvideolab",
-			"database_name": "openvideolab",
-			"database_id": "b3fb9600-fd18-4124-818d-78e83355494d",
-			"remote": true
-		}
-	],
-	"images": {
-		"binding": "IMAGES"
-	},
-	"observability": {
-		"enabled": true
-	},
-	"vars": {
-		"NEXT_PUBLIC_BASE_URL": "https://openvideolab.linrium.workers.dev",
-		"OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1"
-	}
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "vinext/server/app-router-entry",
+  "name": "openvideolab",
+  "compatibility_date": "2026-05-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "none",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "openvideolab",
+      "migrations_dir": "drizzle",
+      "database_id": "b3fb9600-fd18-4124-818d-78e83355494d",
+      "remote": true
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NEXT_PUBLIC_BASE_URL": "https://openvideolab.linrium.workers.dev",
+    "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1"
+  }
 }
