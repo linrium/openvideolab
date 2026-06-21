@@ -4,7 +4,6 @@ import {
   type Icon,
   IconArrowBarToRight,
   IconClipboard,
-  IconCompass,
   IconLogin,
   IconLogout,
   IconMoon,
@@ -49,7 +48,7 @@ import {
 import { authClient } from "@/lib/auth-client"
 
 const mainNavigation: { href: string; icon: Icon; label: string }[] = [
-  { href: "/explore", icon: IconCompass, label: "Explore" },
+  // { href: "/explore", icon: IconCompass, label: "Explore" },
   { href: "/videos/new", icon: IconVideo, label: "New Video" },
   { href: "/images/new", icon: IconPhoto, label: "New Image" },
   // { href: "/storyboard/new", icon: IconClipboard, label: "New Storyboard" },

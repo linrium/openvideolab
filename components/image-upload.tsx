@@ -426,16 +426,30 @@ function MultiMediaUpload({
     setError(null)
   }
 
-  async function upload(file: File) {
+  async function uploadFiles(files: File[]) {
     if (disabled || values.length >= max) {
+      return
+    }
+
+    const availableSlots = max - values.length
+    const filesToUpload = files.slice(0, availableSlots)
+    if (filesToUpload.length === 0) {
       return
     }
 
     setUploading(true)
     setError(null)
     try {
-      const metadata = (await getMetadata?.(file)) ?? {}
-      onChange([...values, { ...(await uploadImage(file)), ...metadata }])
+      const uploadedValues = await Promise.all(
+        filesToUpload.map(async (file) => {
+          const metadata = (await getMetadata?.(file)) ?? {}
+          return { ...(await uploadImage(file)), ...metadata }
+        })
+      )
+      onChange([...values, ...uploadedValues])
+      if (files.length > availableSlots) {
+        setError(`Only ${availableSlots} more files can be uploaded.`)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -449,9 +463,9 @@ function MultiMediaUpload({
       return
     }
 
-    const file = e.target.files?.[0]
-    if (file) {
-      upload(file)
+    const files = Array.from(e.target.files ?? [])
+    if (files.length > 0) {
+      uploadFiles(files)
     }
     e.target.value = ""
   }
@@ -463,9 +477,9 @@ function MultiMediaUpload({
       return
     }
 
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      upload(file)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) {
+      uploadFiles(files)
     }
   }
 
@@ -486,6 +500,7 @@ function MultiMediaUpload({
         accept={accept}
         className="hidden h-0"
         disabled={disabled}
+        multiple
         onChange={onFileChange}
         ref={inputRef}
         tabIndex={-1}

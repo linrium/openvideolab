@@ -71,6 +71,8 @@ import { Input } from "./ui/input"
 const VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY = "video-settings-sidebar-width"
 const VIDEO_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
 const TITLE_SAVE_DEBOUNCE_MS = 600
+const MAX_INPUT_REFERENCES = 9
+const MAX_KIE_REFERENCE_MEDIA = 3
 
 const MODEL_VALUES = MODELS.map((m) => m.value) as [ModelValue, ...ModelValue[]]
 
@@ -87,12 +89,14 @@ const schema = z.object({
   audioReference: z.object({ url: z.string(), key: z.string() }).optional(),
   inputReferences: z
     .array(z.object({ url: z.string(), key: z.string() }))
+    .max(MAX_INPUT_REFERENCES)
     .optional(),
   firstFrame: z.object({ url: z.string(), key: z.string() }).optional(),
   lastFrame: z.object({ url: z.string(), key: z.string() }).optional(),
   nsfwChecker: z.boolean().optional(),
   referenceAudioUrls: z
     .array(z.object({ url: z.string(), key: z.string() }))
+    .max(MAX_KIE_REFERENCE_MEDIA)
     .optional(),
   referenceVideoUrls: z
     .array(
@@ -102,6 +106,7 @@ const schema = z.object({
         url: z.string(),
       })
     )
+    .max(MAX_KIE_REFERENCE_MEDIA)
     .optional(),
   watermark: z.boolean().optional(),
 })
@@ -109,7 +114,7 @@ const schema = z.object({
 export type VideoFormValues = z.infer<typeof schema>
 
 const DEFAULT_VALUES: VideoFormValues = {
-  model: "bytedance/seedance-2.0",
+  model: "kie/bytedance/seedance-2-fast",
   title: "",
   prompt: "",
   negativePrompt: "",
@@ -965,10 +970,12 @@ export function VideoForm({
                             <FieldLabel>Reference Videos</FieldLabel>
                             <FieldDescription>
                               Optional Kie.ai reference videos. Upload MP4, MOV,
-                              or WebM files to R2 for this task.
+                              or WebM files to R2 for this task. Up to{" "}
+                              {MAX_KIE_REFERENCE_MEDIA} videos.
                             </FieldDescription>
                             <MultiVideoUpload
                               disabled={readOnly}
+                              max={MAX_KIE_REFERENCE_MEDIA}
                               onChange={(values) => field.handleChange(values)}
                               values={field.state.value ?? []}
                             />
@@ -981,13 +988,15 @@ export function VideoForm({
                       <form.Field name="referenceAudioUrls">
                         {(field) => (
                           <Field>
-                            <FieldLabel>Reference Audio</FieldLabel>
+                            <FieldLabel>Reference Audios</FieldLabel>
                             <FieldDescription>
                               Optional Kie.ai reference audio. Upload MP3 or WAV
-                              files to R2 for this task.
+                              files to R2 for this task. Up to{" "}
+                              {MAX_KIE_REFERENCE_MEDIA} audio files.
                             </FieldDescription>
                             <MultiAudioUpload
                               disabled={readOnly}
+                              max={MAX_KIE_REFERENCE_MEDIA}
                               onChange={(values) => field.handleChange(values)}
                               values={field.state.value ?? []}
                             />
@@ -1036,10 +1045,12 @@ export function VideoForm({
                               Upload images whose visual style, color palette,
                               or composition should influence the output. The
                               model uses these as soft guidance — they don't
-                              need to match the prompt exactly. Up to 5 images.
+                              need to match the prompt exactly. Up to{" "}
+                              {MAX_INPUT_REFERENCES} images.
                             </FieldDescription>
                             <MultiImageUpload
                               disabled={readOnly}
+                              max={MAX_INPUT_REFERENCES}
                               onChange={(values) => field.handleChange(values)}
                               values={field.state.value ?? []}
                             />

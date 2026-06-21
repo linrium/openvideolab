@@ -309,4 +309,4 @@ export const MODEL_CONFIGS: Record<ModelValue, ModelFieldConfig> = {
   },
 }
 
-export const DEFAULT_MODEL_CONFIG: ModelFieldConfig = seedanceConfig
+export const DEFAULT_MODEL_CONFIG: ModelFieldConfig = kieSeedanceFastConfig
