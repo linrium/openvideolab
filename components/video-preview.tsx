@@ -1,6 +1,8 @@
 "use client"
 
 import {
+  IconCheck,
+  IconCopy,
   IconDownload,
   IconRefresh,
   IconVideo,
@@ -9,45 +11,25 @@ import {
   IconX,
 } from "@tabler/icons-react"
 import { useEffect, useEffectEvent, useState, useTransition } from "react"
+import { toast } from "sonner"
 import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
 import { publishGenerationAction } from "@/app/actions/publish-generation"
-import { Badge } from "@/components/ui/badge"
+import { CopyLinkButton } from "@/components/copy-link-button"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Status } from "@/components/ui/status"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { VideoJsPlayer } from "@/components/video-js-player"
 import { KIE_CREDIT_USD_RATE } from "@/lib/constants"
 import type { VideoJobStatus } from "@/lib/openrouter-client"
 import { Spokes } from "./loading-ui/spokes"
-
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  completed: {
-    label: "Completed",
-    className:
-      "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  },
-  in_progress: {
-    label: "In Progress",
-    className: "border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400",
-  },
-  pending: {
-    label: "Pending",
-    className:
-      "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  },
-  failed: {
-    label: "Failed",
-    className:
-      "border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400",
-  },
-  cancelled: {
-    label: "Cancelled",
-    className: "border-zinc-400/40 bg-zinc-400/10 text-zinc-500",
-  },
-  expired: {
-    label: "Expired",
-    className: "border-zinc-400/40 bg-zinc-400/10 text-zinc-500",
-  },
-}
 
 const TERMINAL_STATUSES = new Set([
   "completed",
@@ -57,6 +39,58 @@ const TERMINAL_STATUSES = new Set([
 ])
 const AUTO_SYNC_STATUSES = new Set(["pending", "in_progress"])
 const AUTO_SYNC_INTERVAL_MS = 5000
+const COPIED_ID_RESET_DELAY_MS = 1800
+
+async function copyTextToClipboard(value: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+    return
+  }
+
+  const textarea = document.createElement("textarea")
+  textarea.value = value
+  textarea.setAttribute("readonly", "")
+  textarea.style.position = "fixed"
+  textarea.style.opacity = "0"
+  document.body.appendChild(textarea)
+  textarea.select()
+
+  const copied = document.execCommand("copy")
+  document.body.removeChild(textarea)
+
+  if (!copied) {
+    throw new Error("Clipboard copy failed")
+  }
+}
+
+function CopyIdButton({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleClick = async () => {
+    try {
+      await copyTextToClipboard(value)
+      setCopied(true)
+      toast.success(`${label} copied`)
+      window.setTimeout(() => setCopied(false), COPIED_ID_RESET_DELAY_MS)
+    } catch {
+      toast.error(`Failed to copy ${label.toLowerCase()}`)
+    }
+  }
+
+  return (
+    <Button
+      aria-label={`Copy ${label}`}
+      className="size-5"
+      onClick={handleClick}
+      size="icon-xs"
+      title={`Copy ${label}`}
+      type="button"
+      variant="ghost"
+    >
+      {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+    </Button>
+  )
+}
 
 function formatMillisecondsAsMinutes(value: string): string {
   const minutes = Number(value) / 60_000
@@ -211,12 +245,32 @@ function formatCostUsdValue(
   return ` (~$${(Number(value) * KIE_CREDIT_USD_RATE).toFixed(4)})`
 }
 
+function costsAreEqual(
+  first: string | null | undefined,
+  second: string | null | undefined
+): boolean {
+  if (!(first && second)) {
+    return false
+  }
+
+  const firstValue = Number(first)
+  const secondValue = Number(second)
+
+  if (!(Number.isFinite(firstValue) && Number.isFinite(secondValue))) {
+    return first === second
+  }
+
+  return firstValue === secondValue
+}
+
 function PublishButton({
   generationId,
   isPublished,
+  publicPath,
 }: {
   generationId: string
   isPublished: boolean
+  publicPath?: string
 }) {
   const [published, setPublished] = useState(isPublished)
   const [isPending, startTransition] = useTransition()
@@ -231,117 +285,157 @@ function PublishButton({
   }
 
   return (
-    <Button
-      disabled={isPending}
-      onClick={handleToggle}
-      size="sm"
-      type="button"
-      variant={published ? "default" : "outline"}
-    >
-      {published ? (
-        <>
-          <IconWorldOff size={16} />
-          Unpublish
-        </>
-      ) : (
-        <>
-          <IconWorld size={16} />
-          Publish
-        </>
+    <>
+      {published && publicPath && (
+        <CopyLinkButton href={publicPath} size="sm" variant="outline" />
       )}
-    </Button>
+      <Button
+        disabled={isPending}
+        onClick={handleToggle}
+        size="sm"
+        type="button"
+        variant={published ? "default" : "outline"}
+      >
+        {published ? (
+          <>
+            <IconWorldOff size={16} />
+            Unpublish
+          </>
+        ) : (
+          <>
+            <IconWorld size={16} />
+            Publish
+          </>
+        )}
+      </Button>
+    </>
   )
 }
 
-function VideoMetadata({
-  video,
-  displayedTotalCost,
-}: {
-  video: VideoData
-  displayedTotalCost: string | null | undefined
-}) {
+function VideoMetadata({ video }: { video: VideoData }) {
+  const showEstimatedCost =
+    Boolean(video.estimatedCost) &&
+    !costsAreEqual(video.estimatedCost, video.totalCost)
+  const showTotalCost = Boolean(video.totalCost)
+
   return (
-    <div className="mx-auto flex w-full max-w-4xl gap-6 px-4 pb-4 text-xs">
-      <dl className="grid flex-1 grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-0.5">
-        {(video.latency || video.generationTime) && (
-          <>
-            <dt className="whitespace-nowrap text-muted-foreground/70">
-              Latency
-            </dt>
-            <dd className="tabular-nums">
-              {video.latency ? formatMillisecondsAsSeconds(video.latency) : "—"}
-            </dd>
-            <dt className="whitespace-nowrap text-muted-foreground/70">
-              Gen Time
-            </dt>
-            <dd className="tabular-nums">
-              {video.generationTime
-                ? formatMillisecondsAsMinutes(video.generationTime)
-                : "—"}
-            </dd>
-          </>
-        )}
-        {video.inputVideoDuration != null && (
-          <>
-            <dt className="whitespace-nowrap text-muted-foreground/70">
-              Input Video
-            </dt>
-            <dd className="tabular-nums">{video.inputVideoDuration}s</dd>
-            <dt className="whitespace-nowrap text-muted-foreground/70">
-              Billable
-            </dt>
-            <dd className="tabular-nums">
-              {video.duration == null
-                ? `${video.inputVideoDuration}s + —`
-                : `${video.inputVideoDuration}s + ${video.duration}s = ${video.inputVideoDuration + video.duration}s`}
-            </dd>
-          </>
-        )}
-        {(video.estimatedCost || video.totalCost) && (
-          <>
-            <dt className="whitespace-nowrap text-muted-foreground/70">
-              Est Cost
-            </dt>
-            <dd className="tabular-nums">
-              {formatCostValue(video.estimatedCost, video.costType)}
-              {formatCostUsdValue(video.estimatedCost, video.costType)}
-            </dd>
-            <dt className="whitespace-nowrap text-muted-foreground/70">
-              Total Cost
-            </dt>
-            <dd className="tabular-nums">
-              {formatCostValue(displayedTotalCost, video.costType)}
-              {formatCostUsdValue(displayedTotalCost, video.costType)}
-            </dd>
-          </>
-        )}
-        {video.error && (
-          <>
-            <dt className="whitespace-nowrap text-muted-foreground/70">
-              Error
-            </dt>
-            <dd className="col-span-3 text-rose-600 dark:text-rose-400">
-              {video.error}
-            </dd>
-          </>
-        )}
-      </dl>
-      <dl className="grid w-52 shrink-0 grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
-        <dt className="whitespace-nowrap text-muted-foreground/70">Job ID</dt>
-        <dd className="min-w-0 truncate font-mono text-muted-foreground">
-          {video.jobId}
-        </dd>
-        {video.generationId && (
-          <>
-            <dt className="whitespace-nowrap text-muted-foreground/70">
-              Gen ID
-            </dt>
-            <dd className="min-w-0 truncate font-mono text-muted-foreground">
-              {video.generationId}
-            </dd>
-          </>
-        )}
-      </dl>
+    <div className="mx-auto w-full max-w-4xl px-4 pb-4">
+      <div className="overflow-hidden rounded-lg border border-border/70">
+        <Table>
+          <TableHeader className="bg-muted/30">
+            <TableRow className="border-border/70 border-b hover:bg-transparent">
+              <TableHead className="h-auto w-36 px-3 py-2">Info</TableHead>
+              <TableHead className="h-auto px-3 py-2">Value</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {video.latency && (
+              <TableRow className="border-border/60 border-b">
+                <TableCell className="px-3 py-2 text-muted-foreground">
+                  Latency
+                </TableCell>
+                <TableCell className="px-3 py-2 tabular-nums">
+                  {formatMillisecondsAsSeconds(video.latency)}
+                </TableCell>
+              </TableRow>
+            )}
+            {video.generationTime && (
+              <TableRow className="border-border/60 border-b">
+                <TableCell className="px-3 py-2 text-muted-foreground">
+                  Gen Time
+                </TableCell>
+                <TableCell className="px-3 py-2 tabular-nums">
+                  {formatMillisecondsAsMinutes(video.generationTime)}
+                </TableCell>
+              </TableRow>
+            )}
+            {video.inputVideoDuration != null && (
+              <>
+                <TableRow>
+                  <TableCell className="px-3 py-2 text-muted-foreground">
+                    Input Video
+                  </TableCell>
+                  <TableCell className="px-3 py-2 tabular-nums">
+                    {video.inputVideoDuration}s
+                  </TableCell>
+                </TableRow>
+                <TableRow className="border-border/60 border-b">
+                  <TableCell className="px-3 py-2 text-muted-foreground">
+                    Billable
+                  </TableCell>
+                  <TableCell className="px-3 py-2 tabular-nums">
+                    {video.duration == null
+                      ? `${video.inputVideoDuration}s + —`
+                      : `${video.inputVideoDuration}s + ${video.duration}s = ${
+                          video.inputVideoDuration + video.duration
+                        }s`}
+                  </TableCell>
+                </TableRow>
+              </>
+            )}
+            {showEstimatedCost && (
+              <TableRow className="border-border/60 border-b">
+                <TableCell className="px-3 py-2 text-muted-foreground">
+                  Est Cost
+                </TableCell>
+                <TableCell className="px-3 py-2 tabular-nums">
+                  {formatCostValue(video.estimatedCost, video.costType)}
+                  {formatCostUsdValue(video.estimatedCost, video.costType)}
+                </TableCell>
+              </TableRow>
+            )}
+            {showTotalCost && (
+              <TableRow className="border-border/60 border-b">
+                <TableCell className="px-3 py-2 text-muted-foreground">
+                  Total Cost
+                </TableCell>
+                <TableCell className="px-3 py-2 tabular-nums">
+                  {formatCostValue(video.totalCost, video.costType)}
+                  {formatCostUsdValue(video.totalCost, video.costType)}
+                </TableCell>
+              </TableRow>
+            )}
+            <TableRow className="border-border/60 border-b">
+              <TableCell className="px-3 py-2 text-muted-foreground">
+                Job ID
+              </TableCell>
+              <TableCell className="px-3 py-2">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="min-w-0 truncate font-mono text-muted-foreground">
+                    {video.jobId}
+                  </span>
+                  <CopyIdButton label="Job ID" value={video.jobId} />
+                </div>
+              </TableCell>
+            </TableRow>
+            {video.generationId && (
+              <TableRow className="border-border/60 border-b">
+                <TableCell className="px-3 py-2 text-muted-foreground">
+                  Gen ID
+                </TableCell>
+                <TableCell className="px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="min-w-0 truncate font-mono text-muted-foreground">
+                      {video.generationId}
+                    </span>
+                    <CopyIdButton label="Gen ID" value={video.generationId} />
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+            {video.error && (
+              <TableRow>
+                <TableCell className="px-3 py-2 text-muted-foreground">
+                  Error
+                </TableCell>
+                <TableCell className="whitespace-normal px-3 py-2 text-rose-600 dark:text-rose-400">
+                  {video.error}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
@@ -351,6 +445,7 @@ interface VideoPreviewProps {
   initialStatus?: string
   isPublished?: boolean
   jobId?: string
+  publicPath?: string
   url: string
   video?: VideoData
 }
@@ -362,16 +457,12 @@ export function VideoPreview({
   video,
   initialStatus,
   isPublished = false,
+  publicPath,
 }: VideoPreviewProps) {
   const [currentStatus, setCurrentStatus] = useState(
     video?.status ?? initialStatus
   )
   const [currentUrl, setCurrentUrl] = useState(url)
-  const displayedTotalCost = video?.totalCost || video?.estimatedCost
-
-  const statusConfig = currentStatus
-    ? (STATUS_CONFIG[currentStatus] ?? STATUS_CONFIG.pending)
-    : null
 
   return (
     <div className="w-full space-y-3">
@@ -390,16 +481,13 @@ export function VideoPreview({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 px-4">
-          {statusConfig && (
-            <Badge className={statusConfig.className} variant="outline">
-              {statusConfig.label}
-            </Badge>
-          )}
+          {currentStatus && <Status status={currentStatus} />}
           <div className="ml-auto flex items-center gap-2">
             {generationId && currentStatus === "completed" && (
               <PublishButton
                 generationId={generationId}
                 isPublished={isPublished}
+                publicPath={publicPath}
               />
             )}
             {currentUrl && (
@@ -425,10 +513,7 @@ export function VideoPreview({
       {video && (
         <>
           <Separator />
-          <VideoMetadata
-            displayedTotalCost={displayedTotalCost}
-            video={video}
-          />
+          <VideoMetadata video={video} />
         </>
       )}
     </div>

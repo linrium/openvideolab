@@ -4,6 +4,8 @@ import type { AspectRatio, Resolution } from "@openrouter/sdk/models"
 import {
   type Icon,
   IconArrowUp,
+  IconCheck,
+  IconCopy,
   IconDeviceMobile,
   IconDeviceTablet,
   IconSquare,
@@ -323,14 +325,7 @@ interface VideoFormProps {
   videoId?: string
 }
 
-function getSubmitLabel(
-  readOnly: boolean,
-  confirming: boolean,
-  isSubmitting: boolean
-) {
-  if (readOnly) {
-    return "Video Already Exists"
-  }
+function getSubmitLabel(confirming: boolean, isSubmitting: boolean) {
   if (isSubmitting) {
     return "Submitting…"
   }
@@ -338,6 +333,89 @@ function getSubmitLabel(
     return "Confirm?"
   }
   return "Generate Video"
+}
+
+const COPIED_PROMPT_RESET_DELAY_MS = 1800
+
+async function copyPromptToClipboard(prompt: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(prompt)
+    return
+  }
+
+  const textarea = document.createElement("textarea")
+  textarea.value = prompt
+  textarea.setAttribute("readonly", "")
+  textarea.style.position = "fixed"
+  textarea.style.opacity = "0"
+  document.body.appendChild(textarea)
+  textarea.select()
+
+  const copied = document.execCommand("copy")
+  document.body.removeChild(textarea)
+
+  if (!copied) {
+    throw new Error("Clipboard copy failed")
+  }
+}
+
+function VideoPromptActions({
+  canSubmit,
+  confirming,
+  copiedPrompt,
+  isSubmitting,
+  onCopyPrompt,
+  onGenerate,
+  prompt,
+  readOnly,
+}: {
+  canSubmit: boolean
+  confirming: boolean
+  copiedPrompt: boolean
+  isSubmitting: boolean
+  onCopyPrompt: (prompt: string) => void
+  onGenerate: () => void
+  prompt: string
+  readOnly: boolean
+}) {
+  const hasPrompt = prompt.trim().length > 0
+  const submitLabel = getSubmitLabel(confirming, isSubmitting)
+
+  return (
+    <>
+      {readOnly && hasPrompt ? (
+        <InputGroupButton
+          aria-label="Copy prompt"
+          onClick={() => onCopyPrompt(prompt)}
+          size="sm"
+          title="Copy prompt"
+          type="button"
+          variant="outline"
+        >
+          {copiedPrompt ? <IconCheck size={16} /> : <IconCopy size={16} />}
+          <SwapText text={copiedPrompt ? "Copied" : "Copy Prompt"} />
+        </InputGroupButton>
+      ) : null}
+      {readOnly ? null : (
+        <InputGroupButton
+          aria-label={submitLabel}
+          disabled={!(canSubmit && hasPrompt) || isSubmitting}
+          onClick={onGenerate}
+          size="sm"
+          title={submitLabel}
+          type="button"
+          variant={confirming ? "destructive" : "default"}
+        >
+          {isSubmitting ? (
+            <Spokes className="size-3" />
+          ) : (
+            <IconArrowUp size={16} />
+          )}
+          <SwapText text={submitLabel} />
+        </InputGroupButton>
+      )}
+    </>
+  )
 }
 
 export function VideoForm({
@@ -348,6 +426,7 @@ export function VideoForm({
 }: VideoFormProps) {
   const router = useRouter()
   const [confirming, setConfirming] = useState(false)
+  const [copiedPrompt, setCopiedPrompt] = useState(false)
   const [isSavingTitle, setIsSavingTitle] = useState(false)
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingTitleSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -367,6 +446,20 @@ export function VideoForm({
     } else {
       setConfirming(true)
       confirmTimeoutRef.current = setTimeout(() => setConfirming(false), 3000)
+    }
+  }
+
+  const handleCopyPromptClick = async (prompt: string) => {
+    try {
+      await copyPromptToClipboard(prompt)
+      setCopiedPrompt(true)
+      toast.success("Prompt copied")
+      window.setTimeout(
+        () => setCopiedPrompt(false),
+        COPIED_PROMPT_RESET_DELAY_MS
+      )
+    } catch {
+      toast.error("Failed to copy prompt")
     }
   }
 
@@ -1350,39 +1443,18 @@ export function VideoForm({
                                 prompt: state.values.prompt,
                               })}
                             >
-                              {({ canSubmit, isSubmitting, prompt }) => {
-                                const hasPrompt = prompt.trim().length > 0
-                                const submitLabel = getSubmitLabel(
-                                  readOnly,
-                                  confirming,
-                                  isSubmitting
-                                )
-
-                                return (
-                                  <InputGroupButton
-                                    aria-label={submitLabel}
-                                    disabled={
-                                      readOnly ||
-                                      !(canSubmit && hasPrompt) ||
-                                      isSubmitting
-                                    }
-                                    onClick={handleGenerateClick}
-                                    size="sm"
-                                    title={submitLabel}
-                                    type="button"
-                                    variant={
-                                      confirming ? "destructive" : "default"
-                                    }
-                                  >
-                                    {isSubmitting ? (
-                                      <Spokes className="size-3" />
-                                    ) : (
-                                      <IconArrowUp size={16} />
-                                    )}
-                                    <SwapText text={submitLabel} />
-                                  </InputGroupButton>
-                                )
-                              }}
+                              {({ canSubmit, isSubmitting, prompt }) => (
+                                <VideoPromptActions
+                                  canSubmit={canSubmit}
+                                  confirming={confirming}
+                                  copiedPrompt={copiedPrompt}
+                                  isSubmitting={isSubmitting}
+                                  onCopyPrompt={handleCopyPromptClick}
+                                  onGenerate={handleGenerateClick}
+                                  prompt={prompt}
+                                  readOnly={readOnly}
+                                />
+                              )}
                             </form.Subscribe>
                           </InputGroupAddon>
                         </InputGroup>

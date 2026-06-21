@@ -25,6 +25,7 @@ import {
 } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { publishImageAction } from "@/app/actions/publish-image"
+import { CopyLinkButton } from "@/components/copy-link-button"
 import type {
   GeneratedImage,
   GeneratedImagesState,
@@ -231,32 +232,46 @@ function ImagePublishButton({
   }
 
   return (
-    <Button
-      aria-label={published ? "Unpublish image" : "Publish image"}
-      className={cn(
-        IMAGE_ACTION_BUTTON_CLASS,
-        published &&
-          "border-primary/50 bg-primary text-primary-foreground hover:bg-primary/90"
+    <>
+      {published && (
+        <CopyLinkButton
+          aria-label="Copy published image link"
+          className={IMAGE_ACTION_BUTTON_CLASS}
+          href={`/explore/images/${image.id}`}
+          label="Copy"
+          labelClassName="@md/image-card:inline hidden"
+          size="sm"
+          title="Copy link"
+          variant="secondary"
+        />
       )}
-      disabled={isPending}
-      onClick={handleToggle}
-      size="sm"
-      title={published ? "Unpublish" : "Publish"}
-      type="button"
-      variant="secondary"
-    >
-      {published ? (
-        <>
-          <IconWorldOff data-icon="inline-start" />
-          <span className="@md/image-card:inline hidden">Unpublish</span>
-        </>
-      ) : (
-        <>
-          <IconWorld data-icon="inline-start" />
-          <span className="@md/image-card:inline hidden">Publish</span>
-        </>
-      )}
-    </Button>
+      <Button
+        aria-label={published ? "Unpublish image" : "Publish image"}
+        className={cn(
+          IMAGE_ACTION_BUTTON_CLASS,
+          published &&
+            "border-primary/50 bg-primary text-primary-foreground hover:bg-primary/90"
+        )}
+        disabled={isPending}
+        onClick={handleToggle}
+        size="sm"
+        title={published ? "Unpublish" : "Publish"}
+        type="button"
+        variant="secondary"
+      >
+        {published ? (
+          <>
+            <IconWorldOff data-icon="inline-start" />
+            <span className="@md/image-card:inline hidden">Unpublish</span>
+          </>
+        ) : (
+          <>
+            <IconWorld data-icon="inline-start" />
+            <span className="@md/image-card:inline hidden">Publish</span>
+          </>
+        )}
+      </Button>
+    </>
   )
 }
 

@@ -179,6 +179,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
           generationId={video.videoGenerationId}
           isPublished={video.publishedAt !== null}
           jobId={video.jobId}
+          publicPath={`/explore/videos/${video.videoId}`}
           url={videoUrl}
           video={video}
         />
