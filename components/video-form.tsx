@@ -12,7 +12,13 @@ import {
 } from "@tabler/icons-react"
 import { useForm } from "@tanstack/react-form"
 import { usePathname, useRouter } from "next/navigation"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { toast } from "sonner"
 import z from "zod/v4"
 import {
@@ -73,6 +79,7 @@ import { Input } from "./ui/input"
 
 const VIDEO_SETTINGS_SIDEBAR_WIDTH_KEY = "video-settings-sidebar-width"
 const VIDEO_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
+const VIDEO_COMPOSER_HEIGHT_VAR = "--video-composer-height"
 const TITLE_SAVE_DEBOUNCE_MS = 600
 const MAX_INPUT_REFERENCES = 9
 const MAX_KIE_REFERENCE_MEDIA = 3
@@ -433,12 +440,17 @@ export function VideoForm({
   const [copiedPrompt, setCopiedPrompt] = useState(false)
   const [isSavingTitle, setIsSavingTitle] = useState(false)
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const previewComposerRef = useRef<HTMLDivElement | null>(null)
   const pendingTitleSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedTitleRef = useRef(initialValues.title)
   const latestTitleRef = useRef(initialValues.title)
   const titleSaveCountRef = useRef(0)
   const titleSaveVersionRef = useRef(0)
   const canEditTitle = Boolean(videoId)
+  const [previewComposerHeight, setPreviewComposerHeight] = useState(0)
+  const previewScrollStyle = {
+    [VIDEO_COMPOSER_HEIGHT_VAR]: `${previewComposerHeight}px`,
+  } as CSSProperties
 
   const handleGenerateClick = () => {
     if (confirming) {
@@ -577,6 +589,25 @@ export function VideoForm({
     },
     []
   )
+
+  useEffect(() => {
+    const composerElement = previewComposerRef.current
+
+    if (!composerElement) {
+      return
+    }
+
+    const updateComposerHeight = () => {
+      setPreviewComposerHeight(composerElement.getBoundingClientRect().height)
+    }
+
+    updateComposerHeight()
+
+    const resizeObserver = new ResizeObserver(updateComposerHeight)
+    resizeObserver.observe(composerElement)
+
+    return () => resizeObserver.disconnect()
+  }, [])
 
   const startTitleSave = () => {
     titleSaveCountRef.current += 1
@@ -1408,12 +1439,17 @@ export function VideoForm({
         <div
           className={cn(
             "flex-1 overflow-y-auto",
-            !isNewVideoPage && "max-h-[65vh]"
+            !isNewVideoPage &&
+              "max-h-[calc(100vh-var(--video-composer-height))]"
           )}
+          style={previewScrollStyle}
         >
           {preview}
         </div>
-        <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
+        <div
+          className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4"
+          ref={previewComposerRef}
+        >
           <div className={VIDEO_PREVIEW_CONTENT_CLASS}>
             <div className="px-4">
               <form.Subscribe
