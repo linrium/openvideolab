@@ -15,6 +15,7 @@ import {
   IconWorld,
   IconWorldOff,
 } from "@tabler/icons-react"
+import { useStore } from "@tanstack/react-form"
 import Image from "next/image"
 import {
   type ReactNode,
@@ -32,6 +33,7 @@ import type {
   ImageGenerationFormApi,
 } from "@/components/image-studio"
 import { Spokes } from "@/components/loading-ui/spokes"
+import { TextShimmer } from "@/components/motion-primitives/text-shimmer"
 import { PromptComposer } from "@/components/prompt-composer"
 import { SwapText } from "@/components/swap-text"
 import { Button } from "@/components/ui/button"
@@ -49,8 +51,10 @@ import {
 } from "@/components/ui/input-group"
 import { Separator } from "@/components/ui/separator"
 import {
+  getEstimatedImageCostRange,
   IMAGE_SIZE_DIMENSIONS,
   type ImageSize,
+  SUPPORTED_IMAGE_EDIT_MODEL,
   SUPPORTED_IMAGE_GENERATION_MODEL,
   SUPPORTED_SEEDREAM_IMAGE_MODEL,
 } from "@/lib/image-generation"
@@ -61,6 +65,11 @@ const IMAGE_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
 const IMAGE_ACTION_BUTTON_CLASS =
   "@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
 const PROMPT_UNDO_STORAGE_PREFIX = "image-prompt-composer-undo:"
+const MODEL_LABELS = {
+  [SUPPORTED_IMAGE_EDIT_MODEL]: "GPT Image 2",
+  [SUPPORTED_IMAGE_GENERATION_MODEL]: "GPT Image 2",
+  [SUPPORTED_SEEDREAM_IMAGE_MODEL]: "Seedream 4.5",
+} as const
 
 function formatTimestamp(value: string | null): string | null {
   if (!value) {
@@ -80,6 +89,14 @@ function formatCost(value: string | null): string | null {
   }
 
   return `$${Number(value).toFixed(3)}`
+}
+
+function formatCostRange(range: { max: number; min: number }): string {
+  if (range.min === range.max) {
+    return `$${range.min.toFixed(3)}`
+  }
+
+  return `$${range.min.toFixed(3)}-$${range.max.toFixed(3)}`
 }
 
 function labelFromValue(value: string): string {
@@ -180,10 +197,9 @@ function ImageError({
 function ImagePlaceholder({ isGenerating }: { isGenerating: boolean }) {
   if (isGenerating) {
     return (
-      <>
-        <Spokes className="size-8 text-muted-foreground" />
-        <span>Generating images…</span>
-      </>
+      <TextShimmer className="font-medium text-sm" duration={1.4}>
+        Generating images…
+      </TextShimmer>
     )
   }
 
@@ -288,12 +304,30 @@ export function ImagePreview({
 }) {
   const [confirming, setConfirming] = useState(false)
   const [canUndoPrompt, setCanUndoPrompt] = useState(false)
+  const [loadingStartedAt, setLoadingStartedAt] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<{
     url: string
     size: ImageSize
   } | null>(null)
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const bottomAnchorRef = useRef<HTMLDivElement | null>(null)
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting)
+  const loadingMetadata = useStore(form.store, (state) => ({
+    cost: formatCostRange(
+      getEstimatedImageCostRange({
+        model: state.values.model,
+        n: state.values.n,
+        quality: state.values.quality,
+        size: state.values.size,
+      })
+    ),
+    model: MODEL_LABELS[state.values.model],
+    quality:
+      state.values.quality === "auto"
+        ? null
+        : labelFromValue(state.values.quality),
+    size: state.values.size,
+  }))
 
   useEffect(
     () => () => {
@@ -309,15 +343,25 @@ export function ImagePreview({
   }, [])
 
   useEffect(() => {
-    const scrollContainer = scrollContainerRef.current
-    if (!scrollContainer || generatedImages.length === 0) {
+    if (isSubmitting) {
+      setLoadingStartedAt((current) => current ?? new Date().toISOString())
       return
     }
 
-    requestAnimationFrame(() => {
-      scrollContainer.scrollTop = scrollContainer.scrollHeight
+    setLoadingStartedAt(null)
+  }, [isSubmitting])
+
+  useEffect(() => {
+    if (!(generatedImages.length > 0 || isSubmitting || generationError)) {
+      return
+    }
+
+    const animationFrame = requestAnimationFrame(() => {
+      bottomAnchorRef.current?.scrollIntoView({ block: "end" })
     })
-  }, [generatedImages.length])
+
+    return () => cancelAnimationFrame(animationFrame)
+  }, [generatedImages.length, generationError, isSubmitting])
 
   const handleGenerateClick = () => {
     if (confirming) {
@@ -368,231 +412,257 @@ export function ImagePreview({
     ? IMAGE_SIZE_DIMENSIONS[selectedImage.size]
     : null
   const lcpImageUrl = generatedImages[0]?.images[0]?.url
+  const shouldShowEmptyState =
+    generatedImages.length === 0 && !isSubmitting && !generationError
+  const shouldShowGenerationError = !isSubmitting && generationError
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto" ref={scrollContainerRef}>
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="w-full">
           <div className={IMAGE_PREVIEW_CONTENT_CLASS}>
             <div className="space-y-4 px-4 pt-4 pb-4">
-              <form.Subscribe selector={(state) => state.isSubmitting}>
-                {(isSubmitting) => {
-                  if (isSubmitting) {
-                    return (
-                      <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
-                        <ImagePlaceholder isGenerating />
-                      </div>
+              {generatedImages.length > 0
+                ? generatedImages.toReversed().map((batch, batchIndex) => {
+                    const batchKey =
+                      batch.images[0]?.url ??
+                      batch.metadata.createdAt ??
+                      batchIndex
+                    const dimensions = IMAGE_SIZE_DIMENSIONS[batch.size]
+                    const createdAtLabel = formatTimestamp(
+                      batch.metadata.createdAt
                     )
-                  }
-                  if (generationError) {
-                    return (
-                      <ImageError
-                        createdAt={generationError.createdAt}
-                        message={generationError.message}
-                      />
-                    )
-                  }
-                  return null
-                }}
-              </form.Subscribe>
+                    const metadataItems = [
+                      {
+                        icon: IconRulerMeasure,
+                        label: "Size",
+                        value: [
+                          batch.metadata.size.replace("x", " × "),
+                          batch.metadata.quality
+                            ? labelFromValue(batch.metadata.quality)
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · "),
+                      },
+                      {
+                        icon: IconCpu,
+                        label: "Model",
+                        value: batch.metadata.model,
+                      },
+                      {
+                        icon: IconCurrencyDollar,
+                        label: "Cost",
+                        value: formatCost(batch.metadata.cost),
+                      },
+                    ].filter((item) => item.value)
 
-              {generatedImages.length > 0 ? (
-                generatedImages.toReversed().map((batch, batchIndex) => {
-                  const batchKey =
-                    batch.images[0]?.url ??
-                    batch.metadata.createdAt ??
-                    batchIndex
-                  const dimensions = IMAGE_SIZE_DIMENSIONS[batch.size]
-                  const createdAtLabel = formatTimestamp(
-                    batch.metadata.createdAt
-                  )
-                  const metadataItems = [
-                    {
-                      icon: IconRulerMeasure,
-                      label: "Size",
-                      value: [
-                        batch.metadata.size.replace("x", " × "),
-                        batch.metadata.quality
-                          ? labelFromValue(batch.metadata.quality)
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · "),
-                    },
-                    {
-                      icon: IconCpu,
-                      label: "Model",
-                      value: batch.metadata.model,
-                    },
-                    {
-                      icon: IconCurrencyDollar,
-                      label: "Cost",
-                      value: formatCost(batch.metadata.cost),
-                    },
-                  ].filter((item) => item.value)
+                    if (batch.error) {
+                      return (
+                        <div key={batchKey}>
+                          {batchIndex > 0 && <Separator className="mb-4" />}
+                          <ImageError
+                            createdAt={batch.metadata.createdAt}
+                            message={batch.error}
+                          />
+                        </div>
+                      )
+                    }
 
-                  if (batch.error) {
+                    const isGallery = batch.images.length > 1
+
                     return (
                       <div key={batchKey}>
                         {batchIndex > 0 && <Separator className="mb-4" />}
-                        <ImageError
-                          createdAt={batch.metadata.createdAt}
-                          message={batch.error}
-                        />
-                      </div>
-                    )
-                  }
-
-                  const isGallery = batch.images.length > 1
-
-                  return (
-                    <div key={batchKey}>
-                      {batchIndex > 0 && <Separator className="mb-4" />}
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-muted-foreground text-xs">
-                        <MetadataText icon={IconCalendarTime}>
-                          {createdAtLabel ?? " "}
-                        </MetadataText>
-                        {isGallery ? (
-                          <MetadataText icon={IconPhoto}>
-                            {batch.images.length} images
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-muted-foreground text-xs">
+                          <MetadataText icon={IconCalendarTime}>
+                            {createdAtLabel ?? " "}
                           </MetadataText>
-                        ) : null}
-                      </div>
-                      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
-                        {metadataItems.map((item) => (
-                          <MetadataText icon={item.icon} key={item.label}>
-                            <span className="font-medium text-foreground/80">
-                              {item.label}
-                            </span>
-                            : {item.value}
-                          </MetadataText>
-                        ))}
-                      </div>
-                      <div
-                        className={cn(
-                          "gap-3",
-                          isGallery ? "columns-1 sm:columns-2" : "grid"
-                        )}
-                      >
-                        {batch.images.map((image, imageIndex) => (
-                          <div
-                            className={cn(
-                              "space-y-2",
-                              isGallery && "mb-3 break-inside-avoid"
-                            )}
-                            key={image.url}
-                          >
-                            <div className="group @container/image-card relative overflow-hidden rounded-md border border-border/70 bg-muted/20">
-                              <button
-                                aria-label="Open image viewer"
-                                className={cn(
-                                  "block w-full cursor-zoom-in",
-                                  isGallery && "bg-muted/40"
-                                )}
-                                onClick={() =>
-                                  setSelectedImage({
-                                    url: image.url,
-                                    size: batch.size,
-                                  })
-                                }
-                                type="button"
-                              >
-                                <Image
-                                  alt="Generated image"
-                                  className="h-auto w-full"
-                                  height={dimensions.height}
-                                  loading={
-                                    image.url === lcpImageUrl &&
-                                    imageIndex === 0
-                                      ? "eager"
-                                      : "lazy"
+                          {isGallery ? (
+                            <MetadataText icon={IconPhoto}>
+                              {batch.images.length} images
+                            </MetadataText>
+                          ) : null}
+                        </div>
+                        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
+                          {metadataItems.map((item) => (
+                            <MetadataText icon={item.icon} key={item.label}>
+                              <span className="font-medium text-foreground/80">
+                                {item.label}
+                              </span>
+                              : {item.value}
+                            </MetadataText>
+                          ))}
+                        </div>
+                        <div
+                          className={cn(
+                            "gap-3",
+                            isGallery ? "columns-1 sm:columns-2" : "grid"
+                          )}
+                        >
+                          {batch.images.map((image, imageIndex) => (
+                            <div
+                              className={cn(
+                                "space-y-2",
+                                isGallery && "mb-3 break-inside-avoid"
+                              )}
+                              key={image.url}
+                            >
+                              <div className="group @container/image-card relative overflow-hidden rounded-md border border-border/70 bg-muted/20">
+                                <button
+                                  aria-label="Open image viewer"
+                                  className={cn(
+                                    "block w-full cursor-zoom-in",
+                                    isGallery && "bg-muted/40"
+                                  )}
+                                  onClick={() =>
+                                    setSelectedImage({
+                                      url: image.url,
+                                      size: batch.size,
+                                    })
                                   }
-                                  src={image.url}
-                                  unoptimized
-                                  width={dimensions.width}
-                                />
-                              </button>
-                              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/15 to-transparent opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" />
-                              <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-                                {!readOnly && image.id && (
-                                  <ImagePublishButton
-                                    image={image}
-                                    onToggle={() => undefined}
-                                  />
-                                )}
-                                {!readOnly && (
-                                  <Button
-                                    aria-label="Use as reference"
-                                    className={IMAGE_ACTION_BUTTON_CLASS}
-                                    onClick={() =>
-                                      handleReferenceClick(image.url)
-                                    }
-                                    size="sm"
-                                    title="Reference"
-                                    type="button"
-                                    variant="secondary"
-                                  >
-                                    <IconArrowUpRight data-icon="inline-start" />
-                                    <span className="@md/image-card:inline hidden">
-                                      Reference
-                                    </span>
-                                  </Button>
-                                )}
-                                {!readOnly && batch.metadata.prompt ? (
-                                  <Button
-                                    aria-label="View prompt"
-                                    className={IMAGE_ACTION_BUTTON_CLASS}
-                                    onClick={() =>
-                                      handleViewPromptClick(
-                                        batch.metadata.prompt ?? ""
-                                      )
-                                    }
-                                    size="sm"
-                                    title="View Prompt"
-                                    type="button"
-                                    variant="secondary"
-                                  >
-                                    <IconEye data-icon="inline-start" />
-                                    <span className="@md/image-card:inline hidden">
-                                      View Prompt
-                                    </span>
-                                  </Button>
-                                ) : null}
-                                <Button
-                                  aria-label="Download image"
-                                  className={IMAGE_ACTION_BUTTON_CLASS}
-                                  onClick={() => {
-                                    downloadImage(image.url)
-                                  }}
-                                  size="sm"
-                                  title="Download"
                                   type="button"
-                                  variant="secondary"
                                 >
-                                  <IconDownload data-icon="inline-start" />
-                                  <span className="@md/image-card:inline hidden">
-                                    Download
-                                  </span>
-                                </Button>
+                                  <Image
+                                    alt="Generated image"
+                                    className="h-auto w-full"
+                                    height={dimensions.height}
+                                    loading={
+                                      image.url === lcpImageUrl &&
+                                      imageIndex === 0
+                                        ? "eager"
+                                        : "lazy"
+                                    }
+                                    src={image.url}
+                                    unoptimized
+                                    width={dimensions.width}
+                                  />
+                                </button>
+                                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/15 to-transparent opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" />
+                                <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                                  {!readOnly && image.id && (
+                                    <ImagePublishButton
+                                      image={image}
+                                      onToggle={() => undefined}
+                                    />
+                                  )}
+                                  {!readOnly && (
+                                    <Button
+                                      aria-label="Use as reference"
+                                      className={IMAGE_ACTION_BUTTON_CLASS}
+                                      onClick={() =>
+                                        handleReferenceClick(image.url)
+                                      }
+                                      size="sm"
+                                      title="Reference"
+                                      type="button"
+                                      variant="secondary"
+                                    >
+                                      <IconArrowUpRight data-icon="inline-start" />
+                                      <span className="@md/image-card:inline hidden">
+                                        Reference
+                                      </span>
+                                    </Button>
+                                  )}
+                                  {!readOnly && batch.metadata.prompt ? (
+                                    <Button
+                                      aria-label="View prompt"
+                                      className={IMAGE_ACTION_BUTTON_CLASS}
+                                      onClick={() =>
+                                        handleViewPromptClick(
+                                          batch.metadata.prompt ?? ""
+                                        )
+                                      }
+                                      size="sm"
+                                      title="View Prompt"
+                                      type="button"
+                                      variant="secondary"
+                                    >
+                                      <IconEye data-icon="inline-start" />
+                                      <span className="@md/image-card:inline hidden">
+                                        View Prompt
+                                      </span>
+                                    </Button>
+                                  ) : null}
+                                  <Button
+                                    aria-label="Download image"
+                                    className={IMAGE_ACTION_BUTTON_CLASS}
+                                    onClick={() => {
+                                      downloadImage(image.url)
+                                    }}
+                                    size="sm"
+                                    title="Download"
+                                    type="button"
+                                    variant="secondary"
+                                  >
+                                    <IconDownload data-icon="inline-start" />
+                                    <span className="@md/image-card:inline hidden">
+                                      Download
+                                    </span>
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <form.Subscribe selector={(state) => state.isSubmitting}>
-                  {(isSubmitting) =>
-                    isSubmitting || generationError ? null : (
-                      <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
-                        <ImagePlaceholder isGenerating={false} />
+                          ))}
+                        </div>
                       </div>
                     )
-                  }
-                </form.Subscribe>
+                  })
+                : null}
+
+              {isSubmitting && (
+                <div>
+                  {generatedImages.length > 0 && <Separator className="mb-4" />}
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-muted-foreground text-xs">
+                    <MetadataText icon={IconCalendarTime}>
+                      {formatTimestamp(loadingStartedAt) ?? " "}
+                    </MetadataText>
+                  </div>
+                  <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
+                    <MetadataText icon={IconRulerMeasure}>
+                      <span className="font-medium text-foreground/80">
+                        Size
+                      </span>
+                      :{" "}
+                      {[
+                        loadingMetadata.size.replace("x", " × "),
+                        loadingMetadata.quality,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </MetadataText>
+                    <MetadataText icon={IconCpu}>
+                      <span className="font-medium text-foreground/80">
+                        Model
+                      </span>
+                      : {loadingMetadata.model}
+                    </MetadataText>
+                    <MetadataText icon={IconCurrencyDollar}>
+                      <span className="font-medium text-foreground/80">
+                        Cost
+                      </span>
+                      : {loadingMetadata.cost}
+                    </MetadataText>
+                  </div>
+                  <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
+                    <ImagePlaceholder isGenerating />
+                  </div>
+                </div>
               )}
+
+              {shouldShowGenerationError && (
+                <ImageError
+                  createdAt={generationError.createdAt}
+                  message={generationError.message}
+                />
+              )}
+
+              {shouldShowEmptyState ? (
+                <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-center text-muted-foreground text-sm">
+                  <ImagePlaceholder isGenerating={false} />
+                </div>
+              ) : null}
+              <div ref={bottomAnchorRef} />
             </div>
           </div>
         </div>

@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
 import { publishGenerationAction } from "@/app/actions/publish-generation"
 import { CopyLinkButton } from "@/components/copy-link-button"
+import { TextShimmer } from "@/components/motion-primitives/text-shimmer"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Status } from "@/components/ui/status"
@@ -150,10 +151,9 @@ function VideoPlaceholder({
     )
   }
   return (
-    <>
-      <Spokes className="size-8 text-muted-foreground" />
-      <span>{status === "in_progress" ? "Generating…" : "Pending…"}</span>
-    </>
+    <TextShimmer className="font-medium text-sm" duration={1.4}>
+      {status === "in_progress" ? "Generating…" : "Pending…"}
+    </TextShimmer>
   )
 }
 

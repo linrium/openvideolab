@@ -111,7 +111,7 @@ export const IMAGE_DEFAULT_VALUES: ImageGenerationValues = {
   mask: undefined,
   mode: "generate",
   model: SUPPORTED_IMAGE_GENERATION_MODEL,
-  moderation: "auto",
+  moderation: "low",
   n: 1,
   prompt: "",
   quality: "auto",
