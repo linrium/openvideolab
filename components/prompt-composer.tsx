@@ -425,7 +425,7 @@ export function PromptComposer({
 
   return (
     <EditorContent
-      className="w-full min-w-0 [&_.tiptap]:w-full [&_.tiptap]:text-left"
+      className="flex min-h-0 w-full min-w-0 flex-1 [&_.tiptap]:h-full [&_.tiptap]:min-h-full [&_.tiptap]:w-full [&_.tiptap]:text-left"
       editor={editor}
     />
   )

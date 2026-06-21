@@ -11,7 +11,7 @@ import {
   IconSquare,
 } from "@tabler/icons-react"
 import { useForm } from "@tanstack/react-form"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import z from "zod/v4"
@@ -64,6 +64,7 @@ import {
   type ModelValue,
   PRICING,
 } from "@/lib/constants"
+import { cn } from "@/lib/utils"
 import {
   isKieVideoModel,
   type PersistedVideoProvider,
@@ -424,7 +425,10 @@ export function VideoForm({
   readOnly = false,
   videoId,
 }: VideoFormProps) {
+  const pathname = usePathname()
   const router = useRouter()
+  const isNewVideoPage =
+    pathname === "/videos/new" || pathname === "/videos/new/"
   const [confirming, setConfirming] = useState(false)
   const [copiedPrompt, setCopiedPrompt] = useState(false)
   const [isSavingTitle, setIsSavingTitle] = useState(false)
@@ -1400,8 +1404,13 @@ export function VideoForm({
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden">
-      <section className="flex h-full min-h-0 flex-1 flex-col justify-center overflow-hidden">
-        <div className="max-h-[65vh] min-h-0 flex-1 overflow-y-auto">
+      <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          className={cn(
+            "flex-1 overflow-y-auto",
+            !isNewVideoPage && "max-h-[65vh]"
+          )}
+        >
           {preview}
         </div>
         <div className="sticky bottom-0 border-border/70 border-t bg-background pt-4 pb-4">
