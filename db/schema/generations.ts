@@ -3,13 +3,12 @@ import {
   check,
   index,
   integer,
-  pgTable,
+  sqliteTable,
   text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core"
+} from "drizzle-orm/sqlite-core"
 import { v7 as uuidv7 } from "uuid"
 import { users } from "./auth"
+import { currentTimestampMs, timestampMs } from "./columns"
 
 export const GENERATION_TYPES = [
   "video",
@@ -27,10 +26,10 @@ export const GENERATION_STATUSES = [
   "expired",
 ] as const
 
-export const generations = pgTable(
+export const generations = sqliteTable(
   "generations",
   {
-    id: uuid("id")
+    id: text("id")
       .primaryKey()
       .$defaultFn(() => uuidv7()),
     userId: text("user_id")
@@ -40,13 +39,9 @@ export const generations = pgTable(
     status: text("status").notNull().default("pending"),
     title: text("title").notNull().default(""),
     count: integer("count").notNull().default(1),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestampMs("created_at").default(currentTimestampMs).notNull(),
+    updatedAt: timestampMs("updated_at").default(currentTimestampMs).notNull(),
+    publishedAt: timestampMs("published_at"),
   },
   (t) => [
     index("generations_user_id_idx").on(t.userId),

@@ -7,8 +7,10 @@ declare namespace NodeJS {
     AWS_REGION: string
     AWS_SECRET_ACCESS_KEY: string
     BETTER_AUTH_URL: string
-    DATABASE_URL: string
 
+    CLOUDFLARE_ACCOUNT_ID: string
+    CLOUDFLARE_D1_API_TOKEN: string
+    CLOUDFLARE_D1_DATABASE_ID: string
     GOOGLE_CLIENT_ID: string
     GOOGLE_CLIENT_SECRET: string
 
@@ -20,4 +22,8 @@ declare namespace NodeJS {
     OPENROUTER_BASE_URL: string
     OPENROUTER_BASE_WEBHOOK_URL: string
   }
+}
+
+interface CloudflareEnv {
+  DB: D1Database
 }

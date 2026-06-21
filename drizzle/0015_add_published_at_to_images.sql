@@ -1,1 +1,0 @@
-ALTER TABLE "images" ADD COLUMN "published_at" timestamp with time zone;

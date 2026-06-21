@@ -3,13 +3,9 @@ import {
   check,
   index,
   integer,
-  jsonb,
-  numeric,
-  pgTable,
+  sqliteTable,
   text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core"
+} from "drizzle-orm/sqlite-core"
 import { v7 as uuidv7 } from "uuid"
 import type {
   ImageBackground,
@@ -19,6 +15,7 @@ import type {
   ImageSize,
 } from "@/lib/image-generation"
 import { users } from "./auth"
+import { currentTimestampMs, timestampMs } from "./columns"
 import { generations } from "./generations"
 
 export interface PersistedImageUsage {
@@ -37,19 +34,19 @@ export interface PersistedImageUsage {
   }
 }
 
-export const images = pgTable(
+export const images = sqliteTable(
   "images",
   {
-    id: uuid("id")
+    id: text("id")
       .primaryKey()
       .$defaultFn(() => uuidv7()),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    generationId: uuid("generation_id")
+    generationId: text("generation_id")
       .notNull()
       .references(() => generations.id, { onDelete: "cascade" }),
-    batchId: uuid("batch_id")
+    batchId: text("batch_id")
       .notNull()
       .$defaultFn(() => uuidv7()),
     status: text("status").notNull().default("completed"),
@@ -57,11 +54,11 @@ export const images = pgTable(
     prompt: text("prompt").notNull().default(""),
     model: text("model").notNull().default(""),
     referenceId: text("reference_id"),
-    usage: jsonb("usage").$type<PersistedImageUsage | null>(),
-    estimatedCost: numeric("estimated_cost", { precision: 12, scale: 6 }),
-    totalCost: numeric("total_cost", { precision: 12, scale: 6 }),
-    generationTime: numeric("generation_time", { precision: 12, scale: 3 }),
-    latency: numeric("latency", { precision: 12, scale: 3 }),
+    usage: text("usage", { mode: "json" }).$type<PersistedImageUsage | null>(),
+    estimatedCost: text("estimated_cost"),
+    totalCost: text("total_cost"),
+    generationTime: text("generation_time"),
+    latency: text("latency"),
     count: integer("count"),
     background: text("background").$type<ImageBackground | null>(),
     moderation: text("moderation").$type<ImageModeration | null>(),
@@ -69,7 +66,7 @@ export const images = pgTable(
     size: text("size").$type<ImageSize | null>(),
     mode: text("mode").$type<ImageMode | null>(),
     inputFidelity: text("input_fidelity"),
-    sourceImages: text("source_images").array(),
+    sourceImages: text("source_images", { mode: "json" }).$type<string[]>(),
     mask: text("mask"),
     path: text("path"),
     sourceUrl: text("source_url"),
@@ -77,13 +74,9 @@ export const images = pgTable(
     width: integer("width"),
     height: integer("height"),
     position: integer("position").notNull().default(0),
-    publishedAt: timestamp("published_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    publishedAt: timestampMs("published_at"),
+    createdAt: timestampMs("created_at").default(currentTimestampMs).notNull(),
+    updatedAt: timestampMs("updated_at").default(currentTimestampMs).notNull(),
   },
   (t) => [
     index("images_user_id_idx").on(t.userId),

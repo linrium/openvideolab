@@ -1,75 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1777899920815,
-      "tag": "0000_solid_hardball",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777899920816,
-      "tag": "0001_add_generation_usage",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777899920817,
-      "tag": "0002_sessionize_generations",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1777899920818,
-      "tag": "0003_remove_duplicated_generation_fields",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1777899920819,
-      "tag": "0004_add_generation_count",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1777899920820,
-      "tag": "0005_add_deepseek_api_key",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1777899920821,
-      "tag": "0006_add_storyboard_tables",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1777899920822,
-      "tag": "0007_trim_storyboard_tables",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1777899920823,
-      "tag": "0008_storyboard_original_content",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1777899920824,
-      "tag": "0009_remove_storyboard_visual_direction",
+      "version": "6",
+      "when": 1782049736972,
+      "tag": "0000_great_sir_ram",
       "breakpoints": true
     }
   ]

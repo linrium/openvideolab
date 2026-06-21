@@ -1,8 +1,9 @@
 import { relations } from "drizzle-orm"
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { users } from "./auth"
+import { currentTimestampMs, timestampMs } from "./columns"
 
-export const userSettings = pgTable("user_settings", {
+export const userSettings = sqliteTable("user_settings", {
   userId: text("user_id")
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -14,11 +15,9 @@ export const userSettings = pgTable("user_settings", {
   kieApiKey: text("kie_api_key"),
   openrouterApiKey: text("openrouter_api_key"),
   openaiApiKey: text("openai_api_key"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
+  createdAt: timestampMs("created_at").default(currentTimestampMs).notNull(),
+  updatedAt: timestampMs("updated_at")
+    .default(currentTimestampMs)
     .$onUpdate(() => new Date())
     .notNull(),
 })

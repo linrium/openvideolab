@@ -1,2 +1,0 @@
-ALTER TABLE "generations"
-  ADD COLUMN IF NOT EXISTS "count" integer NOT NULL DEFAULT 1;

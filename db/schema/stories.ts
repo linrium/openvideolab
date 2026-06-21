@@ -2,15 +2,13 @@ import { relations } from "drizzle-orm"
 import {
   index,
   integer,
-  jsonb,
-  pgTable,
+  sqliteTable,
   text,
-  timestamp,
   unique,
-  uuid,
-} from "drizzle-orm/pg-core"
+} from "drizzle-orm/sqlite-core"
 import { v7 as uuidv7 } from "uuid"
 import { users } from "./auth"
+import { currentTimestampMs, timestampMs } from "./columns"
 import { generations } from "./generations"
 import { images } from "./images"
 
@@ -19,34 +17,33 @@ export interface PersistedStoryCharacter {
   role: string
 }
 
-export const stories = pgTable(
+export const stories = sqliteTable(
   "stories",
   {
-    id: uuid("id")
+    id: text("id")
       .primaryKey()
       .$defaultFn(() => uuidv7()),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    generationId: uuid("generation_id")
+    generationId: text("generation_id")
       .notNull()
       .unique()
       .references(() => generations.id, { onDelete: "cascade" }),
     sourcePrompt: text("source_prompt").notNull().default(""),
     sourceUrl: text("source_url"),
     title: text("title").notNull().default(""),
-    styleNotes: text("style_notes").array().notNull().default([]),
-    characters: jsonb("characters")
+    styleNotes: text("style_notes", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    characters: text("characters", { mode: "json" })
       .$type<PersistedStoryCharacter[]>()
       .notNull()
       .default([]),
     pageCount: integer("page_count").notNull().default(1),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestampMs("created_at").default(currentTimestampMs).notNull(),
+    updatedAt: timestampMs("updated_at").default(currentTimestampMs).notNull(),
   },
   (t) => [
     index("stories_user_id_idx").on(t.userId),
@@ -54,29 +51,28 @@ export const stories = pgTable(
   ]
 )
 
-export const storyPages = pgTable(
+export const storyPages = sqliteTable(
   "story_pages",
   {
-    id: uuid("id")
+    id: text("id")
       .primaryKey()
       .$defaultFn(() => uuidv7()),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    storyId: uuid("story_id")
+    storyId: text("story_id")
       .notNull()
       .references(() => stories.id, { onDelete: "cascade" }),
     pageNumber: integer("page_number").notNull(),
     panelCount: integer("panel_count").notNull(),
-    characters: text("characters").array().notNull().default([]),
+    characters: text("characters", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     originalContent: text("original_content").notNull().default(""),
     imagePrompt: text("image_prompt").notNull().default(""),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestampMs("created_at").default(currentTimestampMs).notNull(),
+    updatedAt: timestampMs("updated_at").default(currentTimestampMs).notNull(),
   },
   (t) => [
     index("story_pages_user_id_idx").on(t.userId),
@@ -85,28 +81,24 @@ export const storyPages = pgTable(
   ]
 )
 
-export const storyCharacters = pgTable(
+export const storyCharacters = sqliteTable(
   "story_characters",
   {
-    id: uuid("id")
+    id: text("id")
       .primaryKey()
       .$defaultFn(() => uuidv7()),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    storyId: uuid("story_id")
+    storyId: text("story_id")
       .notNull()
       .references(() => stories.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    imageId: uuid("image_id").references(() => images.id, {
+    imageId: text("image_id").references(() => images.id, {
       onDelete: "set null",
     }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestampMs("created_at").default(currentTimestampMs).notNull(),
+    updatedAt: timestampMs("updated_at").default(currentTimestampMs).notNull(),
   },
   (t) => [
     index("story_characters_story_id_idx").on(t.storyId),
