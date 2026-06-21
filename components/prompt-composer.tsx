@@ -285,6 +285,7 @@ export function PromptComposer({
 }: PromptComposerProps & { ref?: RefObject<PromptComposerHandle | null> }) {
   const mentionItemsRef = useRef<MentionItem[]>(items)
   const isInternalChangeRef = useRef(false)
+  const isExternalSyncRef = useRef(false)
 
   // Keep the ref in sync so the suggestion closure always sees latest items
   useEffect(() => {
@@ -383,6 +384,11 @@ export function PromptComposer({
       },
     },
     onUpdate({ editor: e }) {
+      if (isExternalSyncRef.current) {
+        isExternalSyncRef.current = false
+        return
+      }
+
       const nextValue = getEditorPlainText(e)
       if (nextValue === null) {
         return
@@ -409,6 +415,7 @@ export function PromptComposer({
       return
     }
     if (currentValue !== value) {
+      isExternalSyncRef.current = true
       editor.commands.setContent(textToContent(value, mentionItemsRef.current))
     }
   }, [editor, value])

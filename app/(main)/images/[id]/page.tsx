@@ -55,12 +55,15 @@ async function fetchImageRows(generationId: string) {
   return db
     .select({
       id: images.id,
+      background: images.background,
       batchId: images.batchId,
+      count: images.count,
       createdAt: images.createdAt,
       error: images.error,
       estimatedCost: images.estimatedCost,
       height: images.height,
       model: images.model,
+      moderation: images.moderation,
       path: images.path,
       position: images.position,
       prompt: images.prompt,
@@ -79,14 +82,29 @@ async function fetchImageRows(generationId: string) {
     .orderBy(desc(images.createdAt), asc(images.position))
 }
 
-function buildBatchMetadata(image: ImageRow, resolvedSize: ImageSize) {
+function buildSourceImages(image: ImageRow) {
+  return (image.sourceImages ?? []).map((url, index) => ({
+    key: `${image.id}:source:${index}`,
+    url,
+  }))
+}
+
+function buildBatchMetadata(
+  image: ImageRow,
+  resolvedSize: ImageSize,
+  fallbackCount: number
+) {
   return {
+    background: image.background ?? IMAGE_DEFAULT_VALUES.background,
     cost: image.estimatedCost,
+    count: image.count ?? fallbackCount,
     createdAt: image.createdAt.toISOString(),
     model: image.model,
+    moderation: image.moderation ?? IMAGE_DEFAULT_VALUES.moderation,
     prompt: image.prompt,
     quality: image.quality,
     size: resolvedSize,
+    sourceImages: buildSourceImages(image),
     totalCost: image.totalCost,
   }
 }
@@ -99,7 +117,8 @@ async function resolveImageUrl(image: ImageRow): Promise<string> {
 }
 
 async function buildGeneratedBatches(
-  imageRows: ImageRow[]
+  imageRows: ImageRow[],
+  fallbackCount: number
 ): Promise<GeneratedImagesState[]> {
   const batchMap = new Map<string, GeneratedImagesState>()
 
@@ -126,7 +145,7 @@ async function buildGeneratedBatches(
       batchMap.set(image.batchId, {
         error: image.error ?? "Generation failed",
         images: [],
-        metadata: buildBatchMetadata(image, resolvedSize),
+        metadata: buildBatchMetadata(image, resolvedSize, fallbackCount),
         size: resolvedSize,
       })
       continue
@@ -142,7 +161,7 @@ async function buildGeneratedBatches(
             publishedAt: image.publishedAt?.toISOString() ?? null,
           },
         ],
-        metadata: buildBatchMetadata(image, resolvedSize),
+        metadata: buildBatchMetadata(image, resolvedSize, fallbackCount),
         size: resolvedSize,
       })
     }
@@ -179,7 +198,10 @@ export default async function ImagePage({
   }
 
   const imageRows = await fetchImageRows(generation.generationId)
-  const generatedBatches = await buildGeneratedBatches(imageRows)
+  const generatedBatches = await buildGeneratedBatches(
+    imageRows,
+    generation.count
+  )
 
   const latestBatch = imageRows[0]
   const initialValues: ImageGenerationValues = {

@@ -29,6 +29,7 @@ import { publishImageAction } from "@/app/actions/publish-image"
 import { CopyLinkButton } from "@/components/copy-link-button"
 import type {
   GeneratedImage,
+  GeneratedImageMetadata,
   GeneratedImagesState,
   ImageGenerationFormApi,
 } from "@/components/image-studio"
@@ -52,8 +53,12 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   getEstimatedImageCostRange,
+  IMAGE_DEFAULT_VALUES,
   IMAGE_SIZE_DIMENSIONS,
+  type ImageGenerationValues,
+  type ImageModel,
   type ImageSize,
+  imageGenerationSchema,
   SUPPORTED_IMAGE_EDIT_MODEL,
   SUPPORTED_IMAGE_GENERATION_MODEL,
   SUPPORTED_SEEDREAM_IMAGE_MODEL,
@@ -64,7 +69,7 @@ const LABEL_SPLIT_PATTERN = /[-x]/
 const IMAGE_PREVIEW_CONTENT_CLASS = "mx-auto w-full max-w-4xl"
 const IMAGE_ACTION_BUTTON_CLASS =
   "@md/image-card:size-auto size-6 @md/image-card:px-2 px-0 @md/image-card:has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-start]:pl-0"
-const PROMPT_UNDO_STORAGE_PREFIX = "image-prompt-composer-undo:"
+const DRAFT_CONFIG_UNDO_STORAGE_PREFIX = "image-draft-config-undo:"
 const MODEL_LABELS = {
   [SUPPORTED_IMAGE_EDIT_MODEL]: "GPT Image 2",
   [SUPPORTED_IMAGE_GENERATION_MODEL]: "GPT Image 2",
@@ -134,42 +139,72 @@ function downloadImage(url: string): void {
   link.remove()
 }
 
-function getPromptUndoStorageKey(): string {
-  return `${PROMPT_UNDO_STORAGE_PREFIX}${window.location.pathname}`
+function getDraftConfigUndoStorageKey(): string {
+  return `${DRAFT_CONFIG_UNDO_STORAGE_PREFIX}${window.location.pathname}`
 }
 
-function savePromptForUndo(prompt: string): void {
+type ImageDraftConfig = Pick<
+  ImageGenerationValues,
+  | "background"
+  | "imageSize"
+  | "inputFidelity"
+  | "inputImages"
+  | "mask"
+  | "mode"
+  | "model"
+  | "moderation"
+  | "n"
+  | "prompt"
+  | "quality"
+  | "size"
+>
+
+function getDraftConfig(values: ImageGenerationValues): ImageDraftConfig {
+  return {
+    background: values.background,
+    imageSize: values.imageSize,
+    inputFidelity: values.inputFidelity,
+    inputImages: values.inputImages,
+    mask: values.mask,
+    mode: values.mode,
+    model: values.model,
+    moderation: values.moderation,
+    n: values.n,
+    prompt: values.prompt,
+    quality: values.quality,
+    size: values.size,
+  }
+}
+
+function saveDraftConfigForUndo(values: ImageGenerationValues): void {
   window.localStorage.setItem(
-    getPromptUndoStorageKey(),
-    JSON.stringify({ prompt })
+    getDraftConfigUndoStorageKey(),
+    JSON.stringify(getDraftConfig(values))
   )
 }
 
-function readPromptForUndo(): string | null {
-  const savedValue = window.localStorage.getItem(getPromptUndoStorageKey())
+function readDraftConfigForUndo(): ImageDraftConfig | null {
+  const savedValue = window.localStorage.getItem(getDraftConfigUndoStorageKey())
   if (!savedValue) {
     return null
   }
 
   try {
     const parsedValue: unknown = JSON.parse(savedValue)
-    if (
-      typeof parsedValue === "object" &&
-      parsedValue !== null &&
-      "prompt" in parsedValue &&
-      typeof parsedValue.prompt === "string"
-    ) {
-      return parsedValue.prompt
+    const parsedDraft = imageGenerationSchema.safeParse({
+      ...IMAGE_DEFAULT_VALUES,
+      ...(typeof parsedValue === "object" && parsedValue !== null
+        ? parsedValue
+        : {}),
+    })
+    if (parsedDraft.success) {
+      return getDraftConfig(parsedDraft.data)
     }
   } catch {
-    window.localStorage.removeItem(getPromptUndoStorageKey())
+    window.localStorage.removeItem(getDraftConfigUndoStorageKey())
   }
 
   return null
-}
-
-function clearPromptUndo(): void {
-  window.localStorage.removeItem(getPromptUndoStorageKey())
 }
 
 function ImageError({
@@ -303,7 +338,7 @@ export function ImagePreview({
   readOnly?: boolean
 }) {
   const [confirming, setConfirming] = useState(false)
-  const [canUndoPrompt, setCanUndoPrompt] = useState(false)
+  const [canUndoDraftConfig, setCanUndoDraftConfig] = useState(false)
   const [loadingStartedAt, setLoadingStartedAt] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<{
     url: string
@@ -311,6 +346,7 @@ export function ImagePreview({
   } | null>(null)
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bottomAnchorRef = useRef<HTMLDivElement | null>(null)
+  const isViewingPromptConfigRef = useRef(false)
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting)
   const loadingMetadata = useStore(form.store, (state) => ({
     cost: formatCostRange(
@@ -337,10 +373,6 @@ export function ImagePreview({
     },
     []
   )
-
-  useEffect(() => {
-    setCanUndoPrompt(readPromptForUndo() !== null)
-  }, [])
 
   useEffect(() => {
     if (isSubmitting) {
@@ -390,22 +422,72 @@ export function ImagePreview({
     form.setFieldValue("model", nextModel)
   }
 
-  const handleViewPromptClick = (prompt: string) => {
-    savePromptForUndo(form.store.state.values.prompt)
-    setCanUndoPrompt(true)
-    form.setFieldValue("prompt", prompt)
+  const resolveMetadataModel = (model: string): ImageModel =>
+    model === SUPPORTED_SEEDREAM_IMAGE_MODEL
+      ? SUPPORTED_SEEDREAM_IMAGE_MODEL
+      : SUPPORTED_IMAGE_GENERATION_MODEL
+
+  const applyDraftConfig = (draftConfig: ImageDraftConfig) => {
+    form.setFieldValue("background", draftConfig.background)
+    form.setFieldValue("imageSize", draftConfig.imageSize)
+    form.setFieldValue("inputFidelity", draftConfig.inputFidelity)
+    form.setFieldValue("inputImages", draftConfig.inputImages)
+    form.setFieldValue("mask", draftConfig.mask)
+    form.setFieldValue("mode", draftConfig.mode)
+    form.setFieldValue("model", draftConfig.model)
+    form.setFieldValue("moderation", draftConfig.moderation)
+    form.setFieldValue("n", draftConfig.n)
+    form.setFieldValue("prompt", draftConfig.prompt)
+    form.setFieldValue("quality", draftConfig.quality)
+    form.setFieldValue("size", draftConfig.size)
   }
 
-  const handleUndoPromptClick = () => {
-    const savedPrompt = readPromptForUndo()
-    if (savedPrompt === null) {
-      setCanUndoPrompt(false)
+  const handleViewPromptClick = (metadata: GeneratedImageMetadata) => {
+    if (!isViewingPromptConfigRef.current) {
+      saveDraftConfigForUndo(form.store.state.values)
+      isViewingPromptConfigRef.current = true
+    }
+    setCanUndoDraftConfig(true)
+
+    const sourceImages = metadata.sourceImages
+    form.setFieldValue("background", metadata.background)
+    form.setFieldValue("inputImages", sourceImages)
+    form.setFieldValue("mask", undefined)
+    form.setFieldValue("mode", sourceImages.length > 0 ? "edit" : "generate")
+    form.setFieldValue("model", resolveMetadataModel(metadata.model))
+    form.setFieldValue("moderation", metadata.moderation)
+    form.setFieldValue("n", metadata.count)
+    form.setFieldValue("prompt", metadata.prompt ?? "")
+    form.setFieldValue(
+      "quality",
+      metadata.quality ?? IMAGE_DEFAULT_VALUES.quality
+    )
+    form.setFieldValue("size", metadata.size)
+  }
+
+  const handlePromptChange = (
+    value: string,
+    onChange: (value: string) => void
+  ) => {
+    if (!isViewingPromptConfigRef.current) {
+      saveDraftConfigForUndo({
+        ...form.store.state.values,
+        prompt: value,
+      })
+    }
+    onChange(value)
+  }
+
+  const handleUndoDraftConfigClick = () => {
+    const savedDraftConfig = readDraftConfigForUndo()
+    if (savedDraftConfig === null) {
+      setCanUndoDraftConfig(false)
       return
     }
 
-    form.setFieldValue("prompt", savedPrompt)
-    clearPromptUndo()
-    setCanUndoPrompt(false)
+    applyDraftConfig(savedDraftConfig)
+    isViewingPromptConfigRef.current = false
+    setCanUndoDraftConfig(false)
   }
 
   const selectedDimensions = selectedImage
@@ -569,9 +651,7 @@ export function ImagePreview({
                                       aria-label="View prompt"
                                       className={IMAGE_ACTION_BUTTON_CLASS}
                                       onClick={() =>
-                                        handleViewPromptClick(
-                                          batch.metadata.prompt ?? ""
-                                        )
+                                        handleViewPromptClick(batch.metadata)
                                       }
                                       size="sm"
                                       title="View Prompt"
@@ -694,7 +774,9 @@ export function ImagePreview({
                             className="max-h-[min(40svh,24rem)] overflow-y-auto"
                             items={mentionItems}
                             onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value)}
+                            onChange={(value) =>
+                              handlePromptChange(value, field.handleChange)
+                            }
                             placeholder="Describe the image you want to generate…"
                             value={field.state.value}
                           />
@@ -725,10 +807,10 @@ export function ImagePreview({
 
                                 return (
                                   <div className="flex items-center gap-2">
-                                    {canUndoPrompt ? (
+                                    {canUndoDraftConfig ? (
                                       <InputGroupButton
                                         disabled={isSubmitting}
-                                        onClick={handleUndoPromptClick}
+                                        onClick={handleUndoDraftConfigClick}
                                         size="sm"
                                         type="button"
                                         variant="outline"

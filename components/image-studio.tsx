@@ -14,7 +14,10 @@ import { ImagePreview } from "@/components/image-preview"
 import { ResizableRightSidebar } from "@/components/resizable-right-sidebar"
 import {
   IMAGE_DEFAULT_VALUES,
+  type ImageBackground,
   type ImageGenerationValues,
+  type ImageInput,
+  type ImageModeration,
   type ImageQuality,
   type ImageSize,
   imageGenerationSchema,
@@ -25,12 +28,16 @@ const IMAGE_SETTINGS_SIDEBAR_WIDTH_KEY = "image-settings-sidebar-width"
 const TITLE_SAVE_DEBOUNCE_MS = 600
 
 export interface GeneratedImageMetadata {
+  background: ImageBackground
   cost: string | null
+  count: number
   createdAt: string | null
   model: string
+  moderation: ImageModeration
   prompt?: string | null
   quality: ImageQuality | null
   size: ImageSize
+  sourceImages: ImageInput[]
   totalCost: string | null
 }
 

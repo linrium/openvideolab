@@ -11,7 +11,13 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import { v7 as uuidv7 } from "uuid"
-import type { ImageMode, ImageQuality, ImageSize } from "@/lib/image-generation"
+import type {
+  ImageBackground,
+  ImageMode,
+  ImageModeration,
+  ImageQuality,
+  ImageSize,
+} from "@/lib/image-generation"
 import { users } from "./auth"
 import { generations } from "./generations"
 
@@ -56,6 +62,9 @@ export const images = pgTable(
     totalCost: numeric("total_cost", { precision: 12, scale: 6 }),
     generationTime: numeric("generation_time", { precision: 12, scale: 3 }),
     latency: numeric("latency", { precision: 12, scale: 3 }),
+    count: integer("count"),
+    background: text("background").$type<ImageBackground | null>(),
+    moderation: text("moderation").$type<ImageModeration | null>(),
     quality: text("quality").$type<ImageQuality | null>(),
     size: text("size").$type<ImageSize | null>(),
     mode: text("mode").$type<ImageMode | null>(),

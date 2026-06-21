@@ -652,13 +652,16 @@ export async function submitImageAction(
       .insert(imagesTable)
       .values(
         uploadedImages.map((image, index) => ({
+          background: data.background,
           batchId,
+          count: data.n,
           estimatedCost,
           generationId: sessionId,
           inputFidelity: data.inputFidelity,
           mask: data.mask?.url ?? null,
           mode: data.mode,
           model,
+          moderation: data.moderation,
           prompt,
           quality: resolvedQuality,
           referenceId,
@@ -690,12 +693,16 @@ export async function submitImageAction(
         url: image.previewUrl,
       })),
       metadata: {
+        background: data.background,
         cost: estimatedCost,
+        count: data.n,
         createdAt: generation.createdAt.toISOString(),
         model,
+        moderation: data.moderation,
         prompt,
         quality: resolvedQuality,
         size: resolvedSize,
+        sourceImages: data.inputImages,
         totalCost,
       },
       size: resolvedSize,
@@ -729,13 +736,16 @@ export async function submitImageAction(
 
     await db.insert(imagesTable).values(
       Array.from({ length: data.n }, (_, index) => ({
+        background: data.background,
         batchId,
+        count: data.n,
         error: errorMessage,
         generationId: sessionId,
         inputFidelity: data.inputFidelity,
         mask: data.mask?.url ?? null,
         mode: data.mode,
         model,
+        moderation: data.moderation,
         position: index,
         prompt,
         sourceImages: data.inputImages.map((img) => img.url),
