@@ -17,6 +17,16 @@ function getPlayerAspectRatio(value: string | null | undefined): string {
   return value?.replace(":", " / ") ?? "16 / 9"
 }
 
+function getPlayerMaxWidth(value: string | null | undefined): string {
+  const [width, height] = value?.split(":").map(Number) ?? []
+
+  if (!(width && height)) {
+    return "calc(50vh * 16 / 9)"
+  }
+
+  return `calc(50vh * ${width} / ${height})`
+}
+
 type VideoSkinStyle = CSSProperties & {
   "--media-border-radius": string
   "--media-video-border-radius": string
@@ -33,6 +43,7 @@ export function VideoJsPlayer({ aspectRatio, src }: VideoJsPlayerProps) {
     "--media-border-radius": "0.5rem",
     "--media-video-border-radius": "0.5rem",
     aspectRatio: getPlayerAspectRatio(aspectRatio),
+    maxWidth: getPlayerMaxWidth(aspectRatio),
   }
 
   return (

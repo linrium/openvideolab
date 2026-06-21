@@ -10,6 +10,7 @@ import {
   IconWorldOff,
   IconX,
 } from "@tabler/icons-react"
+import type { CSSProperties } from "react"
 import { useEffect, useEffectEvent, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { pollJobStatusAction } from "@/app/actions/poll-job-status-action"
@@ -40,6 +41,20 @@ const TERMINAL_STATUSES = new Set([
 const AUTO_SYNC_STATUSES = new Set(["pending", "in_progress"])
 const AUTO_SYNC_INTERVAL_MS = 5000
 const COPIED_ID_RESET_DELAY_MS = 1800
+
+function getPreviewAspectRatio(value: string | null | undefined): string {
+  return value?.replace(":", " / ") ?? "16 / 9"
+}
+
+function getPreviewMaxWidth(value: string | null | undefined): string {
+  const [width, height] = value?.split(":").map(Number) ?? []
+
+  if (!(width && height)) {
+    return "calc(50vh * 16 / 9)"
+  }
+
+  return `calc(50vh * ${width} / ${height})`
+}
 
 async function copyTextToClipboard(value: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
@@ -463,6 +478,10 @@ export function VideoPreview({
     video?.status ?? initialStatus
   )
   const [currentUrl, setCurrentUrl] = useState(url)
+  const previewFrameStyle: CSSProperties = {
+    aspectRatio: getPreviewAspectRatio(video?.aspectRatio),
+    maxWidth: getPreviewMaxWidth(video?.aspectRatio),
+  }
 
   return (
     <div className="w-full space-y-3">
@@ -471,7 +490,10 @@ export function VideoPreview({
           {currentStatus === "completed" && currentUrl ? (
             <VideoJsPlayer aspectRatio={video?.aspectRatio} src={currentUrl} />
           ) : (
-            <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-muted-foreground text-sm">
+            <div
+              className="flex w-full flex-col items-center justify-center gap-2 rounded-md bg-muted text-muted-foreground text-sm"
+              style={previewFrameStyle}
+            >
               <VideoPlaceholder
                 hasJob={Boolean(jobId)}
                 status={currentStatus}

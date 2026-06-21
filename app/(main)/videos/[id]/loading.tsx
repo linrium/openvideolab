@@ -7,7 +7,7 @@ export default function Loading() {
       <section className="flex h-full min-h-0 flex-1 justify-center overflow-y-auto">
         <div className="w-full max-w-4xl space-y-3 px-4 pt-4">
           {/* Video player */}
-          <Skeleton className="aspect-video w-full rounded-md" />
+          <Skeleton className="mx-auto aspect-video w-full max-w-[calc(50vh*16/9)] rounded-md" />
 
           {/* Status badge + actions */}
           <div className="flex items-center justify-between gap-2">
