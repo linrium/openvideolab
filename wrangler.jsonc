@@ -22,14 +22,14 @@
       "bucket_name": "openvideolab-opennext-cache"
     }
   ],
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "openvideolab",
-      "database_id": "b3fb9600-fd18-4124-818d-78e83355494d",
-      "remote": true
-    }
-  ],
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "openvideolab",
+  //     "database_id": "b3fb9600-fd18-4124-818d-78e83355494d",
+  //     "remote": true
+  //   }
+  // ],
   "images": {
     "binding": "IMAGES"
   },
