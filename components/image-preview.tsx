@@ -351,6 +351,7 @@ export function ImagePreview({
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bottomAnchorRef = useRef<HTMLDivElement | null>(null)
   const isViewingPromptConfigRef = useRef(false)
+  const canSubmit = useStore(form.store, (state) => state.canSubmit)
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting)
   const loadingMetadata = useStore(form.store, (state) => ({
     cost: isGeminiImageModel(state.values.model)
@@ -413,6 +414,23 @@ export function ImagePreview({
 
     setConfirming(true)
     confirmTimeoutRef.current = setTimeout(() => setConfirming(false), 3000)
+  }
+
+  const handleCancelGenerate = () => {
+    if (confirmTimeoutRef.current) {
+      clearTimeout(confirmTimeoutRef.current)
+    }
+    setConfirming(false)
+  }
+
+  const handleGenerateShortcut = () => {
+    const state = form.store.state
+    const hasPrompt = state.values.prompt.trim().length > 0
+    if (!(state.canSubmit && hasPrompt) || state.isSubmitting) {
+      return
+    }
+
+    handleGenerateClick()
   }
 
   const handleReferenceClick = (url: string) => {
@@ -780,10 +798,18 @@ export function ImagePreview({
                             className="max-h-[min(40svh,24rem)] overflow-y-auto"
                             items={mentionItems}
                             onBlur={field.handleBlur}
+                            onCancelShortcut={handleCancelGenerate}
                             onChange={(value) =>
                               handlePromptChange(value, field.handleChange)
                             }
+                            onSubmitShortcut={handleGenerateShortcut}
                             placeholder="Describe the image you want to generate…"
+                            shortcutCancelDisabled={!confirming}
+                            shortcutSubmitDisabled={
+                              !(
+                                canSubmit && field.state.value.trim().length > 0
+                              ) || isSubmitting
+                            }
                             value={field.state.value}
                           />
                           <InputGroupAddon

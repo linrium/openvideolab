@@ -275,8 +275,12 @@ interface PromptComposerProps {
   disabled?: boolean
   items: MentionItem[]
   onBlur?: () => void
+  onCancelShortcut?: () => void
   onChange: (value: string) => void
+  onSubmitShortcut?: () => void
   placeholder?: string
+  shortcutCancelDisabled?: boolean
+  shortcutSubmitDisabled?: boolean
   value: string
 }
 
@@ -286,26 +290,49 @@ export function PromptComposer({
   disabled = false,
   items,
   onBlur,
+  onCancelShortcut,
   onChange,
+  onSubmitShortcut,
   placeholder = "Type your prompt…",
+  shortcutCancelDisabled = false,
+  shortcutSubmitDisabled = false,
   value,
   ref,
 }: PromptComposerProps & { ref?: RefObject<PromptComposerHandle | null> }) {
   const mentionItemsRef = useRef<MentionItem[]>(items)
+  const disabledRef = useRef(disabled)
   const isInternalChangeRef = useRef(false)
   const isExternalSyncRef = useRef(false)
+  const onCancelShortcutRef = useRef(onCancelShortcut)
+  const onSubmitShortcutRef = useRef(onSubmitShortcut)
+  const shortcutCancelDisabledRef = useRef(shortcutCancelDisabled)
+  const shortcutSubmitDisabledRef = useRef(shortcutSubmitDisabled)
 
   // Keep the ref in sync so the suggestion closure always sees latest items
   useEffect(() => {
     mentionItemsRef.current = items
   }, [items])
 
+  useEffect(() => {
+    disabledRef.current = disabled
+    onCancelShortcutRef.current = onCancelShortcut
+    onSubmitShortcutRef.current = onSubmitShortcut
+    shortcutCancelDisabledRef.current = shortcutCancelDisabled
+    shortcutSubmitDisabledRef.current = shortcutSubmitDisabled
+  }, [
+    disabled,
+    onCancelShortcut,
+    onSubmitShortcut,
+    shortcutCancelDisabled,
+    shortcutSubmitDisabled,
+  ])
+
   const mentionExt = useRef(
     buildMentionExtension(() => mentionItemsRef.current)
   ).current
 
   const editor = useEditor({
-    immediatelyRender: true,
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: false,
@@ -332,6 +359,33 @@ export function PromptComposer({
           "[&_.mention]:inline-flex [&_.mention]:items-center [&_.mention]:rounded [&_.mention]:bg-primary/15 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary [&_.mention]:text-xs",
           className
         ),
+      },
+      handleKeyDown(_, event) {
+        if (disabledRef.current) {
+          return false
+        }
+
+        if (
+          event.key === "Enter" &&
+          event.metaKey &&
+          !shortcutSubmitDisabledRef.current
+        ) {
+          event.preventDefault()
+          onSubmitShortcutRef.current?.()
+          return true
+        }
+
+        if (
+          event.key === "Escape" &&
+          !shortcutCancelDisabledRef.current &&
+          onCancelShortcutRef.current
+        ) {
+          event.preventDefault()
+          onCancelShortcutRef.current()
+          return true
+        }
+
+        return false
       },
       handlePaste(view, event) {
         const plain = event.clipboardData?.getData("text/plain")

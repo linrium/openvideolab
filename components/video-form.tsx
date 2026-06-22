@@ -10,7 +10,7 @@ import {
   IconDeviceTablet,
   IconSquare,
 } from "@tabler/icons-react"
-import { useForm } from "@tanstack/react-form"
+import { useForm, useStore } from "@tanstack/react-form"
 import { usePathname, useRouter } from "next/navigation"
 import {
   type CSSProperties,
@@ -465,6 +465,13 @@ export function VideoForm({
     }
   }
 
+  const handleCancelGenerate = () => {
+    if (confirmTimeoutRef.current) {
+      clearTimeout(confirmTimeoutRef.current)
+    }
+    setConfirming(false)
+  }
+
   const handleCopyPromptClick = async (prompt: string) => {
     try {
       await copyPromptToClipboard(prompt)
@@ -575,6 +582,18 @@ export function VideoForm({
       router.push(detailPath)
     },
   })
+  const canSubmit = useStore(form.store, (state) => state.canSubmit)
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting)
+
+  const handleGenerateShortcut = () => {
+    const state = form.store.state
+    const hasPrompt = state.values.prompt.trim().length > 0
+    if (!(state.canSubmit && hasPrompt) || state.isSubmitting) {
+      return
+    }
+
+    handleGenerateClick()
+  }
 
   useEffect(() => {
     savedTitleRef.current = initialValues.title
@@ -1475,8 +1494,18 @@ export function VideoForm({
                             disabled={readOnly}
                             items={mentionItems}
                             onBlur={field.handleBlur}
+                            onCancelShortcut={handleCancelGenerate}
                             onChange={(value) => field.handleChange(value)}
+                            onSubmitShortcut={handleGenerateShortcut}
                             placeholder="Describe the video you want to generate…"
+                            shortcutCancelDisabled={!confirming}
+                            shortcutSubmitDisabled={
+                              readOnly ||
+                              !(
+                                canSubmit && field.state.value.trim().length > 0
+                              ) ||
+                              isSubmitting
+                            }
                             value={field.state.value}
                           />
                           <InputGroupAddon
