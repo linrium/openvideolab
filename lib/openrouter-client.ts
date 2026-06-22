@@ -27,6 +27,22 @@ export interface GenerateVideoResult {
 
 const BASE_URL = process.env.OPENROUTER_BASE_URL
 
+function getOpenRouterErrorMessage(body: unknown): string | undefined {
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("error" in body) ||
+    typeof body.error !== "object" ||
+    body.error === null ||
+    !("message" in body.error) ||
+    typeof body.error.message !== "string"
+  ) {
+    return
+  }
+
+  return body.error.message
+}
+
 export function createOpenrouterClient(apiKey: string): OpenRouter {
   return new OpenRouter({
     apiKey,
@@ -112,8 +128,7 @@ export async function fetchVideoContent(
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)
-    const message =
-      (body?.error?.message as string | undefined) ?? response.statusText
+    const message = getOpenRouterErrorMessage(body) ?? response.statusText
     throw new Error(`OpenRouter video content fetch failed: ${message}`)
   }
 

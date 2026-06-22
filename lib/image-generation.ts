@@ -8,14 +8,18 @@ export const SUPPORTED_IMAGE_GENERATION_MODEL =
 export const SUPPORTED_IMAGE_EDIT_MODEL = "chatgpt-image-latest" as const
 export const SUPPORTED_SEEDREAM_IMAGE_MODEL =
   "bytedance-seed/seedream-4.5" as const
+export const SUPPORTED_GEMINI_IMAGE_MODEL =
+  "google/gemini-3-pro-image-preview" as const
 export const IMAGE_MODEL_OPTIONS = [
   SUPPORTED_IMAGE_GENERATION_MODEL,
   SUPPORTED_IMAGE_EDIT_MODEL,
   SUPPORTED_SEEDREAM_IMAGE_MODEL,
+  SUPPORTED_GEMINI_IMAGE_MODEL,
 ] as const
 export const IMAGE_MODEL_SELECT_OPTIONS = [
   SUPPORTED_IMAGE_GENERATION_MODEL,
   SUPPORTED_SEEDREAM_IMAGE_MODEL,
+  SUPPORTED_GEMINI_IMAGE_MODEL,
 ] as const
 export const SUPPORTED_IMAGE_MODEL = SUPPORTED_IMAGE_GENERATION_MODEL
 
@@ -69,6 +73,11 @@ export const GPT_IMAGE_SIZE_OPTIONS = [
 export const SEEDREAM_IMAGE_SIZE_OPTIONS = [
   "auto",
   ...OPENROUTER_IMAGE_ASPECT_RATIO_OPTIONS,
+] as const
+
+export const OPENROUTER_IMAGE_MODEL_OPTIONS = [
+  SUPPORTED_SEEDREAM_IMAGE_MODEL,
+  SUPPORTED_GEMINI_IMAGE_MODEL,
 ] as const
 
 export const imageInputSchema = z.object({
@@ -138,6 +147,8 @@ export const IMAGE_PRICING = {
 } as const
 
 export const SEEDREAM_IMAGE_COST = 0.04
+export const GEMINI_IMAGE_INPUT_COST_PER_MILLION_TOKENS = 2
+export const GEMINI_IMAGE_OUTPUT_COST_PER_MILLION_TOKENS = 12
 
 export const IMAGE_MODEL_CAPABILITIES = {
   [SUPPORTED_IMAGE_GENERATION_MODEL]: {
@@ -159,6 +170,15 @@ export const IMAGE_MODEL_CAPABILITIES = {
     sourceImages: true,
   },
   [SUPPORTED_SEEDREAM_IMAGE_MODEL]: {
+    background: false,
+    inputFidelity: false,
+    mask: false,
+    moderation: false,
+    quality: false,
+    sizes: SEEDREAM_IMAGE_SIZE_OPTIONS,
+    sourceImages: true,
+  },
+  [SUPPORTED_GEMINI_IMAGE_MODEL]: {
     background: false,
     inputFidelity: false,
     mask: false,
@@ -199,6 +219,18 @@ export function isSeedreamImageModel(
   return model === SUPPORTED_SEEDREAM_IMAGE_MODEL
 }
 
+export function isGeminiImageModel(
+  model: ImageModel
+): model is typeof SUPPORTED_GEMINI_IMAGE_MODEL {
+  return model === SUPPORTED_GEMINI_IMAGE_MODEL
+}
+
+export function isOpenRouterImageModel(
+  model: ImageModel
+): model is (typeof OPENROUTER_IMAGE_MODEL_OPTIONS)[number] {
+  return OPENROUTER_IMAGE_MODEL_OPTIONS.some((option) => option === model)
+}
+
 export function isSupportedImageSizeForModel(
   model: ImageModel,
   size: ImageSize
@@ -217,6 +249,10 @@ export function getEstimatedImageCostRange(values: {
   if (isSeedreamImageModel(values.model)) {
     const cost = SEEDREAM_IMAGE_COST * values.n
     return { max: cost, min: cost }
+  }
+
+  if (isGeminiImageModel(values.model)) {
+    return { max: 0, min: 0 }
   }
 
   const qualities =

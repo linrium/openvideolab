@@ -33,6 +33,30 @@ export interface VideoValue extends ImageValue {
   durationSeconds?: number
 }
 
+function isUploadResponse(value: unknown): value is ImageValue {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "key" in value &&
+    "url" in value &&
+    typeof value.key === "string" &&
+    typeof value.url === "string"
+  )
+}
+
+function getUploadErrorMessage(value: unknown): string {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "error" in value &&
+    typeof value.error === "string"
+  ) {
+    return value.error
+  }
+
+  return "Upload failed"
+}
+
 async function uploadImage(file: File): Promise<ImageValue> {
   const body = new FormData()
   body.append("file", file)
@@ -40,10 +64,14 @@ async function uploadImage(file: File): Promise<ImageValue> {
   const res = await fetch("/api/upload", { method: "POST", body })
   const json = await res.json()
   if (!res.ok) {
-    throw new Error(json.error ?? "Upload failed")
+    throw new Error(getUploadErrorMessage(json))
   }
 
-  return { url: json.url, key: json.key }
+  if (!isUploadResponse(json)) {
+    throw new Error("Upload response was invalid")
+  }
+
+  return { key: json.key, url: json.url }
 }
 
 function formatSize(img: GeneratedImageItem): string {

@@ -3,9 +3,7 @@
   "main": ".open-next/worker.js",
   "name": "openvideolab",
   "compatibility_date": "2026-05-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -22,12 +20,10 @@
       "bucket_name": "openvideolab-opennext-cache"
     }
   ],
-  // "d1_databases": [
+  // "hyperdrive": [
   //   {
-  //     "binding": "DB",
-  //     "database_name": "openvideolab",
-  //     "database_id": "b3fb9600-fd18-4124-818d-78e83355494d",
-  //     "remote": true
+  //     "binding": "HYPERDRIVE",
+  //     "id": "719bf4ec930942fdad5cd584272eaddd",
   //   }
   // ],
   "images": {

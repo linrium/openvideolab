@@ -59,6 +59,9 @@ import {
   type ImageModel,
   type ImageSize,
   imageGenerationSchema,
+  isGeminiImageModel,
+  isOpenRouterImageModel,
+  SUPPORTED_GEMINI_IMAGE_MODEL,
   SUPPORTED_IMAGE_EDIT_MODEL,
   SUPPORTED_IMAGE_GENERATION_MODEL,
   SUPPORTED_SEEDREAM_IMAGE_MODEL,
@@ -74,6 +77,7 @@ const MODEL_LABELS = {
   [SUPPORTED_IMAGE_EDIT_MODEL]: "GPT Image 2",
   [SUPPORTED_IMAGE_GENERATION_MODEL]: "GPT Image 2",
   [SUPPORTED_SEEDREAM_IMAGE_MODEL]: "Seedream 4.5",
+  [SUPPORTED_GEMINI_IMAGE_MODEL]: "Gemini 3 Pro Image",
 } as const
 
 function formatTimestamp(value: string | null): string | null {
@@ -134,7 +138,7 @@ function getSubmitLabel({
 function downloadImage(url: string): void {
   const link = document.createElement("a")
   link.href = `/api/images/download?url=${encodeURIComponent(url)}`
-  document.body.append(link)
+  document.body.appendChild(link)
   link.click()
   link.remove()
 }
@@ -349,14 +353,16 @@ export function ImagePreview({
   const isViewingPromptConfigRef = useRef(false)
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting)
   const loadingMetadata = useStore(form.store, (state) => ({
-    cost: formatCostRange(
-      getEstimatedImageCostRange({
-        model: state.values.model,
-        n: state.values.n,
-        quality: state.values.quality,
-        size: state.values.size,
-      })
-    ),
+    cost: isGeminiImageModel(state.values.model)
+      ? "Metered"
+      : formatCostRange(
+          getEstimatedImageCostRange({
+            model: state.values.model,
+            n: state.values.n,
+            quality: state.values.quality,
+            size: state.values.size,
+          })
+        ),
     model: MODEL_LABELS[state.values.model],
     quality:
       state.values.quality === "auto"
@@ -412,10 +418,9 @@ export function ImagePreview({
   const handleReferenceClick = (url: string) => {
     const current = form.store.state.values.inputImages
     const currentModel = form.store.state.values.model
-    const nextModel =
-      currentModel === SUPPORTED_SEEDREAM_IMAGE_MODEL
-        ? SUPPORTED_SEEDREAM_IMAGE_MODEL
-        : SUPPORTED_IMAGE_GENERATION_MODEL
+    const nextModel = isOpenRouterImageModel(currentModel)
+      ? currentModel
+      : SUPPORTED_IMAGE_GENERATION_MODEL
     const next = [...current, { key: uuidv4(), url }]
     form.setFieldValue("inputImages", next)
     form.setFieldValue("mode", "edit")
@@ -423,8 +428,9 @@ export function ImagePreview({
   }
 
   const resolveMetadataModel = (model: string): ImageModel =>
-    model === SUPPORTED_SEEDREAM_IMAGE_MODEL
-      ? SUPPORTED_SEEDREAM_IMAGE_MODEL
+    model === SUPPORTED_SEEDREAM_IMAGE_MODEL ||
+    model === SUPPORTED_GEMINI_IMAGE_MODEL
+      ? model
       : SUPPORTED_IMAGE_GENERATION_MODEL
 
   const applyDraftConfig = (draftConfig: ImageDraftConfig) => {

@@ -17,6 +17,8 @@ import {
 } from "@/db/schema/images"
 import { auth } from "@/lib/auth"
 import {
+  GEMINI_IMAGE_INPUT_COST_PER_MILLION_TOKENS,
+  GEMINI_IMAGE_OUTPUT_COST_PER_MILLION_TOKENS,
   GPT_IMAGE_SIZE_OPTIONS,
   getEstimatedImageCost,
   IMAGE_SIZE_DIMENSIONS,
@@ -25,9 +27,10 @@ import {
   type ImageModel,
   type ImageSize,
   imageGenerationSchema,
-  isSeedreamImageModel,
+  isOpenRouterImageModel,
   isSupportedImageSizeForModel,
   SEEDREAM_IMAGE_COST,
+  SUPPORTED_GEMINI_IMAGE_MODEL,
   SUPPORTED_IMAGE_EDIT_MODEL,
   SUPPORTED_IMAGE_GENERATION_MODEL,
   SUPPORTED_SEEDREAM_IMAGE_MODEL,
@@ -57,12 +60,12 @@ interface GeneratedImageAsset {
 }
 
 interface PreparedImageGeneration {
-  estimatedCost: string
+  estimatedCost: string | null
   model: ImageModel
   referenceId: string
   resolvedQuality: NonNullable<GeneratedImageMetadata["quality"]> | null
   resolvedSize: ImageSize
-  totalCost: string
+  totalCost: string | null
   uploadedImages: GeneratedImageAsset[]
   usage: PersistedImageUsage | undefined
 }
@@ -82,7 +85,7 @@ function resolveImageSize(
 }
 
 function resolveRequestModel(data: ImageGenerationValues): ImageModel {
-  if (isSeedreamImageModel(data.model)) {
+  if (isOpenRouterImageModel(data.model)) {
     return data.model
   }
 
@@ -273,15 +276,40 @@ async function createOpenAiImageResponse(
   }
 }
 
-async function createSeedreamImageResponses(
+function getOpenRouterResponseCost(
+  response: ChatResult,
+  model: ImageModel
+): number | null {
+  if (typeof response.usage?.cost === "number") {
+    return response.usage.cost
+  }
+
+  if (model !== SUPPORTED_GEMINI_IMAGE_MODEL || !response.usage) {
+    return null
+  }
+
+  const inputCost =
+    (response.usage.promptTokens * GEMINI_IMAGE_INPUT_COST_PER_MILLION_TOKENS) /
+    1_000_000
+  const outputCost =
+    (response.usage.completionTokens *
+      GEMINI_IMAGE_OUTPUT_COST_PER_MILLION_TOKENS) /
+    1_000_000
+
+  return inputCost + outputCost
+}
+
+async function createOpenRouterImageResponses(
   userId: string,
   data: ImageGenerationValues
 ): Promise<{
   images: Array<{ b64_json?: string | null; url?: string | null }>
-  model: typeof SUPPORTED_SEEDREAM_IMAGE_MODEL
+  model: ImageModel
   referenceId: string
+  totalCost: number | null
 }> {
   const openrouterClient = await getOpenrouterClientByUserId(userId)
+  const model = resolveRequestModel(data)
   const content =
     data.inputImages.length === 0
       ? data.prompt
@@ -302,8 +330,11 @@ async function createSeedreamImageResponses(
         chatRequest: {
           imageConfig,
           messages: [{ content, role: "user" }],
-          modalities: ["image"],
-          model: SUPPORTED_SEEDREAM_IMAGE_MODEL,
+          modalities:
+            model === SUPPORTED_GEMINI_IMAGE_MODEL
+              ? ["image", "text"]
+              : ["image"],
+          model,
           stream: false,
         },
       })
@@ -317,9 +348,54 @@ async function createSeedreamImageResponses(
 
   return {
     images: images.slice(0, data.n),
-    model: SUPPORTED_SEEDREAM_IMAGE_MODEL,
+    model,
     referenceId: responses.map((response) => response.id).join(","),
+    totalCost: responses.reduce<number | null>((total, response) => {
+      const cost = getOpenRouterResponseCost(response, model)
+      return cost === null ? total : (total ?? 0) + cost
+    }, null),
   }
+}
+
+function getOpenRouterEstimatedCost(options: {
+  cost: number | null | undefined
+  imageCount: number
+  model: ImageModel
+}): string | null {
+  if (options.model === SUPPORTED_SEEDREAM_IMAGE_MODEL) {
+    return String(SEEDREAM_IMAGE_COST * options.imageCount)
+  }
+
+  return options.cost === undefined || options.cost === null
+    ? null
+    : String(options.cost)
+}
+
+function getPreparedTotalCost(options: {
+  estimatedCost: string | null
+  imageCount: number
+  openRouterCost: number | null | undefined
+  isOpenRouterRequest: boolean
+  model: ImageModel
+  resolvedQuality: NonNullable<GeneratedImageMetadata["quality"]> | null
+  resolvedSize: ImageSize
+}): string | null {
+  if (options.openRouterCost !== undefined && options.openRouterCost !== null) {
+    return String(options.openRouterCost)
+  }
+
+  if (options.isOpenRouterRequest || options.resolvedQuality === null) {
+    return options.estimatedCost
+  }
+
+  return String(
+    getEstimatedImageCost({
+      model: options.model,
+      n: options.imageCount,
+      quality: options.resolvedQuality,
+      size: options.resolvedSize,
+    })
+  )
 }
 
 async function uploadGeneratedImageToR2(options: {
@@ -366,23 +442,23 @@ async function prepareImageGeneration(
   data: ImageGenerationValues
 ): Promise<PreparedImageGeneration> {
   const model = resolveRequestModel(data)
-  const isSeedreamRequest = isSeedreamImageModel(model)
+  const isOpenRouterRequest = isOpenRouterImageModel(model)
 
   if (!isSupportedImageSizeForModel(model, data.size)) {
     throw new Error("Selected size is not supported by this image model")
   }
 
-  const openAiResponse = isSeedreamRequest
+  const openAiResponse = isOpenRouterRequest
     ? null
     : await createOpenAiImageResponse(
         await getOpenAiClientByUserId(userId),
         data
       )
-  const seedreamResponse = isSeedreamRequest
-    ? await createSeedreamImageResponses(userId, data)
+  const openRouterResponse = isOpenRouterRequest
+    ? await createOpenRouterImageResponses(userId, data)
     : null
   const generatedImages =
-    openAiResponse?.response.data ?? seedreamResponse?.images ?? []
+    openAiResponse?.response.data ?? openRouterResponse?.images ?? []
   const uploadedImages = await Promise.all(
     generatedImages
       .filter((image) => image.url || image.b64_json)
@@ -391,7 +467,7 @@ async function prepareImageGeneration(
 
   if (uploadedImages.length === 0) {
     throw new Error(
-      isSeedreamRequest
+      isOpenRouterRequest
         ? "OpenRouter returned no images for this request"
         : "OpenAI returned no images for this request"
     )
@@ -405,8 +481,13 @@ async function prepareImageGeneration(
     openAiResponse === null
       ? null
       : resolveImageQuality(data.quality, openAiResponse.response)
-  const estimatedCost = isSeedreamRequest
-    ? String(SEEDREAM_IMAGE_COST * uploadedImages.length)
+  const openRouterCost = openRouterResponse?.totalCost
+  const estimatedCost = isOpenRouterRequest
+    ? getOpenRouterEstimatedCost({
+        cost: openRouterCost,
+        imageCount: uploadedImages.length,
+        model,
+      })
     : String(
         getEstimatedImageCost({
           model,
@@ -415,17 +496,15 @@ async function prepareImageGeneration(
           size: data.size,
         })
       )
-  const totalCost =
-    resolvedQuality === null
-      ? estimatedCost
-      : String(
-          getEstimatedImageCost({
-            model,
-            n: uploadedImages.length,
-            quality: resolvedQuality,
-            size: resolvedSize,
-          })
-        )
+  const totalCost = getPreparedTotalCost({
+    estimatedCost,
+    imageCount: uploadedImages.length,
+    isOpenRouterRequest,
+    model,
+    openRouterCost,
+    resolvedQuality,
+    resolvedSize,
+  })
   const usage =
     openAiResponse === null || resolvedQuality === null
       ? undefined
@@ -439,7 +518,7 @@ async function prepareImageGeneration(
     model,
     referenceId:
       openAiResponse === null
-        ? (seedreamResponse?.referenceId ?? "")
+        ? (openRouterResponse?.referenceId ?? "")
         : String(openAiResponse.response.created ?? ""),
     resolvedQuality,
     resolvedSize,

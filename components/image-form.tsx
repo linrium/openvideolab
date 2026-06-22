@@ -36,6 +36,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
+  GEMINI_IMAGE_INPUT_COST_PER_MILLION_TOKENS,
+  GEMINI_IMAGE_OUTPUT_COST_PER_MILLION_TOKENS,
   getEstimatedImageCost,
   getEstimatedImageCostRange,
   getImageModelCapabilities,
@@ -49,9 +51,12 @@ import {
   type IMAGE_SIZE_OPTIONS,
   type ImageModel,
   type ImageSize,
+  isGeminiImageModel,
+  isOpenRouterImageModel,
   isSupportedImageSizeForModel,
   OPENROUTER_IMAGE_SIZE_OPTIONS,
   SEEDREAM_IMAGE_COST,
+  SUPPORTED_GEMINI_IMAGE_MODEL,
   SUPPORTED_IMAGE_EDIT_MODEL,
   SUPPORTED_IMAGE_GENERATION_MODEL,
   SUPPORTED_IMAGE_MODEL,
@@ -80,6 +85,7 @@ const MODEL_LABELS = {
   [SUPPORTED_IMAGE_GENERATION_MODEL]: "GPT Image 2",
   [SUPPORTED_IMAGE_EDIT_MODEL]: "GPT Image 2",
   [SUPPORTED_SEEDREAM_IMAGE_MODEL]: "Seedream 4.5",
+  [SUPPORTED_GEMINI_IMAGE_MODEL]: "Gemini 3 Pro Image",
 } as const
 const OPENROUTER_IMAGE_SIZE_LABELS: Record<
   (typeof OPENROUTER_IMAGE_SIZE_OPTIONS)[number],
@@ -103,6 +109,10 @@ function getEstimatedCostRangeText(values: {
   quality: (typeof IMAGE_QUALITY_OPTIONS)[number]
   size: (typeof IMAGE_SIZE_OPTIONS)[number]
 }): { label: string; max: number; min: number } {
+  if (isGeminiImageModel(values.model)) {
+    return { label: "Metered", max: 0, min: 0 }
+  }
+
   const range = getEstimatedImageCostRange(values)
 
   return {
@@ -123,8 +133,8 @@ function formatCostRange(range: { max: number; min: number }): string {
 }
 
 function getModelForSourceImageState(currentModel: ImageModel): ImageModel {
-  if (currentModel === SUPPORTED_SEEDREAM_IMAGE_MODEL) {
-    return SUPPORTED_SEEDREAM_IMAGE_MODEL
+  if (isOpenRouterImageModel(currentModel)) {
+    return currentModel
   }
 
   return SUPPORTED_IMAGE_GENERATION_MODEL
@@ -406,12 +416,12 @@ export function ImageForm({
                       {(field) => (
                         <Field>
                           <FieldLabel>
-                            {model === SUPPORTED_SEEDREAM_IMAGE_MODEL
+                            {isOpenRouterImageModel(model)
                               ? "Aspect Ratio"
                               : "Size"}
                           </FieldLabel>
                           <FieldDescription>
-                            {model === SUPPORTED_SEEDREAM_IMAGE_MODEL
+                            {isOpenRouterImageModel(model)
                               ? "Pick the image shape, or let the model decide."
                               : "Pick the image shape and resolution, or let the model decide."}
                           </FieldDescription>
@@ -448,7 +458,7 @@ export function ImageForm({
                       )}
                     </form.Field>
 
-                    {model === SUPPORTED_SEEDREAM_IMAGE_MODEL ? (
+                    {isOpenRouterImageModel(model) ? (
                       <form.Field name="imageSize">
                         {(field) => (
                           <Field>
@@ -653,7 +663,7 @@ export function ImageForm({
                                 {estimate.label}
                               </span>
                             </div>
-                            {model !== SUPPORTED_SEEDREAM_IMAGE_MODEL &&
+                            {!isOpenRouterImageModel(model) &&
                               (quality === "auto" || size === "auto") && (
                                 <div className="text-muted-foreground/80">
                                   Auto mode shows an estimated price range.
@@ -662,7 +672,9 @@ export function ImageForm({
                             <div className="flex justify-between text-muted-foreground">
                               <span>Total cost</span>
                               <span className="tabular-nums">
-                                {formatCostRange(estimate)}
+                                {isGeminiImageModel(model)
+                                  ? "After generation"
+                                  : formatCostRange(estimate)}
                               </span>
                             </div>
                           </div>
@@ -750,6 +762,18 @@ export function ImageForm({
                   <p className="text-muted-foreground text-xs/relaxed">
                     ${SEEDREAM_IMAGE_COST.toFixed(2)} per generated image,
                     regardless of size.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-4">
+                  <p className="font-medium text-xs">
+                    {MODEL_LABELS[SUPPORTED_GEMINI_IMAGE_MODEL]}
+                  </p>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    Metered by OpenRouter usage at $
+                    {GEMINI_IMAGE_INPUT_COST_PER_MILLION_TOKENS.toFixed(0)} / $
+                    {GEMINI_IMAGE_OUTPUT_COST_PER_MILLION_TOKENS.toFixed(0)} per
+                    1M input/output tokens. The final cost is saved after
+                    generation.
                   </p>
                 </div>
                 <p className="text-muted-foreground text-xs/relaxed">
