@@ -79,7 +79,8 @@
   "version": "0.1.0",
   "private": true,
   "overrides": {
-    "@nodable/entities": "2.2.0"
+    "@nodable/entities": "2.2.0",
+    "fast-xml-parser": "5.9.3"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
