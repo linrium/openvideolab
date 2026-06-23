@@ -20,12 +20,12 @@
       "bucket_name": "openvideolab-opennext-cache"
     }
   ],
-  // "hyperdrive": [
-  //   {
-  //     "binding": "HYPERDRIVE",
-  //     "id": "719bf4ec930942fdad5cd584272eaddd",
-  //   }
-  // ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "719bf4ec930942fdad5cd584272eaddd"
+    }
+  ],
   "images": {
     "binding": "IMAGES"
   },

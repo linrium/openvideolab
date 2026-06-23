@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
     ],
   },
   allowedDevOrigins: ["linhs-macbook-pro.tailba52d0.ts.net"],
+  outputFileTracingIncludes: {
+    "**/*": [
+      "./node_modules/pg-cloudflare/dist/**",
+      "./node_modules/pg-cloudflare/esm/**",
+    ],
+  },
 }
 
 export default nextConfig
